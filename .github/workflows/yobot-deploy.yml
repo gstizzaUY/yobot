@@ -1,7 +1,7 @@
 name: Build and Push Yobot
 on:
   push:
-    branches: [master] # Se activa cuando subes cambios a tu rama master
+    branches: [master]
 
 jobs:
   build:
@@ -17,7 +17,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: gstizzauy
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
