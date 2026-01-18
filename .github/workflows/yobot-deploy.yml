@@ -26,7 +26,7 @@ jobs:
           context: .
           file: ./docker/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/yobot:latest
+          tags: ghcr.io/gstizzauy/yobot:latest
           build-args: |
             BUNDLE_WITHOUT=development:test
             RAILS_ENV=production
