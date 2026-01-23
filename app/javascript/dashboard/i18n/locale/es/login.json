@@ -1,6 +1,6 @@
 {
   "LOGIN": {
-    "TITLE": "Iniciar sesión en Reply",
+    "TITLE": "Iniciar Sesión",
     "EMAIL": {
       "LABEL": "E-mail",
       "PLACEHOLDER": "ejemplo{'@'}nombredeempresa.com",

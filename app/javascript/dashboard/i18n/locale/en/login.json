@@ -1,6 +1,6 @@
 {
   "LOGIN": {
-    "TITLE": "Iniciar sesión en Reply",
+    "TITLE": "Login to Chatwoot",
     "EMAIL": {
       "LABEL": "Email",
       "PLACEHOLDER": "example{'@'}companyname.com",
