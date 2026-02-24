@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Configurar MercadoLibre - Reply-AI</title>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans min-h-screen flex items-center justify-center p-6">
+    <div class="max-w-2xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
+        <div class="bg-blue-600 p-8 text-center">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-4 text-3xl">🚀</div>
+            <h1 class="text-3xl font-black text-white">¡Casi listo, <%= @user_name %>!</h1>
+            <p class="text-blue-100 mt-2">Paso final: Dale superpoderes a tu cuenta</p>
+        </div>
+
+        <div class="p-10">
+            <div class="space-y-8">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <span class="flex items-center justify-center w-6 h-6 bg-yellow-400 text-yellow-900 rounded-full text-xs">1</span>
+                        ¿Por qué conectar tu cuenta?
+                    </h2>
+                    <ul class="space-y-3 text-gray-600">
+                        <li class="flex gap-3">
+                            <span class="text-green-500 font-bold">✓</span>
+                            <span><b>Respuestas 24/7:</b> La IA responderá preguntas técnicas mientras duermes.</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="text-green-500 font-bold">✓</span>
+                            <span><b>Contexto Real:</b> El bot leerá tus publicaciones para saber stock y detalles técnicos.</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="text-green-500 font-bold">✓</span>
+                            <span><b>Reputación:</b> Mejora tu tiempo de respuesta y posición en los listados.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100">
+                    <h3 class="font-bold text-blue-800 mb-2">💡 Recomendaciones:</h3>
+                    <p class="text-sm text-blue-700 leading-relaxed">
+                        Asegúrate de estar logueado en la cuenta de MercadoLibre que deseas vincular. Solo solicitaremos permisos de <b>lectura y escritura de mensajes/preguntas</b>.
+                    </p>
+                </div>
+
+                <div class="pt-4">
+                    <%
+                    # Construimos la URL de autorización de ML
+                    # Nota: Usa .com.ar, .com.mx, etc., según tu país principal o cámbialo a .com
+                    auth_url = "https://auth.mercadolibre.com/authorization?response_type=code&client_id=#{ENV['ML_APP_ID']}&redirect_uri=#{ENV['ML_REDIRECT_URI']}"
+                    %>
+                    <a href="<%= auth_url %>" class="block w-full bg-blue-600 text-white text-center py-5 rounded-2xl font-black text-xl hover:bg-blue-700 transition shadow-xl shadow-blue-100 transform hover:-translate-y-1">
+                        Conectar mi cuenta de MercadoLibre
+                    </a>
+                    <p class="text-center text-xs text-gray-400 mt-4 italic">
+                        Al conectar, se creará automáticamente tu canal de Pre-venta en Reply-AI.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

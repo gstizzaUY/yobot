@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Error de Vinculación - Reply-AI</title>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-6">
+    <div class="max-w-md w-full bg-white rounded-3xl shadow-xl p-10 text-center border border-red-50">
+        <div class="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">⚠️</div>
+        
+        <% if @session_alive %>
+            <h1 class="text-2xl font-black text-gray-800 mb-4">La vinculación falló</h1>
+            <p class="text-gray-600 mb-8">
+                Parece que no pudimos conectar con tu cuenta de MercadoLibre. No te preocupes, tus datos de registro están a salvo.
+            </p>
+            
+            <% 
+               # Re-generamos la URL de ML usando el mismo state para no perder el registro
+               retry_url = "https://auth.mercadolibre.com/authorization?response_type=code&client_id=#{ENV['ML_APP_ID']}&redirect_uri=#{ENV['ML_REDIRECT_URI']}&state=#{@state}" 
+            %>
+
+            <div class="space-y-4">
+                <a href="<%= retry_url %>" class="block w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition shadow-lg">
+                    Intentar vincular nuevamente
+                </a>
+                <a href="/signup" class="block text-sm text-gray-400 hover:text-gray-600 transition">
+                    Volver al inicio
+                </a>
+            </div>
+        <% else %>
+            <h1 class="text-2xl font-black text-gray-800 mb-4">Sesión expirada</h1>
+            <p class="text-gray-600 mb-8">
+                El proceso de registro tardó demasiado por seguridad. Por favor, vuelve a completar el formulario.
+            </p>
+            <a href="/signup" class="block w-full bg-gray-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition">
+                Ir al formulario de registro
+            </a>
+        <% end %>
+    </div>
+</body>
+</html>

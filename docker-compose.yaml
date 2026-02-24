@@ -118,6 +118,63 @@ services:
     ports:
       - 1025:1025
       - 8025:8025
+  n8n-main:
+    image: n8nio/n8n:2.6.4
+    restart: always
+    command: start --mode=queue
+    ports:
+      - '5678:5678'
+    environment:
+      - N8N_MODE=queue
+      - EXECUTIONS_MODE=queue
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+      - N8N_BLOCK_EXECUTION_FROM_MAIN=true
+      - N8N_TASKS_HANDLER=redis
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=postgres
+      - DB_POSTGRESDB_PASSWORD=postgres
+      - QUEUE_BULL_REDIS_HOST=redis
+      - QUEUE_BULL_REDIS_PORT=6379
+      - QUEUE_BULL_REDIS_PASSWORD=postgres
+      - N8N_REDIS_HOST=redis
+      - N8N_REDIS_PORT=6379
+      - N8N_REDIS_PASSWORD=postgres
+      - N8N_ENCRYPTION_KEY=yobot_secret_n8n_key
+    volumes:
+      - n8n_storage:/home/node/.n8n
+    depends_on:
+      - postgres
+      - redis
+
+  n8n-worker:
+    image: n8nio/n8n:2.6.4
+    restart: always
+    command: worker
+    environment:
+      - N8N_MODE=queue
+      - EXECUTIONS_MODE=queue
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+      - N8N_TASKS_HANDLER=redis
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=postgres
+      - DB_POSTGRESDB_PASSWORD=postgres
+      - QUEUE_BULL_REDIS_HOST=redis
+      - QUEUE_BULL_REDIS_PORT=6379
+      - QUEUE_BULL_REDIS_PASSWORD=postgres
+      - N8N_REDIS_HOST=redis
+      - N8N_REDIS_PORT=6379
+      - N8N_REDIS_PASSWORD=postgres
+      - N8N_ENCRYPTION_KEY=yobot_secret_n8n_key
+    volumes:
+      - n8n_storage:/home/node/.n8n
+    depends_on:
+      - n8n-main
 
 volumes:
   postgres:
@@ -126,3 +183,4 @@ volumes:
   node_modules:
   cache:
   bundle:
+  n8n_storage:

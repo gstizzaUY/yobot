@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Sincronizando Reply-AI...</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 flex items-center justify-center h-screen font-sans">
+    <div class="text-center">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600 border-gray-200 mb-4"></div>
+        <h2 class="text-xl font-bold text-gray-800">Sincronizando tu sesión segura...</h2>
+        <p class="text-gray-500 mt-2">Estamos configurando tu acceso a Reply-AI.</p>
+    </div>
+
+    <script>
+        async function syncSession() {
+            try {
+                // 1. Llamamos a nuestra API de intercambio
+                // Como ya tenemos la sesión de Ruby abierta, esto funcionará
+                const response = await fetch('/api/v1/reply_ai/token_exchange');
+                const data = await response.json();
+
+                if (data.auth_data) {
+                    // 2. Limpiar e Inyectar en LocalStorage
+                    localStorage.clear();
+                    
+                    // Inyectar llaves individuales
+                    Object.keys(data.auth_data).forEach(key => {
+                        localStorage.setItem(key, data.auth_data[key]);
+                    });
+
+                    // Inyectar objetos complejos que Chatwoot busca
+                    localStorage.setItem('auth_data', JSON.stringify(data.auth_data));
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    localStorage.setItem('activeAccountId', data.activeAccountId);
+
+                    // 3. Inyectar Cookies (httponly: false)
+                    const cookieBase = "; path=/; SameSite=Lax";
+                    document.cookie = `access-token=${data.auth_data['access-token']}${cookieBase}`;
+                    document.cookie = `client=${data.auth_data['client']}${cookieBase}`;
+                    document.cookie = `uid=${data.auth_data['uid']}${cookieBase}`;
+
+                    // 4. Redirigir al destino final
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const destination = urlParams.get('redirect_to') === 'app' ? '/app/dashboard' : '/dashboard';
+                    
+                    setTimeout(() => {
+                        window.location.replace(destination);
+                    }, 500);
+                }
+            } catch (error) {
+                console.error('Error sincronizando:', error);
+                window.location.href = '/app/login';
+            }
+        }
+
+        // Ejecutar al cargar
+        syncSession();
+    </script>
+</body>
+</html>
