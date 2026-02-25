@@ -2,8 +2,8 @@
 
 # Esperamos a que Sidekiq esté listo para registrar la tarea
 Rails.application.reloader.to_prepare do
-  # Verificamos que estemos en un proceso que necesite Sidekiq
-  if defined?(Sidekiq::Cron::Job)
+  # Solo registrar el cron job cuando corre dentro del proceso Sidekiq server
+  if defined?(Sidekiq::Cron::Job) && Sidekiq.server?
     Sidekiq::Cron::Job.create(
       name: 'ReplyAi::TokenRefreshWorker',
       cron: '0 * * * *', # Se ejecuta al minuto 0 de cada hora
