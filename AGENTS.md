@@ -1,9 +1,13 @@
-# Chatwoot Development Guidelines
+# Chatwoot + Reply-AI Development Guidelines
+
+> **Full technical reference**: `TECHNICAL.md` (761 líneas, leer ANTES de trabajar en este proyecto).  
+> **Custom layer**: Todo el código Reply-AI / MercadoLibre vive en `custom/`. NUNCA modificar archivos en `app/`.
 
 ## Build / Test / Lint
 
 - **Setup**: `bundle install && pnpm install`
-- **Run Dev**: `pnpm dev` or `overmind start -f ./Procfile.dev`
+- **Run Dev (Docker)**: `docker compose up -d`
+- **Run Dev (Local)**: `pnpm dev` or `overmind start -f ./Procfile.dev`
 - **Seed Local Test Data**: `bundle exec rails db:seed` (quickly populates minimal data for standard feature verification)
 - **Seed Search Test Data**: `bundle exec rails search:setup_test_data` (bulk fixture generation for search/performance/manual load scenarios)
 - **Seed Account Sample Data (richer test data)**: `Seeders::AccountSeeder` is available as an internal utility and is exposed through Super Admin `Accounts#seed`, but can be used directly in dev workflows too:
@@ -112,6 +116,64 @@ Practical checklist for any change impacting core logic or public APIs
 - When renaming/moving shared code, mirror the change in `enterprise/` to prevent drift.
 - Tests: Add Enterprise-specific specs under `spec/enterprise`, mirroring OSS spec layout where applicable.
 - When modifying existing OSS features for Enterprise-only behavior, add an Enterprise module (via `prepend_mod_with`/`include_mod_with`) instead of editing OSS files directly—especially for policies, controllers, and services. For Enterprise-exclusive features, place code directly under `enterprise/`.
+
+## Custom Layer (Reply-AI / MercadoLibre)
+
+> **Critical**: Todo el código custom vive en `custom/`. NUNCA crear ni modificar archivos en `app/`, `lib/`, o `enterprise/` para funcionalidad Reply-AI.
+
+### Dónde va cada cosa
+
+| Tipo de archivo | Ubicación |
+|----------------|-----------|
+| Modelos custom | `custom/app/models/` |
+| Controladores custom | `custom/app/controllers/` |
+| Vistas custom | `custom/app/views/` |
+| Workers Sidekiq | `custom/lib/reply_ai/` |
+| Middleware Rack | `custom/lib/reply_ai/` |
+| Migraciones custom | `custom/db/migrate/` |
+| Initializers | `config/initializers/reply_ai_*.rb` |
+| Workflows n8n | `n8n/` |
+
+### Cómo se carga custom/
+
+- **Zeitwerk**: `config/initializers/00_custom_load_paths.rb` usa `push_dir` para registrar modelos, controladores y `custom/lib/` en el autoloader. No modifica `eager_load_paths` (está congelado).
+- **Vistas**: `ActionController::Base.prepend_view_path` en `to_prepare`.
+- **Rutas**: `Rails.application.routes.prepend` en `reply-ai_routes.rb`.
+- **Migraciones**: `reply_ai_schema_guard.rb` registra el path y auto-aplica migraciones pendientes al boot.
+- **Asociaciones**: `reply_ai_account_associations.rb` usa `Account.class_eval` en `to_prepare`.
+
+### Extender clases core (cuando sea necesario)
+
+```ruby
+# Para agregar métodos a una clase core, crear un módulo en custom/:
+# custom/app/models/custom/concerns/account.rb
+module Custom::Concerns::Account
+  extend ActiveSupport::Concern
+  included do
+    has_many :mi_modelo
+  end
+end
+
+# En initializer:
+Account.include_mod_with('Concerns::Account')
+```
+
+### Verificación post-cambios
+
+```bash
+# Verificar que todo carga (48 checks)
+docker compose exec rails bundle exec rails runner custom/verify.rb
+
+# Verificar que Rails arranca
+docker compose logs rails | grep Listening
+```
+
+### Restricciones
+
+- `eager_load_paths` y `config.paths['app/views']` están **congelados** en initializers. Usar `push_dir` y `prepend_view_path` respectivamente.
+- Al existir `custom/`, `ChatwootApp.extensions` devuelve `['enterprise', 'custom']`. El módulo `Custom` debe existir (está definido en `custom/lib/custom.rb`).
+- Las migraciones custom deben estar en `custom/db/migrate/`, no en `db/migrate/`.
+- No modificar `config/application.rb` ni ningún archivo dentro de `app/`.
 
 ## Branding / White-labeling note
 
