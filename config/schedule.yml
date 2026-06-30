@@ -74,3 +74,9 @@ remove_orphan_conversations_job:
   cron: '0 */12 * * *'
   class: 'Internal::RemoveOrphanConversationsJob'
   queue: housekeeping
+
+# Reply-AI: refrescar tokens de MercadoLibre cada 5 minutos
+reply_ai_token_refresh_job:
+  cron: '*/5 * * * *'
+  class: 'ReplyAi::TokenRefreshWorker'
+  queue: low
