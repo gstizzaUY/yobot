@@ -19,6 +19,8 @@ Rails.application.routes.prepend do
   # Tiendas oficiales MercadoLibre
   patch '/dashboard/stores/:store_id/greeting' => 'landing#update_store_greeting', as: :update_store_greeting
   post  '/dashboard/stores/refresh'            => 'landing#refresh_official_stores', as: :refresh_official_stores
+  # Forzar refresco de tokens ML (manual, vía GET)
+  get   '/dashboard/refresh-tokens'            => 'landing#refresh_tokens',          as: :refresh_tokens
   # Estado del bot considerando programación horaria (para n8n)
   get   '/bot_active'            => 'landing#bot_active',            as: :bot_active
   # Kill-switch post-venta: verifica si la IA debe responder en una conversación

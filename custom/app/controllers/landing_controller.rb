@@ -3,9 +3,9 @@ require 'erb'
 require 'uri'
 
 class LandingController < ApplicationController
-  skip_before_action :authenticate_user!, only: [:index, :signup, :create_account, :meli_callback, :go_to_chats, :dashboard, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :rag_search, :update_store_greeting, :refresh_official_stores, :bot_active, :conversation_ai_gate, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :pv_rag_search, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax], raise: false
+  skip_before_action :authenticate_user!, only: [:index, :signup, :create_account, :meli_callback, :go_to_chats, :dashboard, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :rag_search, :update_store_greeting, :refresh_official_stores, :refresh_tokens, :bot_active, :conversation_ai_gate, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :pv_rag_search, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax], raise: false
   layout false
-  before_action :set_account, only: [:dashboard, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :update_store_greeting, :refresh_official_stores, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax]
+  before_action :set_account, only: [:dashboard, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :update_store_greeting, :refresh_official_stores, :refresh_tokens, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax]
   before_action :set_account_from_token, only: [:rag_search, :pv_rag_search]
 
   def index; end
@@ -559,6 +559,25 @@ class LandingController < ApplicationController
   def refresh_official_stores
     ReplyAi::MeliSyncOfficialStoresWorker.perform_async(@account.id)
     render json: { ok: true, message: 'Sincronización iniciada' }
+  end
+
+  # Forzar refresco de access tokens de MercadoLibre AHORA (GET /dashboard/refresh-tokens)
+  def refresh_tokens
+    credentials = @account.meli_credentials.where.not(refresh_token: nil)
+    results = []
+
+    credentials.each do |cred|
+      begin
+        worker = ReplyAi::TokenRefreshWorker.new
+        worker.send(:refresh_meli_token, cred)
+        cred.reload
+        results << { id: cred.id, status: cred.status, expira: cred.expires_at, token_preview: cred.access_token&.first(25) }
+      rescue => e
+        results << { id: cred.id, error: e.message }
+      end
+    end
+
+    render json: { ok: true, credentials: results }
   end
 
   # PASO 5: Subir documento de entrenamiento RAG
