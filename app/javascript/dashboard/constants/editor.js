@@ -14,6 +14,7 @@ export const FORMATTING = {
       'link',
       'bulletList',
       'orderedList',
+      'imageUpload',
       'undo',
       'redo',
     ],
@@ -30,6 +31,7 @@ export const FORMATTING = {
       'strike',
       'bulletList',
       'orderedList',
+      'imageUpload',
       'undo',
       'redo',
     ],
@@ -109,11 +111,6 @@ export const FORMATTING = {
       'redo',
     ],
   },
-  'Channel::Voice': {
-    marks: [],
-    nodes: [],
-    menu: [],
-  },
   'Channel::Tiktok': {
     marks: [],
     nodes: [],
@@ -166,12 +163,18 @@ export const FORMATTING = {
     nodes: [],
     menu: [],
   },
+  'Context::NoToolbar': {
+    marks: ['strong', 'em', 'link'],
+    nodes: ['bulletList', 'orderedList'],
+    menu: [],
+  },
 };
 
 // Editor menu options for Full Editor
 export const ARTICLE_EDITOR_MENU_OPTIONS = [
   'strong',
   'em',
+  'strike',
   'link',
   'undo',
   'redo',
@@ -182,6 +185,7 @@ export const ARTICLE_EDITOR_MENU_OPTIONS = [
   'h3',
   'imageUpload',
   'code',
+  'insertTable',
 ];
 
 /**
@@ -264,25 +268,5 @@ export const MARKDOWN_PATTERNS = [
       { pattern: /<([a-zA-Z][a-zA-Z0-9+.-]*:[^\s>]+)>/g, replacement: '$1' }, // <https://...>, <mailto:...>, <tel:...>, <ftp://...>, etc
       { pattern: /<([^\s@]+@[^\s@>]+)>/g, replacement: '$1' }, // <user@example.com> -> user@example.com
     ],
-  },
-];
-
-// Editor image resize options for Message Editor
-export const MESSAGE_EDITOR_IMAGE_RESIZES = [
-  {
-    name: 'Small',
-    height: '24px',
-  },
-  {
-    name: 'Medium',
-    height: '48px',
-  },
-  {
-    name: 'Large',
-    height: '72px',
-  },
-  {
-    name: 'Original Size',
-    height: 'auto',
   },
 ];

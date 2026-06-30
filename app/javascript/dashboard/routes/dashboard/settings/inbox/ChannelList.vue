@@ -92,7 +92,14 @@ const channelList = computed(() => {
     key: 'voice',
     title: t('INBOX_MGMT.ADD.AUTH.CHANNEL.VOICE.TITLE'),
     description: t('INBOX_MGMT.ADD.AUTH.CHANNEL.VOICE.DESCRIPTION'),
-    icon: 'i-ri-phone-fill',
+    icon: 'i-woot-voice',
+  });
+
+  channels.push({
+    key: 'whatsapp_call',
+    title: t('INBOX_MGMT.ADD.AUTH.CHANNEL.WHATSAPP_CALL.TITLE'),
+    description: t('INBOX_MGMT.ADD.AUTH.CHANNEL.WHATSAPP_CALL.DESCRIPTION'),
+    icon: 'i-woot-whatsapp',
   });
 
   return channels;
@@ -116,17 +123,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="w-full p-8 overflow-auto">
-    <div
-      class="grid max-w-3xl grid-cols-1 xs:grid-cols-2 mx-0 gap-6 sm:grid-cols-3"
-    >
-      <ChannelItem
-        v-for="channel in channelList"
-        :key="channel.key"
-        :channel="channel"
-        :enabled-features="enabledFeatures"
-        @channel-item-click="initChannelAuth"
-      />
-    </div>
+  <div
+    class="grid max-w-3xl grid-cols-1 xs:grid-cols-2 mx-0 gap-6 sm:grid-cols-3 p-8"
+  >
+    <ChannelItem
+      v-for="channel in channelList"
+      :key="channel.key"
+      :channel="channel"
+      :enabled-features="enabledFeatures"
+      @channel-item-click="initChannelAuth"
+    />
   </div>
 </template>

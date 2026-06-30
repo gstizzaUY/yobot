@@ -15,7 +15,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   end
 
   def meta
-    result = conversation_finder.perform
+    result = conversation_finder.perform_meta_only
     @conversations_count = result[:count]
   end
 
@@ -28,7 +28,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   def attachments
     @attachments_count = @conversation.attachments.count
     @attachments = @conversation.attachments
-                                .includes(:message)
+                                .includes({ file_attachment: :blob }, message: [:inbox, { sender: { avatar_attachment: :blob } }])
                                 .order(created_at: :desc)
                                 .page(attachment_params[:page])
                                 .per(ATTACHMENT_RESULTS_PER_PAGE)
@@ -70,8 +70,11 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   def transcript
     render json: { error: 'email param missing' }, status: :unprocessable_entity and return if params[:email].blank?
+    return render_payment_required('Email transcript is not available on your plan') unless @conversation.account.email_transcript_enabled?
+    return head :too_many_requests unless @conversation.account.within_email_rate_limit?
 
     ConversationReplyMailer.with(account: @conversation.account).conversation_transcript(@conversation, params[:email])&.deliver_later
+    @conversation.account.increment_email_sent_count
     head :ok
   end
 
@@ -104,7 +107,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   end
 
   def toggle_typing_status
-    typing_status_manager = ::Conversations::TypingStatusManager.new(@conversation, current_user, params)
+    typing_status_manager = ::Conversations::TypingStatusManager.new(@conversation, Current.user, params)
     typing_status_manager.toggle_typing_status
     head :ok
   end
@@ -113,6 +116,8 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     # High-traffic accounts generate excessive DB writes when agents frequently switch between conversations.
     # Throttle last_seen updates to once per hour when there are no unread messages to reduce DB load.
     # Always update immediately if there are unread messages to maintain accurate read/unread state.
+    # Visiting a conversation should clear any unread inbox notifications for this conversation.
+    Notification::MarkConversationReadService.new(user: Current.user, account: Current.account, conversation: @conversation).perform
     return update_last_seen_on_conversation(DateTime.now.utc, true) if assignee? && @conversation.assignee_unread_messages.any?
     return update_last_seen_on_conversation(DateTime.now.utc, false) if !assignee? && @conversation.unread_messages.any?
 
@@ -135,7 +140,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   def destroy
     authorize @conversation, :destroy?
-    ::DeleteObjectJob.perform_later(@conversation, Current.user, request.ip)
+    ::Conversations::DeleteService.new(conversation: @conversation, user: Current.user, ip: request.ip).perform
     head :ok
   end
 
@@ -157,6 +162,8 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     # rubocop:disable Rails/SkipsModelValidations
     @conversation.update_columns(updates)
     # rubocop:enable Rails/SkipsModelValidations
+
+    ::Conversations::UnreadCounts::Notifier.new(@conversation).perform
   end
 
   def should_update_last_seen?
