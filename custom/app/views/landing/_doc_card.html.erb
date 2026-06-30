@@ -1,0 +1,102 @@
+<%# Partial: tarjeta individual de documento RAG %>
+<%# Variables: doc, destroy_path_helper, mgr_mode %>
+
+<%
+  file_name = doc.file_name.to_s
+  ext = File.extname(file_name).downcase
+
+  icon_config = case ext
+  when '.pdf'
+    { border: 'border-red-200',   bg: 'bg-red-50',    text: 'text-red-600',   badge_bg: 'bg-red-100',   badge_text: 'text-red-700',   label: 'PDF' }
+  when '.xlsx', '.xls'
+    { border: 'border-green-200', bg: 'bg-green-50',  text: 'text-green-600', badge_bg: 'bg-green-100', badge_text: 'text-green-700', label: ext == '.xlsx' ? 'XLSX' : 'XLS' }
+  when '.csv'
+    { border: 'border-teal-200',  bg: 'bg-teal-50',   text: 'text-teal-600',  badge_bg: 'bg-teal-100',  badge_text: 'text-teal-700',  label: 'CSV' }
+  when '.docx', '.doc'
+    { border: 'border-blue-200',  bg: 'bg-blue-50',   text: 'text-blue-600',  badge_bg: 'bg-blue-100',  badge_text: 'text-blue-700',  label: ext == '.docx' ? 'DOCX' : 'DOC' }
+  when '.txt'
+    { border: 'border-gray-200',  bg: 'bg-gray-100',  text: 'text-gray-500',  badge_bg: 'bg-gray-100',  badge_text: 'text-gray-600',  label: 'TXT' }
+  else
+    { border: 'border-gray-200',  bg: 'bg-gray-100',  text: 'text-gray-400',  badge_bg: 'bg-gray-100',  badge_text: 'text-gray-500',  label: ext.delete('.').upcase.presence || 'DOC' }
+  end
+%>
+
+<li class="group border border-gray-100 rounded-2xl overflow-hidden bg-white hover:border-gray-200 hover:shadow-sm transition-all" id="doc-item-<%= doc.id %>">
+  <div class="flex items-stretch">
+
+    <!-- Franja lateral de color por tipo -->
+    <div class="flex flex-col items-center justify-center w-14 flex-shrink-0 <%= icon_config[:bg] %> border-r <%= icon_config[:border] %> gap-1 py-3">
+      <% if ext == '.pdf' %>
+        <svg class="w-5 h-5 <%= icon_config[:text] %>" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+        </svg>
+      <% elsif ['.xlsx', '.xls', '.csv'].include?(ext) %>
+        <svg class="w-5 h-5 <%= icon_config[:text] %>" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75.125V7.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125H12m0 0h2.25m-2.25 0c-.621 0-1.125.504-1.125 1.125V18.375m0-7.5h4.875c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125H12m0 0v6.375"/>
+        </svg>
+      <% elsif ['.docx', '.doc'].include?(ext) %>
+        <svg class="w-5 h-5 <%= icon_config[:text] %>" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+        </svg>
+      <% else %>
+        <svg class="w-5 h-5 <%= icon_config[:text] %>" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+        </svg>
+      <% end %>
+      <span class="text-[8px] font-black <%= icon_config[:text] %> tracking-wide"><%= icon_config[:label] %></span>
+    </div>
+
+    <!-- Contenido principal -->
+    <div class="flex-1 min-w-0 px-3 py-3">
+      <!-- Fila superior: nombre + fecha + botón eliminar -->
+      <div class="flex items-start justify-between gap-2 mb-2">
+        <div class="flex-1 min-w-0">
+          <% if doc.file.attached? %>
+            <%= link_to url_for(doc.file), target: "_blank", class: "group/link flex items-center gap-1.5" do %>
+              <span class="text-xs font-bold text-gray-700 group-hover/link:text-[#fd5101] truncate block leading-tight">
+                <%= file_name.presence || 'Archivo sin nombre' %>
+              </span>
+              <svg class="w-3 h-3 text-gray-300 group-hover/link:text-[#fd5101] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/>
+              </svg>
+            <% end %>
+          <% else %>
+            <span class="text-xs font-bold text-gray-600 truncate block leading-tight">
+              <%= file_name.presence || 'Documento de texto' %>
+            </span>
+          <% end %>
+          <span class="text-[10px] text-gray-400">
+            <%= doc.created_at.strftime('%d/%m/%Y · %H:%M') %>
+          </span>
+        </div>
+
+        <!-- Botón eliminar -->
+        <button
+          onclick="deleteDocAjax(<%= doc.id %>, '<%= mgr_mode %>', '<%= destroy_path_helper.call(doc.id) %>')"
+          class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
+          title="Eliminar">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Preview del contenido -->
+      <% if doc.content.present? %>
+        <details class="group/details">
+          <summary class="text-[10px] text-gray-400 hover:text-gray-600 cursor-pointer select-none flex items-center gap-1 list-none">
+            <svg class="w-3 h-3 transition-transform group-open/details:rotate-90" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+            </svg>
+            Ver contenido extraído
+          </summary>
+          <div class="mt-2 text-[10px] text-gray-500 leading-relaxed font-mono bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 max-h-32 overflow-y-auto whitespace-pre-wrap break-words">
+            <%= doc.content.truncate(600) %>
+          </div>
+        </details>
+      <% else %>
+        <p class="text-[10px] text-gray-300 italic">Sin contenido procesado aún…</p>
+      <% end %>
+    </div>
+  </div>
+</li>

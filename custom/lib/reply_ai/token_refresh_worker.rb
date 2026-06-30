@@ -4,12 +4,12 @@ module ReplyAi
     sidekiq_options queue: 'low', retry: 3
 
     def perform
-      # Buscamos tokens que venzan en los próximos 30 minutos
-      credentials = MeliCredential.where("expires_at < ?", 30.minutes.from_now)
+      # Ventana de 90 min: el cron corre cada 60 min, necesitamos margen suficiente
+      # para garantizar que siempre se refresca ANTES de que expire
+      credentials = MeliCredential.where(status: 'active')
+                                  .where('expires_at < ?', 90.minutes.from_now)
 
-      credentials.each do |credential|
-        refresh_meli_token(credential)
-      end
+      credentials.each { |credential| refresh_meli_token(credential) }
     end
 
     private
@@ -27,10 +27,12 @@ module ReplyAi
       credential.update!(
         access_token: data['access_token'],
         refresh_token: data['refresh_token'],
-        expires_at: Time.now + data['expires_in'].seconds
+        expires_at: Time.current + data['expires_in'].seconds,
+        status: 'active'
       )
     rescue => e
-      Rails.logger.error "Error refrescando token para cuenta #{credential.account_id}: #{e.message}"
+      Rails.logger.error "Error refrescando token ML cuenta #{credential.account_id}: #{e.message}"
+      credential.update_columns(status: 'error')
     end
   end
 end

@@ -1,0 +1,213 @@
+<%# Partial reutilizado por dashboard.html.erb (carga inicial) y landing#dashboard_products / pv_dashboard_products (polling AJAX) %>
+<% rag_partial = local_assigns.fetch(:rag_partial, 'doc_row') %>
+<% tab_param   = local_assigns.fetch(:tab_param, 'prods') %>
+
+<!-- Buscador y contador -->
+<form method="GET" action="<%= reply_ai_dashboard_path %>" id="prods-form" class="flex flex-wrap gap-2 items-center mb-4">
+    <input type="hidden" name="tab"  value="<%= tab_param %>">
+    <input type="hidden" name="sort" value="<%= @sort_col %>">
+    <input type="hidden" name="dir"  value="<%= @sort_dir %>">
+    <input type="text" name="q" value="<%= @q %>"
+        placeholder="Buscar por título o ID ML..."
+        class="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#fd5101]">
+    <button type="submit"
+        class="text-white px-4 py-2 rounded-xl text-sm font-bold transition"
+        style="background:#fd5101" onmouseover="this.style.background='#d94200'" onmouseout="this.style.background='#fd5101'">
+        Buscar
+    </button>
+    <% if @q.present? %>
+        <a href="<%= reply_ai_dashboard_path(tab: tab_param) %>"
+            class="text-xs text-gray-400 hover:text-gray-600">Limpiar</a>
+    <% end %>
+    <span class="text-xs text-gray-400 whitespace-nowrap"><%= @total_products %> productos</span>
+</form>
+
+<!-- Tabla -->
+<div class="overflow-x-auto rounded-2xl border border-gray-100">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-xs font-black text-gray-500 uppercase">
+            <tr>
+                <th class="px-3 py-3 text-left w-10"></th>
+                <th class="px-3 py-3 text-left">
+                    <%= sort_link('title', 'Título', @sort_col, @sort_dir, @q) %>
+                </th>
+                <th class="px-3 py-3 text-left w-28">ID ML</th>
+                <th class="px-3 py-3 text-left w-24">SKU</th>
+                <th class="px-3 py-3 text-right w-28">
+                    <%= sort_link('price', 'Precio', @sort_col, @sort_dir, @q) %>
+                </th>
+                <th class="px-3 py-3 text-right w-28">Oferta</th>
+                <th class="px-3 py-3 text-center w-20">
+                    <%= sort_link('condition', 'Condición', @sort_col, @sort_dir, @q) %>
+                </th>
+                <th class="px-3 py-3 text-center w-16">Stock</th>
+                <th class="px-3 py-3 text-center w-20">
+                    <%= sort_link('status', 'Estado', @sort_col, @sort_dir, @q) %>
+                </th>
+                <th class="px-3 py-3 text-right w-36">RAG</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            <% @products.each do |prod| %>
+                <%
+                    sku          = sku_for(prod)
+                    on_sale      = prod.original_price.present? && prod.price.present? && prod.price < prod.original_price
+                    cond_label   = { 'new' => 'Nuevo', 'used' => 'Usado', 'refurbished' => 'Reac.' }[prod.condition] || prod.condition
+                    status_css   = prod.active? ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-500'
+                    cond_css     = prod.condition == 'new' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                    row_css      = prod.active? ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 opacity-60'
+                %>
+                <tr class="<%= row_css %> transition">
+                    <!-- Thumbnail -->
+                    <td class="px-3 py-2" style="width:96px; min-width:96px">
+                        <%
+                            # Cadena de fallback: secure_thumbnail → raw_data.secure_thumbnail
+                            # → pictures[0].secure_url → pictures[0].url → thumbnail
+                            # Finalmente forzar https para evitar mixed content
+                            thumb_url = prod.secure_thumbnail.presence
+                            thumb_url ||= prod.raw_data&.dig('secure_thumbnail').presence
+                            thumb_url ||= prod.raw_data&.dig('pictures')&.first&.dig('secure_url').presence rescue nil
+                            thumb_url ||= prod.raw_data&.dig('pictures')&.first&.dig('url').presence rescue nil
+                            thumb_url ||= prod.thumbnail.presence
+                            thumb_url = thumb_url.to_s.gsub(/\Ahttp:\/\//, 'https://')
+                            has_thumb = thumb_url.present?
+                        %>
+                        <% if prod.permalink.present? %>
+                            <a href="<%= prod.permalink %>" target="_blank" rel="noopener">
+                                <% if has_thumb %>
+                                    <img src="<%= thumb_url %>" width="80" height="80"
+                                        class="rounded-xl object-cover border border-gray-200 hover:opacity-80 transition"
+                                        style="width:80px; height:80px; display:block"
+                                        onerror="this.style.display='none'">
+                                <% else %>
+                                    <div class="w-20 h-20 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
+                                    </div>
+                                <% end %>
+                            </a>
+                        <% else %>
+                            <% if has_thumb %>
+                                <img src="<%= thumb_url %>" width="80" height="80"
+                                    class="rounded-xl object-cover border border-gray-200"
+                                    style="width:80px; height:80px; display:block"
+                                    onerror="this.style.display='none'">
+                            <% else %>
+                                <div class="w-20 h-20 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
+                                </div>
+                            <% end %>
+                        <% end %>
+                    </td>
+
+                    <!-- Título -->
+                    <td class="px-3 py-2 max-w-xs">
+                        <p class="font-medium text-gray-800 leading-tight line-clamp-2 text-sm"><%= prod.title %></p>
+                        <% if prod.permalink.present? %>
+                            <a href="<%= prod.permalink %>" target="_blank" rel="noopener"
+                                class="text-xs text-[#fd5101] hover:underline">Ver publicación ↗</a>
+                        <% end %>
+                    </td>
+
+                    <!-- ID ML -->
+                    <td class="px-3 py-2">
+                        <span class="text-xs font-mono text-gray-500"><%= prod.meli_item_id %></span>
+                    </td>
+
+                    <!-- SKU -->
+                    <td class="px-3 py-2">
+                        <% if sku %>
+                            <span class="text-xs font-semibold text-gray-600"><%= sku %></span>
+                        <% else %>
+                            <span class="text-xs text-gray-300">—</span>
+                        <% end %>
+                    </td>
+
+                    <!-- Precio normal -->
+                    <td class="px-3 py-2 text-right whitespace-nowrap">
+                        <span class="<%= on_sale ? 'font-black text-green-700' : 'font-semibold text-gray-700' %> text-sm">
+                            <%= format_price(prod.price, prod.currency_id) %>
+                        </span>
+                    </td>
+
+                    <!-- Precio oferta (precio de lista antes del descuento) -->
+                    <td class="px-3 py-2 text-right whitespace-nowrap">
+                        <% if on_sale %>
+                            <span class="text-xs text-gray-400 line-through">
+                                <%= format_price(prod.original_price, prod.currency_id) %>
+                            </span>
+                        <% else %>
+                            <span class="text-xs text-gray-300">—</span>
+                        <% end %>
+                    </td>
+
+                    <!-- Condición -->
+                    <td class="px-3 py-2 text-center">
+                        <% if prod.condition.present? %>
+                            <span class="text-xs font-black uppercase px-2 py-0.5 rounded-full <%= cond_css %>">
+                                <%= cond_label %>
+                            </span>
+                        <% end %>
+                    </td>
+
+                    <!-- Stock -->
+                    <td class="px-3 py-2 text-center">
+                        <span class="text-sm font-bold <%= prod.available_quantity.to_i > 0 ? 'text-gray-700' : 'text-red-400' %>">
+                            <%= prod.available_quantity || '—' %>
+                        </span>
+                    </td>
+
+                    <!-- Estado -->
+                    <td class="px-3 py-2 text-center">
+                        <span class="text-xs font-black uppercase px-2 py-0.5 rounded-full <%= status_css %>">
+                            <%= prod.status %>
+                        </span>
+                    </td>
+
+                    <!-- RAG -->
+                    <td class="px-3 py-2 text-right">
+                        <% if prod.active? %>
+                            <%= render partial: rag_partial, locals: { id: prod.meli_item_id, level: 'product', title: prod.title } %>
+                        <% else %>
+                            <span class="text-xs text-gray-300">Inactivo</span>
+                        <% end %>
+                    </td>
+                </tr>
+            <% end %>
+
+            <% if @products.empty? %>
+                <tr>
+                    <td colspan="10" class="px-4 py-12 text-center text-sm text-gray-400">
+                        <%= @q.present? ? "No se encontraron productos para \"#{@q}\"." : 'No hay productos sincronizados.' %>
+                    </td>
+                </tr>
+            <% end %>
+        </tbody>
+    </table>
+</div>
+
+<!-- Paginación -->
+<% if @total_pages > 1 %>
+    <div class="flex items-center justify-between mt-4 px-1">
+        <span class="text-xs text-gray-400">
+            Página <%= @page %> de <%= @total_pages %> &middot; <%= @total_products %> productos
+        </span>
+        <div class="flex gap-1">
+            <% if @page > 1 %>
+                <a href="<%= reply_ai_dashboard_path(tab: 'prods', page: @page - 1, q: @q, sort: @sort_col, dir: @sort_dir) %>"
+                    class="px-3 py-1 rounded-lg text-xs font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition">‹</a>
+            <% end %>
+            <% ([1, @page - 2].max..[@page + 2, @total_pages].min).each do |p| %>
+                <a href="<%= reply_ai_dashboard_path(tab: 'prods', page: p, q: @q, sort: @sort_col, dir: @sort_dir) %>"
+                    class="px-3 py-1 rounded-lg text-xs font-bold transition
+                           <%= p == @page ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' %>"
+                   style="<%= p == @page ? 'background:#fd5101' : '' %>">
+                    <%= p %>
+                </a>
+            <% end %>
+            <% if @page < @total_pages %>
+                <a href="<%= reply_ai_dashboard_path(tab: 'prods', page: @page + 1, q: @q, sort: @sort_col, dir: @sort_dir) %>"
+                    class="px-3 py-1 rounded-lg text-xs font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition">›</a>
+            <% end %>
+        </div>
+    </div>
+<% end %>

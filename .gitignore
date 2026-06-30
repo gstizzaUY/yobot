@@ -101,3 +101,6 @@ CLAUDE.local.md
 .histoire
 .pnpm-store/*
 local/
+
+
+docker-compose.override.yaml

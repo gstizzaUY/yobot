@@ -1,0 +1,1852 @@
+{
+  "name": "reply_ai_postsale_main",
+  "nodes": [
+    {
+      "id": "ps-trigger-001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -768,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "ps-pg-002",
+      "name": "get_account_details",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -592,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  c.access_token,\n  a.custom_attributes->'config'->'prompts' as prompts,\n  a.custom_attributes->'config'->'response_delay' as delay,\n  a.id as chatwoot_account_id,\n  a.custom_attributes->'config'->'post_venta_ia' as pv_ia,\n  (SELECT id FROM inboxes\n   WHERE account_id = a.id\n   AND name ILIKE '%Post-venta (MercadoLibre)%'\n   LIMIT 1) as meli_inbox_id,\n  (SELECT id FROM teams\n   WHERE account_id = a.id\n   AND name ILIKE '%Post-Venta%'\n   LIMIT 1) as meli_team_id\nFROM meli_credentials c\nJOIN accounts a ON a.id = c.account_id\nWHERE c.ml_user_id = '{{ $('Execute Workflow Trigger').item.json.body.user_id }}';",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      }
+    },
+    {
+      "id": "ps-http-003",
+      "name": "get_message_details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -384,
+        0
+      ],
+      "parameters": {
+        "url": "=https://api.mercadolibre.com/messages/{{ $('Execute Workflow Trigger').item.json.body.resource }}?tag=post_sale",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "J0q3ryllyiG4GRKP",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "id": "ps-code-norm",
+      "name": "normalize_message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -280,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst msgs = data.messages || [];\nconst msg = [...msgs].reverse().find(m => m.status !== 'new') ?? msgs[msgs.length - 1];\nif (!msg) throw new Error('No messages found in response');\nconst sellerId = String($('Execute Workflow Trigger').first().json.body.user_id);\nconst resources = msg.message_resources ?? [];\nconst packRes = resources.find(r => r.name === 'packs');\nconst orderRes = resources.find(r => r.name === 'orders');\nconst packId = packRes?.id ?? null;\nconst orderId = orderRes?.id ?? packId;\nreturn {\n  id: msg.id,\n  text: (msg.text ?? '').trim(),\n  from: msg.from,\n  to: msg.to,\n  status: msg.status,\n  message_type: String(msg.from?.user_id) === sellerId ? 'seller_to_buyer' : 'buyer_to_seller',\n  pack_id: packId,\n  order_id: orderId,\n  conversation_status: data.conversation_status,\n  message_resources: resources\n};"
+      }
+    },
+    {
+      "id": "ps-if-004",
+      "name": "is_incoming_from_buyer?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -176,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.message_type }}",
+              "rightValue": "seller_to_buyer",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-http-005",
+      "name": "get_buyer_details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        32,
+        0
+      ],
+      "parameters": {
+        "url": "=https://api.mercadolibre.com/users/{{ $('normalize_message').item.json.from.user_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "J0q3ryllyiG4GRKP",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "id": "ps-http-006",
+      "name": "chatwoot_search_contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/contacts/search?q={{ $('normalize_message').item.json.from.user_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-if-007",
+      "name": "contact_exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.meta.count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-http-008",
+      "name": "chatwoot_contact_create",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        656,
+        -160
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/contacts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"inbox_id\": {{ $('get_account_details').item.json.meli_inbox_id }},\n  \"name\": \"{{ $('get_buyer_details').item.json.nickname }}\",\n  \"identifier\": \"{{ $('normalize_message').item.json.from.user_id }}\"\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-code-get-or-create",
+      "name": "get_or_create_conversation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const acct = $('get_account_details').first().json;\nconst msg  = $('normalize_message').first().json;\nconst API  = 'https://w1206-app.site';\nconst TOKEN = 'TSL8r4ctWYzXJF9fiAS1Z8RV';\nconst packId    = String(msg.pack_id || msg.order_id || '');\nconst inboxId   = String(acct.meli_inbox_id);\nconst accountId = acct.chatwoot_account_id;\n\nconst prev = $input.first().json;\nconst contactId = prev.payload?.contact?.id\n                || prev.payload?.[0]?.id\n                || prev.id;\nif (!contactId) throw new Error('No contact_id: ' + JSON.stringify(prev));\n\nasync function apiGet(path) {\n  try {\n    const r = await this.helpers.httpRequest({\n      method: 'GET',\n      url: `${API}${path}`,\n      headers: { api_access_token: TOKEN },\n      returnFullResponse: false,\n    });\n    return r;\n  } catch (e) {\n    return null;\n  }\n}\n\nasync function apiPost(path, body) {\n  return await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${API}${path}`,\n    headers: { api_access_token: TOKEN, 'Content-Type': 'application/json' },\n    body: JSON.stringify(body),\n  });\n}\n\nconst data = await apiGet.call(this, `/api/v1/accounts/${accountId}/contacts/${contactId}/conversations`);\nconst convs = data?.payload || [];\nconst existing = convs.find(c => {\n  const attrs = c.additional_attributes || {};\n  return (\n    String(c.inbox_id) === inboxId &&\n    (String(c.meta?.source_id) === packId ||\n     String(attrs.pack_id) === packId ||\n     String(attrs.order_id) === String(msg.order_id || ''))\n  );\n});\n\nif (existing) {\n  if (existing.status === 'resolved' || existing.status === 'snoozed') {\n    await apiPost.call(this, `/api/v1/accounts/${accountId}/conversations/${existing.id}/toggle_status`, { status: 'open' });\n  }\n  return { id: existing.id, _reused: true };\n}\n\nconst created = await apiPost.call(this, `/api/v1/accounts/${accountId}/conversations`, {\n  source_id:  packId,\n  contact_id: contactId,\n  inbox_id:   acct.meli_inbox_id,\n  team_id:    acct.meli_team_id,\n  status: 'open',\n  additional_attributes: {\n    type: 'post-venta',\n    order_id: String(msg.order_id || ''),\n    pack_id: packId\n  }\n});\nreturn { id: created.id, _reused: false };\n"
+      }
+    },
+    {
+      "id": "ps-http-010",
+      "name": "chatwoot_add_incoming_message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1072,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('get_or_create_conversation').item.json.id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $('normalize_message').item.json.text }}"
+            },
+            {
+              "name": "message_type",
+              "value": "incoming"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-gate-011",
+      "name": "check_ai_gate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1280,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://rails:3000/conversation_ai_gate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-internal-secret",
+              "value": "reply_ai_internal_2026"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ account_id: $('get_account_details').first().json.chatwoot_account_id, conversation_id: $('get_or_create_conversation').first().json.id, conversation_type: 'post-venta' }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-if-012",
+      "name": "should_ai_respond?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1488,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.should_respond }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-rag-013",
+      "name": "rag_search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1696,
+        0
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "method": "POST",
+        "url": "http://rails:3000/rag/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-internal-secret",
+              "value": "reply_ai_internal_2026"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ account_id: $('get_account_details').first().json.chatwoot_account_id, query: $('normalize_message').first().json.text }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-code-014",
+      "name": "context_assembler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1904,
+        0
+      ],
+      "parameters": {
+        "jsCode": "function getSafe(n) { try { return $(n).first().json; } catch(e) { return {}; } }\n\nasync function safeFetch(url, headers) {\n  try {\n    const r = await fetch(url, { method: 'GET', headers });\n    if (!r.ok) return null;\n    return await r.json();\n  } catch(e) { return null; }\n}\n\nconst account     = getSafe('get_account_details');\nconst msgDetails  = getSafe('normalize_message');\nconst ragResult   = getSafe('rag_search');\nconst convDetails = getSafe('get_or_create_conversation');\nconst token       = account.access_token;\n\nconst orderId = msgDetails.order_id;\nlet order    = null;\nlet shipment = null;\n\nif (orderId && token) {\n  order = await safeFetch(\n    `https://api.mercadolibre.com/orders/${orderId}`,\n    { Authorization: `Bearer ${token}` }\n  );\n  if (order?.shipping?.id) {\n    shipment = await safeFetch(\n      `https://api.mercadolibre.com/shipments/${order.shipping.id}`,\n      { Authorization: `Bearer ${token}` }\n    );\n  }\n}\n\n// Fetch últimos 8 mensajes para contexto de conversación\nconst histData = await safeFetch(\n  `https://w1206-app.site/api/v1/accounts/${account.chatwoot_account_id}/conversations/${convDetails.id}/messages`,\n  { api_access_token: 'TSL8r4ctWYzXJF9fiAS1Z8RV' }\n);\nconst histMsgs = (histData?.payload || []).filter(m => !m.private && m.content);\nconst history = histMsgs.slice(-8).map(m =>\n  `${m.message_type === 0 ? 'Cliente' : 'Vendedor'}: ${m.content}`\n).join('\\n');\n\nconst orderCtx = order\n  ? `ID: ${order.id} | Estado: ${order.status} | Total: ${order.currency_id} ${order.total_amount} | Productos: ${(order.order_items||[]).map(i=>i.item?.title).join(', ')}`\n  : '(Sin datos de pedido)';\n\nconst shipCtx = shipment\n  ? `ID: ${shipment.id} | Estado: ${shipment.status} | Tracking: ${shipment.tracking_number||'N/A'} | Fecha estimada: ${shipment.estimated_handling_limit?.date || shipment.estimated_delivery_time?.date || 'N/A'}`\n  : '(Sin datos de envío)';\n\nreturn {\n  message:               msgDetails.text || '',\n  conversation_id:       convDetails.id,\n  account_id:            account.chatwoot_account_id,\n  ml_user_id:            $('Execute Workflow Trigger').first().json.body.user_id,\n  buyer_user_id:         String(msgDetails.from?.user_id || ''),\n  pack_id:               msgDetails.pack_id,\n  order_context:         orderCtx,\n  shipment_context:      shipCtx,\n  rag_context:           ragResult.context || '',\n  conversation_history:  history,\n  prompts:               account.prompts || {},\n  pv_ia:                 (() => { try { const r = account.pv_ia; return (typeof r === 'string') ? JSON.parse(r) : (r || {}); } catch(e) { return {}; } })()\n};\n"
+      }
+    },
+    {
+      "id": "ps-lbl-015",
+      "name": "set_bot_label",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2112,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/labels",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"labels\": [\"bot-procesando\"]}",
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-cls-016",
+      "name": "classify_intent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2320,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0,\n  max_tokens: 10,\n  messages: [\n    {\n      role: 'system',\n      content: 'Clasificá el mensaje de un cliente en una conversación de e-commerce post-venta. Respondé ÚNICAMENTE con una sola palabra sin puntuación: saludo, logistica, soporte, reclamo, o cierre.\\n- saludo: saludo, presentación, mensaje conversacional sin consulta específica (ej: hola, buenas noches, cómo estás, gracias sin cerrar)\\n- logistica: tracking, cuándo llega, demoras, dirección, estado del envío\\n- soporte: cómo usar el producto, compatibilidad, instrucciones, especificaciones técnicas\\n- reclamo: producto dañado, falta pieza, no funciona, devolución, reembolso, queja formal\\n- cierre: conformidad explícita con la solución recibida, despedida clara después de resolver (ej: muchas gracias quedé conforme, listo todo solucionado)'\n    },\n    {\n      role: 'user',\n      content: `HISTORIAL:\\n${$('context_assembler').item.json.conversation_history || '(sin historial)'}\\n\\nMENSAJE ACTUAL: ${$('context_assembler').item.json.message}`\n    }\n  ]\n}) }}",
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "vHC1imcsHYCcvLxh",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "id": "ps-sw-017",
+      "name": "intent_router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2528,
+        0
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "r0",
+                    "leftValue": "={{ $json.choices[0].message.content.toLowerCase().trim() }}",
+                    "rightValue": "saludo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "saludo"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "r1",
+                    "leftValue": "={{ $json.choices[0].message.content.toLowerCase().trim() }}",
+                    "rightValue": "logistica",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "logistica"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "r2",
+                    "leftValue": "={{ $json.choices[0].message.content.toLowerCase().trim() }}",
+                    "rightValue": "soporte",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "soporte"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "r3",
+                    "leftValue": "={{ $json.choices[0].message.content.toLowerCase().trim() }}",
+                    "rightValue": "reclamo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "reclamo"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "r4",
+                    "leftValue": "={{ $json.choices[0].message.content.toLowerCase().trim() }}",
+                    "rightValue": "cierre",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "cierre"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-genlog-018",
+      "name": "generate_logistics_response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2736,
+        -480
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.7,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un agente de post-venta experto y empático. Respondé SIEMPRE en el idioma del cliente. Dá información logística precisa basada en el contexto disponible.\\n\\nCONTEXTO DEL PEDIDO:\\n' + $('context_assembler').item.json.order_context + '\\n\\nCONTEXTO DEL ENVÍO:\\n' + $('context_assembler').item.json.shipment_context + '\\n\\nSi no encontrás la info exacta, decí: \"Voy a consultar el estado y te aviso a la brevedad.\" Nunca inventes fechas ni números de tracking.\\n\\nINSTRUCCIONES DEL VENDEDOR: ' + ($('context_assembler').item.json.prompts?.otros || '') + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nINSTRUCCIONES ADICIONALES LOGÍSTICA: ' + ($('context_assembler').item.json.pv_ia?.prompts?.logistica || '')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "vHC1imcsHYCcvLxh",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "id": "ps-meli-log-019",
+      "name": "send_logistics_reply_ml",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2944,
+        -480
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.mercadolibre.com/messages/packs/{{ $('context_assembler').item.json.pack_id }}/sellers/{{ $('context_assembler').item.json.ml_user_id }}?tag=post_sale",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ from: { user_id: $('context_assembler').item.json.ml_user_id }, to: { user_id: $('context_assembler').item.json.buyer_user_id }, text: $('generate_logistics_response').item.json.choices[0].message.content }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "J0q3ryllyiG4GRKP",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "id": "ps-cw-log-020",
+      "name": "mirror_logistics_to_chatwoot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3152,
+        -480
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "options": {},
+        "specifyBody": "json",
+        "jsonBody": "={\"content\":\"={{ $('generate_logistics_response').item.json.choices[0].message.content }}\",\"message_type\":\"outgoing\",\"private\":false,\"content_attributes\":{\"source\":\"n8n_ai\"}}"
+      }
+    },
+    {
+      "id": "ps-lbl-log-021",
+      "name": "label_logistics_done",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3360,
+        -480
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/labels",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"labels\": [\"respondida_con_ia\"]}",
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-gensup-022",
+      "name": "generate_support_response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2736,
+        -160
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.7,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un especialista técnico de post-venta empático. Respondé SIEMPRE en el idioma del cliente.\\n\\nBASE DE CONOCIMIENTO:\\n' + ($('context_assembler').item.json.rag_context || 'No hay documentación técnica disponible.') + '\\n\\nCONTEXTO DEL PEDIDO: ' + $('context_assembler').item.json.order_context + '\\n\\nINSTRUCCIONES DEL VENDEDOR: ' + ($('context_assembler').item.json.prompts?.otros || '') + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nINSTRUCCIONES ADICIONALES SOPORTE: ' + ($('context_assembler').item.json.pv_ia?.prompts?.soporte || '') + '\\n\\nSi no encontrás la solución, respondé exactamente: \"Para darte una solución precisa, he transferido este chat a uno de mis compañeros especialistas. Te responderán a la brevedad.\"'\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "vHC1imcsHYCcvLxh",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "id": "ps-meli-sup-023",
+      "name": "send_support_reply_ml",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2944,
+        -160
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.mercadolibre.com/messages/packs/{{ $('context_assembler').item.json.pack_id }}/sellers/{{ $('context_assembler').item.json.ml_user_id }}?tag=post_sale",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ from: { user_id: $('context_assembler').item.json.ml_user_id }, to: { user_id: $('context_assembler').item.json.buyer_user_id }, text: $('generate_support_response').item.json.choices[0].message.content }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "J0q3ryllyiG4GRKP",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "id": "ps-cw-sup-024",
+      "name": "mirror_support_to_chatwoot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3152,
+        -160
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "options": {},
+        "specifyBody": "json",
+        "jsonBody": "={\"content\":\"={{ $('generate_support_response').item.json.choices[0].message.content }}\",\"message_type\":\"outgoing\",\"private\":false,\"content_attributes\":{\"source\":\"n8n_ai\"}}"
+      }
+    },
+    {
+      "id": "ps-lbl-sup-025",
+      "name": "label_support_done",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3360,
+        -160
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/labels",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"labels\": [\"respondida_con_ia\"]}",
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-handnote-026",
+      "name": "post_handover_note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2736,
+        160
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "=⚠️ Handover Sugerido\n\nEl cliente envió un mensaje clasificado como **RECLAMO** y la IA ha silenciado sus respuestas automáticas.\n\n📝 Mensaje del cliente:\n\"{{ $('context_assembler').item.json.message }}\"\n\n📦 Contexto del pedido:\n{{ $('context_assembler').item.json.order_context }}\n\n🚚 Estado del envío:\n{{ $('context_assembler').item.json.shipment_context }}\n\nPor favor intervenís a la brevedad."
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-hlbl-027",
+      "name": "set_human_label",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2944,
+        160
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/labels",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"labels\": [\"atencion-humana\", \"atencion-prioritaria\"]}",
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-gencls-028",
+      "name": "generate_close_response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2736,
+        480
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.8,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un agente de post-venta cordial. El cliente está cerrando la conversación con un mensaje positivo. Respondé brevemente (máximo 2 oraciones): agradecés su elección y te despedís alentando futuras compras. Respondé SIEMPRE en el mismo idioma del cliente.' + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nINSTRUCCIONES CIERRE: ' + ($('context_assembler').item.json.pv_ia?.prompts?.cierre || '')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "vHC1imcsHYCcvLxh",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "id": "ps-meli-cls-029",
+      "name": "send_close_reply_ml",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2944,
+        480
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.mercadolibre.com/messages/packs/{{ $('context_assembler').item.json.pack_id }}/sellers/{{ $('context_assembler').item.json.ml_user_id }}?tag=post_sale",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ from: { user_id: $('context_assembler').item.json.ml_user_id }, to: { user_id: $('context_assembler').item.json.buyer_user_id }, text: $('generate_close_response').item.json.choices[0].message.content }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "J0q3ryllyiG4GRKP",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "id": "ps-cw-cls-030",
+      "name": "mirror_close_to_chatwoot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3152,
+        480
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "options": {},
+        "specifyBody": "json",
+        "jsonBody": "={\"content\":\"={{ $('generate_close_response').item.json.choices[0].message.content }}\",\"message_type\":\"outgoing\",\"private\":false,\"content_attributes\":{\"source\":\"n8n_ai\"}}"
+      }
+    },
+    {
+      "id": "ps-resolve-031",
+      "name": "resolve_conversation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3360,
+        480
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/toggle_status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"status\": \"resolved\"}",
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-if-log-en-032",
+      "name": "logistica_enabled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2632,
+        -480
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "e1",
+              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.logistica?.enabled }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-if-sup-en-033",
+      "name": "soporte_enabled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2632,
+        -160
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "e2",
+              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.soporte?.enabled }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-if-cls-en-034",
+      "name": "cierre_enabled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2632,
+        480
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "e3",
+              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.cierre?.enabled }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-if-fbk-038",
+      "name": "if_fallback_to_human?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3360,
+        -320
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "f1",
+              "leftValue": "={{ $('generate_support_response').first().json.choices[0].message.content }}",
+              "rightValue": "Para darte una solución precisa",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-hlbl-sup-039",
+      "name": "set_human_label_support",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3568,
+        -320
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/labels",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"labels\": [\"atencion-humana\"]}",
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-if-notify-036",
+      "name": "notify_customer?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3152,
+        320
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "n1",
+              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.reclamo?.notify_customer }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-meli-esc-037",
+      "name": "send_escalation_to_buyer_ml",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3360,
+        320
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.mercadolibre.com/messages/packs/{{ $('context_assembler').item.json.pack_id }}/sellers/{{ $('context_assembler').item.json.ml_user_id }}?tag=post_sale",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ from: { user_id: $('context_assembler').item.json.ml_user_id }, to: { user_id: $('context_assembler').item.json.buyer_user_id }, text: $('context_assembler').item.json.pv_ia?.prompts?.escalacion || 'Lamentamos el inconveniente. Un especialista de nuestro equipo se va a comunicar con vos a la brevedad.' }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "J0q3ryllyiG4GRKP",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "id": "ps-if-autores-035",
+      "name": "auto_resolve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3568,
+        480
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "a1",
+              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.cierre?.auto_resolve }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-if-sal-en-040",
+      "name": "saludo_enabled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2632,
+        800
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "s0",
+              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.saludo?.enabled }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ps-gensal-041",
+      "name": "generate_saludo_response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2736,
+        800
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.8,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un agente de post-venta amigable. El cliente te envió un saludo o mensaje de apertura. Respondé con un saludo cálido, breve y natural. Preguntale en qué podés ayudarle con su compra. Respondé SIEMPRE en el mismo idioma del cliente. Máximo 2 oraciones.\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nHISTORIAL:\\n' + ($('context_assembler').item.json.conversation_history || '(ninguno)')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "vHC1imcsHYCcvLxh",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "id": "ps-meli-sal-042",
+      "name": "send_saludo_reply_ml",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2944,
+        800
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.mercadolibre.com/messages/packs/{{ $('context_assembler').item.json.pack_id }}/sellers/{{ $('context_assembler').item.json.ml_user_id }}?tag=post_sale",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ from: { user_id: $('context_assembler').item.json.ml_user_id }, to: { user_id: $('context_assembler').item.json.buyer_user_id }, text: $('generate_saludo_response').item.json.choices[0].message.content }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "J0q3ryllyiG4GRKP",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "id": "ps-cw-sal-043",
+      "name": "mirror_saludo_to_chatwoot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3152,
+        800
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "options": {},
+        "specifyBody": "json",
+        "jsonBody": "={\"content\":\"={{ $('generate_saludo_response').item.json.choices[0].message.content }}\",\"message_type\":\"outgoing\",\"private\":false,\"content_attributes\":{\"source\":\"n8n_ai\"}}"
+      }
+    },
+    {
+      "id": "ps-pg-idempotency",
+      "name": "check_idempotency",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -560,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO meli_questions (question_id, account_id, status)\nSELECT\n  'ms_' || '{{ $input.first().json.body._id }}',\n  (SELECT account_id FROM meli_credentials WHERE ml_user_id = '{{ $input.first().json.body.user_id }}'),\n  'processing'\nWHERE NOT EXISTS (\n  SELECT 1 FROM meli_questions WHERE question_id = 'ms_' || '{{ $input.first().json.body._id }}'\n)\nRETURNING question_id;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      }
+    },
+    {
+      "id": "ps-if-idempotency",
+      "name": "is_new_message?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -352,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "idem-ps-001",
+              "leftValue": "={{ $json.question_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "check_idempotency",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_account_details": {
+      "main": [
+        [
+          {
+            "node": "get_message_details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_message_details": {
+      "main": [
+        [
+          {
+            "node": "normalize_message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "normalize_message": {
+      "main": [
+        [
+          {
+            "node": "is_incoming_from_buyer?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "is_incoming_from_buyer?": {
+      "main": [
+        [
+          {
+            "node": "get_buyer_details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "get_buyer_details": {
+      "main": [
+        [
+          {
+            "node": "chatwoot_search_contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chatwoot_search_contact": {
+      "main": [
+        [
+          {
+            "node": "contact_exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "contact_exists?": {
+      "main": [
+        [
+          {
+            "node": "get_or_create_conversation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "chatwoot_contact_create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chatwoot_contact_create": {
+      "main": [
+        [
+          {
+            "node": "get_or_create_conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_or_create_conversation": {
+      "main": [
+        [
+          {
+            "node": "chatwoot_add_incoming_message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chatwoot_add_incoming_message": {
+      "main": [
+        [
+          {
+            "node": "check_ai_gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_ai_gate": {
+      "main": [
+        [
+          {
+            "node": "should_ai_respond?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "should_ai_respond?": {
+      "main": [
+        [
+          {
+            "node": "rag_search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "rag_search": {
+      "main": [
+        [
+          {
+            "node": "context_assembler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "context_assembler": {
+      "main": [
+        [
+          {
+            "node": "set_bot_label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_bot_label": {
+      "main": [
+        [
+          {
+            "node": "classify_intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "classify_intent": {
+      "main": [
+        [
+          {
+            "node": "intent_router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "intent_router": {
+      "main": [
+        [
+          {
+            "node": "saludo_enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "logistica_enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "soporte_enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "post_handover_note",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "cierre_enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "logistica_enabled?": {
+      "main": [
+        [
+          {
+            "node": "generate_logistics_response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "soporte_enabled?": {
+      "main": [
+        [
+          {
+            "node": "generate_support_response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "cierre_enabled?": {
+      "main": [
+        [
+          {
+            "node": "generate_close_response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "generate_logistics_response": {
+      "main": [
+        [
+          {
+            "node": "send_logistics_reply_ml",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_logistics_reply_ml": {
+      "main": [
+        [
+          {
+            "node": "mirror_logistics_to_chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mirror_logistics_to_chatwoot": {
+      "main": [
+        [
+          {
+            "node": "label_logistics_done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate_support_response": {
+      "main": [
+        [
+          {
+            "node": "send_support_reply_ml",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_support_reply_ml": {
+      "main": [
+        [
+          {
+            "node": "mirror_support_to_chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mirror_support_to_chatwoot": {
+      "main": [
+        [
+          {
+            "node": "if_fallback_to_human?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_fallback_to_human?": {
+      "main": [
+        [
+          {
+            "node": "set_human_label_support",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "label_support_done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "post_handover_note": {
+      "main": [
+        [
+          {
+            "node": "set_human_label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_human_label": {
+      "main": [
+        [
+          {
+            "node": "notify_customer?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "notify_customer?": {
+      "main": [
+        [
+          {
+            "node": "send_escalation_to_buyer_ml",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "generate_close_response": {
+      "main": [
+        [
+          {
+            "node": "send_close_reply_ml",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_close_reply_ml": {
+      "main": [
+        [
+          {
+            "node": "mirror_close_to_chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mirror_close_to_chatwoot": {
+      "main": [
+        [
+          {
+            "node": "auto_resolve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "auto_resolve?": {
+      "main": [
+        [
+          {
+            "node": "resolve_conversation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "saludo_enabled?": {
+      "main": [
+        [
+          {
+            "node": "generate_saludo_response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "generate_saludo_response": {
+      "main": [
+        [
+          {
+            "node": "send_saludo_reply_ml",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_saludo_reply_ml": {
+      "main": [
+        [
+          {
+            "node": "mirror_saludo_to_chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_idempotency": {
+      "main": [
+        [
+          {
+            "node": "is_new_message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "is_new_message?": {
+      "main": [
+        [
+          {
+            "node": "get_account_details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6987f0f533040cbfea8c75383320642dcbc7861e6e8b8f304d7a1f91a57b76b5"
+  },
+  "id": "reply_ai_postsale_main_v2",
+  "tags": []
+}

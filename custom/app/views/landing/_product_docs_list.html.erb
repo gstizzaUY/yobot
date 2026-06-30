@@ -1,0 +1,108 @@
+<%# Partial AJAX: lista de documentos RAG con pestañas Bulk / Manual %>
+<%# Variables: @product_docs, @mode ('pre'|'pv'), @reference_id, @product_title %>
+
+<% destroy_path_helper = @mode == 'pv' ? method(:pv_destroy_doc_ajax_path) : method(:destroy_doc_ajax_path) %>
+<% bulk_docs   = @product_docs.select { |d| d.source == 'bulk_import' } %>
+<% manual_docs = @product_docs.reject { |d| d.source == 'bulk_import' } %>
+
+<!-- ── Tab bar ──────────────────────────────────────────── -->
+<div class="flex border-b border-gray-100 mb-4 -mx-6 px-6 gap-1">
+  <button id="mgr-tab-bulk"
+    onclick="mgrSwitchTab('bulk')"
+    class="mgr-tab px-4 py-2.5 text-xs font-black rounded-t-xl transition-colors border-b-2 border-transparent text-gray-400 hover:text-gray-700 flex items-center gap-2">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+    </svg>
+    Importación masiva
+    <span class="inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-black
+      <%= bulk_docs.any? ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400' %>">
+      <%= bulk_docs.size %>
+    </span>
+  </button>
+  <button id="mgr-tab-manual"
+    onclick="mgrSwitchTab('manual')"
+    class="mgr-tab px-4 py-2.5 text-xs font-black rounded-t-xl transition-colors border-b-2 border-transparent text-gray-400 hover:text-gray-700 flex items-center gap-2">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"/>
+    </svg>
+    Manual
+    <span class="inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-black
+      <%= manual_docs.any? ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-400' %>">
+      <%= manual_docs.size %>
+    </span>
+  </button>
+</div>
+
+<!-- ── Panel: Importación Masiva ───────────────────────── -->
+<div id="mgr-panel-bulk">
+  <% if bulk_docs.empty? %>
+    <div class="flex flex-col items-center justify-center py-10 gap-2 text-center">
+      <div class="w-10 h-10 rounded-2xl bg-gray-100 flex items-center justify-center mb-1">
+        <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+        </svg>
+      </div>
+      <p class="text-sm font-bold text-gray-500">Sin documentos importados</p>
+      <p class="text-xs text-gray-400 max-w-xs">Usá Importación Masiva para cargar múltiples productos desde CSV o Excel</p>
+    </div>
+  <% else %>
+    <ul class="space-y-2" id="doc-list-bulk">
+      <% bulk_docs.each do |doc| %>
+        <%= render partial: 'doc_card', locals: { doc: doc, destroy_path_helper: destroy_path_helper, mgr_mode: @mode } %>
+      <% end %>
+    </ul>
+  <% end %>
+</div>
+
+<!-- ── Panel: Manual ────────────────────────────────────── -->
+<div id="mgr-panel-manual" class="hidden">
+  <% if manual_docs.empty? %>
+    <div class="flex flex-col items-center justify-center py-10 gap-2 text-center">
+      <div class="w-10 h-10 rounded-2xl bg-gray-100 flex items-center justify-center mb-1">
+        <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"/>
+        </svg>
+      </div>
+      <p class="text-sm font-bold text-gray-500">Sin documentos manuales</p>
+      <p class="text-xs text-gray-400 max-w-xs">Presioná "+ Agregar documento" para subir un archivo manualmente</p>
+    </div>
+  <% else %>
+    <ul class="space-y-2" id="doc-list-manual">
+      <% manual_docs.each do |doc| %>
+        <%= render partial: 'doc_card', locals: { doc: doc, destroy_path_helper: destroy_path_helper, mgr_mode: @mode } %>
+      <% end %>
+    </ul>
+  <% end %>
+</div>
+
+<!-- ── Footer ───────────────────────────────────────────── -->
+<div class="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between gap-3 -mx-6 px-6">
+  <span class="text-xs text-gray-400">
+    <span class="font-bold text-gray-600"><%= @product_docs.size %></span>
+    <%= @product_docs.size == 1 ? 'documento' : 'documentos' %> en total ·
+    <span class="text-blue-600 font-semibold"><%= bulk_docs.size %> masivos</span> ·
+    <span class="text-orange-500 font-semibold"><%= manual_docs.size %> manuales</span>
+  </span>
+  <% if @mode == 'pv' %>
+    <button onclick="closeMgrModal(); pvOpenModal('<%= @reference_id %>', 'product', '<%= j @product_title %>')"
+            class="flex items-center gap-1.5 text-white px-4 py-2 rounded-xl text-xs font-black shadow-sm transition-colors flex-shrink-0"
+            style="background:#fd5101" onmouseover="this.style.background='#d94200'" onmouseout="this.style.background='#fd5101'">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+      Agregar documento
+    </button>
+  <% else %>
+    <button onclick="closeMgrModal(); openModal('<%= @reference_id %>', 'product', '<%= j @product_title %>')"
+            class="flex items-center gap-1.5 text-white px-4 py-2 rounded-xl text-xs font-black shadow-sm transition-colors flex-shrink-0"
+            style="background:#fd5101" onmouseover="this.style.background='#d94200'" onmouseout="this.style.background='#fd5101'">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+      Agregar documento
+    </button>
+  <% end %>
+</div>
+
+<script>
+  (function() {
+    const hasBulk = <%= bulk_docs.any? ? 'true' : 'false' %>;
+    mgrSwitchTab(hasBulk ? 'bulk' : 'manual');
+  })();
+</script>

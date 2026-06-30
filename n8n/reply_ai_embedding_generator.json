@@ -1,0 +1,176 @@
+{
+  "name": "reply_ai_embedding_generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "4ac3153f-b331-42fd-bb44-9f3e8372c180",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "af33565a-8549-4887-91a0-b63734aed247",
+      "name": "Webhook",
+      "webhookId": "4ac3153f-b331-42fd-bb44-9f3e8372c180"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, content FROM reply_ai_documents WHERE id = {{ $json.body.doc_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        0
+      ],
+      "id": "445dd4a0-3ed8-4386-a55c-36fa975906d0",
+      "name": "get_document_details",
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "text-embedding-ada-002"
+            },
+            {
+              "name": "input",
+              "value": "={{ $('get_document_details').item.json.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "9b80897d-c1bd-461a-ac44-783c0d06bfe6",
+      "name": "openai_embedding_document",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "J0q3ryllyiG4GRKP",
+          "name": "Header Auth account"
+        },
+        "openAiApi": {
+          "id": "vHC1imcsHYCcvLxh",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const embedding = $input.item.json.data[0].embedding;\nconst docId = $('get_document_details').item.json.id;\nreturn {\n  embedding_str: '[' + embedding.join(',') + ']',\n  doc_id: docId\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "9728000c-56bb-431d-8b3a-90f521479fda",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE reply_ai_documents\nSET embedding = '{{ $json.embedding_str }}'::vector\nWHERE id = {{ $json.doc_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        832,
+        0
+      ],
+      "id": "3fffb01b-792c-4d38-a1d9-7c13d156dacc",
+      "name": "save_embedding_vector",
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "get_document_details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_document_details": {
+      "main": [
+        [
+          {
+            "node": "openai_embedding_document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "openai_embedding_document": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "save_embedding_vector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "ed1470ae-2856-44f3-9dec-6d14394b83e2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6987f0f533040cbfea8c75383320642dcbc7861e6e8b8f304d7a1f91a57b76b5"
+  },
+  "id": "pSXLNRAG3-_-PI9HDt94v",
+  "tags": []
+}

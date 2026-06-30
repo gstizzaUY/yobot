@@ -27,6 +27,7 @@ services:
       - packs:/app/public/packs
       - cache:/app/tmp/cache
       - bundle:/usr/local/bundle
+      - gems:/gems
     depends_on:
       - postgres
       - redis
@@ -35,15 +36,10 @@ services:
       - sidekiq
     ports:
       - 3000:3000
-    env_file: .env
     environment:
       - VITE_DEV_SERVER_HOST=vite
       - NODE_ENV=development
       - RAILS_ENV=development
-      - POSTGRES_HOST=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_USERNAME=postgres
-      - POSTGRES_PASSWORD=postgres
       - POSTGRES_DATABASE=chatwoot_development
     entrypoint: docker/entrypoints/rails.sh
     command: ["bundle", "exec", "rails", "s", "-p", "3000", "-b", "0.0.0.0"]
@@ -57,17 +53,12 @@ services:
       - packs:/app/public/packs
       - cache:/app/tmp/cache
       - bundle:/usr/local/bundle
+      - gems:/gems
     depends_on:
       - postgres
       - redis
       - mailhog
-    environment:
-      - NODE_ENV=development
-      - RAILS_ENV=development
-      - POSTGRES_HOST=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
+    command: ["sh", "-c", "bundle install && bundle exec sidekiq -C config/sidekiq.yml"]
 
   vite:
     <<: *base
@@ -82,11 +73,9 @@ services:
       - cache:/app/tmp/cache
       - bundle:/usr/local/bundle
     ports:
-      - "3036:3036" # Vite dev server
+      - "3036:3036"
     environment:
       - VITE_DEV_SERVER_HOST=0.0.0.0
-      - NODE_ENV=development
-      - RAILS_ENV=development
     entrypoint: docker/entrypoints/vite.sh
     command: bin/vite dev
 
@@ -96,12 +85,11 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - postgres:/data/postgres
+      - postgres:/var/lib/postgresql/data 
     environment:
       - POSTGRES_DB=chatwoot_development
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_HOST_AUTH_METHOD=trust
 
   redis:
     image: redis:alpine
@@ -113,11 +101,6 @@ services:
     ports:
       - '6379:6379'
 
-  mailhog:
-    image: mailhog/mailhog
-    ports:
-      - 1025:1025
-      - 8025:8025
   n8n-main:
     image: n8nio/n8n:2.6.4
     restart: always
@@ -126,23 +109,13 @@ services:
       - '5678:5678'
     environment:
       - N8N_MODE=queue
-      - EXECUTIONS_MODE=queue
-      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
-      - N8N_BLOCK_EXECUTION_FROM_MAIN=true
-      - N8N_TASKS_HANDLER=redis
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_PORT=5432
       - DB_POSTGRESDB_DATABASE=n8n
       - DB_POSTGRESDB_USER=postgres
       - DB_POSTGRESDB_PASSWORD=postgres
-      - QUEUE_BULL_REDIS_HOST=redis
-      - QUEUE_BULL_REDIS_PORT=6379
-      - QUEUE_BULL_REDIS_PASSWORD=postgres
-      - N8N_REDIS_HOST=redis
-      - N8N_REDIS_PORT=6379
-      - N8N_REDIS_PASSWORD=postgres
       - N8N_ENCRYPTION_KEY=yobot_secret_n8n_key
+      - N8N_TRUST_PROXY=true
     volumes:
       - n8n_storage:/home/node/.n8n
     depends_on:
@@ -155,26 +128,26 @@ services:
     command: worker
     environment:
       - N8N_MODE=queue
-      - EXECUTIONS_MODE=queue
-      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
-      - N8N_TASKS_HANDLER=redis
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_PORT=5432
       - DB_POSTGRESDB_DATABASE=n8n
       - DB_POSTGRESDB_USER=postgres
       - DB_POSTGRESDB_PASSWORD=postgres
-      - QUEUE_BULL_REDIS_HOST=redis
-      - QUEUE_BULL_REDIS_PORT=6379
-      - QUEUE_BULL_REDIS_PASSWORD=postgres
-      - N8N_REDIS_HOST=redis
-      - N8N_REDIS_PORT=6379
-      - N8N_REDIS_PASSWORD=postgres
       - N8N_ENCRYPTION_KEY=yobot_secret_n8n_key
     volumes:
       - n8n_storage:/home/node/.n8n
     depends_on:
       - n8n-main
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - 1025:1025
+      - 8025:8025
+
+  tika:
+    image: apache/tika:latest-full
+    restart: always
 
 volumes:
   postgres:
@@ -183,4 +156,5 @@ volumes:
   node_modules:
   cache:
   bundle:
+  gems:
   n8n_storage:

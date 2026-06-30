@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <script>
+        (function() {
+            var saved = localStorage.getItem('replyai_theme');
+            if (saved === 'light') { document.documentElement.className = 'light'; }
+            else                   { document.documentElement.className = 'dark'; }
+        })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/brand-assets/logo_reply-ai_thumbnail.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+                    colors: {
+                        brand: {
+                            DEFAULT: '#fd5101', dark: '#d94200',
+                            light: '#ff7c3f', pale: '#fff4ef', border: '#ffd0b8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <title>IA Post-Venta | reply-ai</title>
+    <style>
+        /* ── Scrollbar ─────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 99px; }
+        html.dark ::-webkit-scrollbar-thumb { background: #2d3139; }
+
+        /* ── Focus ring ─────────────────────────────────────────── */
+        .focus-brand:focus { outline: none; box-shadow: 0 0 0 3px rgba(253,81,1,.25); }
+
+        /* ── Renderizado Inter ───────────────────────────────────── */
+        body {
+            font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            font-size: 15px; line-height: 1.5;
+        }
+
+        /* ── Dark mode — paleta alineada a Chatwoot ───────────────── */
+        html.dark { color-scheme: dark; }
+        html.dark body            { background-color: #151718 !important; color: #ecedee; }
+
+        /* Superficies */
+        html.dark .bg-white    { background-color: #1c1e22 !important; }
+        html.dark .bg-gray-50  { background-color: #1e2025 !important; }
+        html.dark .bg-gray-100 { background-color: #21242c !important; }
+
+        /* Bordes */
+        html.dark .border-gray-50  { border-color: #252830 !important; }
+        html.dark .border-gray-100 { border-color: #2d3139 !important; }
+        html.dark .border-gray-200 { border-color: #2d3139 !important; }
+        html.dark .divide-gray-50 > * { border-color: #252830 !important; }
+
+        /* Texto */
+        html.dark .text-gray-900 { color: #ecedee !important; }
+        html.dark .text-gray-800 { color: #e0e2e8 !important; }
+        html.dark .text-gray-700 { color: #c4c9d4 !important; }
+        html.dark .text-gray-600 { color: #9aa2b4 !important; }
+        html.dark .text-gray-500 { color: #9aa2b4 !important; }
+        html.dark .text-gray-400 { color: #6c737e !important; }
+        html.dark .text-gray-300 { color: #3d4452 !important; }
+
+        /* Inputs / textareas */
+        html.dark textarea,
+        html.dark input[type="number"],
+        html.dark input[type="time"],
+        html.dark select {
+            background-color: #21242c !important;
+            border-color: #2d3139 !important;
+            color: #ecedee !important;
+        }
+
+        /* Topbar */
+        html.dark #topbar { background-color: #1c1e22 !important; border-bottom-color: #2d3139 !important; }
+        html.dark #sidebar-toggle-mobile:hover { background-color: rgba(255,255,255,.08) !important; }
+        html.dark #sidebar-toggle-mobile { color: #9aa2b4 !important; }
+
+        /* Hover del toggle en dark */
+        html.dark #theme-toggle:hover { background-color: #21242c !important; }
+
+        /* ── Cabeceras de tarjetas de intent ─── */
+        .intent-head-blue,
+        .intent-head-purple,
+        .intent-head-red,
+        .intent-head-green  { background-color: rgba(0,0,0,0.03); }
+        html.dark .intent-head-blue,
+        html.dark .intent-head-purple,
+        html.dark .intent-head-red,
+        html.dark .intent-head-green  { background-color: #151718; }
+
+        /* ── Sidebar colapsable ─────────────────────────────── */
+        #sidebar {
+            width: 256px;
+            transition: width .22s ease, transform .22s ease;
+            overflow: hidden;
+        }
+        #sidebar.collapsed { width: 64px; }
+        /* Ocultar textos y labels en modo colapsado */
+        #sidebar.collapsed .sidebar-label,
+        #sidebar.collapsed .sidebar-section-label,
+        #sidebar.collapsed .sidebar-badge { display: none; }
+        #sidebar.collapsed .sidebar-logo-text { display: none; }
+        /* Centrar iconos cuando está colapsado */
+        #sidebar.collapsed nav a,
+        #sidebar.collapsed nav > div > div,
+        #sidebar.collapsed .sidebar-user-link { justify-content: center; padding-left: 0; padding-right: 0; }
+        #sidebar.collapsed nav a { gap: 0; }
+        #sidebar.collapsed .sidebar-user-link { gap: 0; }
+        #sidebar.collapsed #sidebar-logo-area { justify-content: center; padding-left: 0; padding-right: 0; }
+        /* Mobile: oculto por defecto, overlay slide-in */
+        @media (max-width: 767px) {
+            #sidebar {
+                position: fixed; left: 0; top: 0; bottom: 0;
+                z-index: 50; width: 256px !important;
+                transform: translateX(-100%);
+            }
+            #sidebar.mobile-open { transform: translateX(0); }
+            #sidebar-overlay {
+                display: none; position: fixed; inset: 0;
+                background: rgba(0,0,0,.5); z-index: 49;
+                backdrop-filter: blur(2px);
+            }
+            #sidebar-overlay.active { display: block; }
+            #sidebar-toggle-desktop { display: none !important; }
+        }
+        @media (min-width: 768px) {
+            #sidebar-toggle-mobile { display: none !important; }
+            #sidebar-overlay { display: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans antialiased transition-colors duration-200">
+<div class="flex h-screen overflow-hidden">
+
+    <!-- ═══════════════ SIDEBAR ═══════════════ -->
+    <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+    <aside id="sidebar" class="flex-shrink-0 bg-[#0f1117] flex flex-col">
+
+        <div id="sidebar-logo-area" class="relative h-16 flex-shrink-0 px-4 border-b border-white/10 flex items-center gap-3">
+            <img src="/brand-assets/logo_reply-ai_thumbnail.png" alt="Reply-AI" class="h-6 w-auto flex-shrink-0">
+            <span class="sidebar-logo-text text-white font-black text-lg tracking-wider">reply-ai</span>
+            <button id="sidebar-toggle-desktop" onclick="toggleSidebar()"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10 transition"
+                    title="Colapsar barra lateral">
+                <svg id="sb-chevron-left" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+                <svg id="sb-chevron-right" class="w-4 h-4 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+            </button>
+        </div>
+
+        <nav class="flex-1 px-3 py-5 overflow-y-auto space-y-6">
+            <!-- Pre-venta -->
+            <div>
+                <p class="sidebar-section-label px-3 mb-2 text-[10px] font-bold tracking-widest uppercase text-white/30">Pre-venta</p>
+                <ul class="space-y-0.5">
+                    <li>
+                        <a href="<%= reply_ai_dashboard_path %>"
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15M14.25 3.104c.251.023.501.05.75.082M19.8 15l-1.575 1.575M5 14.5l-1.575 1.575M19.8 15l1.2 1.2M5 14.5l-1.2 1.2m14.999 0l-6 6m-6-6 6 6"/></svg>
+                            <span class="sidebar-label">Prompts</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<%= reply_ai_dashboard_path(tab: 'rag') %>"
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
+                            <span class="sidebar-label">Documentos</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Post-venta -->
+            <div>
+                <p class="sidebar-section-label px-3 mb-2 text-[10px] font-bold tracking-widest uppercase text-white/30">Post-venta</p>
+                <ul class="space-y-0.5">
+                    <li>
+                        <a href="<%= reply_ai_post_venta_path %>"
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+                           style="background:rgba(253,81,1,0.15); color:#fd5101;">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:#fd5101"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/></svg>
+                            <span class="sidebar-label">Prompts</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Conversaciones -->
+            <div>
+                <p class="sidebar-section-label px-3 mb-2 text-[10px] font-bold tracking-widest uppercase text-white/30">Conversaciones</p>
+                <ul class="space-y-0.5">
+                    <li>
+                        <a href="<%= @magic_link_to_chats %>"
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+                            <span class="sidebar-label">Consola de Mensajes</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Ajustes -->
+            <div>
+                <p class="sidebar-section-label px-3 mb-2 text-[10px] font-bold tracking-widest uppercase text-white/30">Ajustes</p>
+                <ul class="space-y-0.5">
+                    <li>
+                        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/40 cursor-not-allowed">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z"/></svg>
+                            <span class="sidebar-label">Analíticas</span>
+                            <span class="sidebar-badge ml-auto text-[9px] font-bold bg-white/10 text-white/40 px-1.5 py-0.5 rounded-full">Pronto</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/40 cursor-not-allowed">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.4.604-.4.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.959.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 01-.61-.58v0z"/></svg>
+                            <span class="sidebar-label">Integraciones</span>
+                            <span class="sidebar-badge ml-auto text-[9px] font-bold bg-white/10 text-white/40 px-1.5 py-0.5 rounded-full">Pronto</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Cuenta usuario -->
+        <div class="border-t border-white/10 px-3 py-4 space-y-0.5">
+            <a href="#" class="sidebar-user-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+                <span class="sidebar-label">Mi Cuenta</span>
+            </a>
+            <a href="#" class="sidebar-user-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/></svg>
+                <span class="sidebar-label">Plan &amp; Facturación</span>
+            </a>
+            <a href="#" class="sidebar-user-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/></svg>
+                <span class="sidebar-label">Cerrar Sesión</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- ═══════════════ CONTENIDO PRINCIPAL ═══════════════ -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- Topbar -->
+        <header id="topbar" class="flex-shrink-0 h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 transition-colors duration-200">
+            <div class="flex items-center gap-2">
+                <button id="sidebar-toggle-mobile" onclick="openSidebar()"
+                        class="w-9 h-9 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+                </button>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#f0f4ff">
+                        <svg class="w-4 h-4" style="color:#4f46e5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-900">IA Post-Venta</h2>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <% if flash[:notice] %>
+                    <div class="flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1.5 rounded-lg border border-green-100 text-sm font-medium">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <%= flash[:notice] %>
+                    </div>
+                <% end %>
+                <button id="theme-toggle" onclick="toggleDarkMode()"
+                        class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+                        title="Cambiar tema">
+                    <svg id="icon-sun" class="w-4 h-4 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"/>
+                    </svg>
+                    <svg id="icon-moon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>
+                    </svg>
+                </button>
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                     style="background:#fd5101">U</div>
+            </div>
+        </header>
+
+        <!-- Contenido -->
+        <main class="flex-1 overflow-y-auto px-4 py-5 sm:px-8 sm:py-7">
+            <form action="<%= update_post_venta_path %>" method="POST" class="space-y-6">
+                <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+
+                <!-- Toggle maestro + modelo -->
+                <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div class="px-4 sm:px-6 py-5 border-b border-gray-50">
+                        <div class="flex items-center justify-between flex-wrap gap-3">
+                            <div>
+                                <h3 class="font-semibold text-gray-800 text-lg">Agente IA Post-Venta</h3>
+                                <p class="text-[13px] text-gray-400 mt-0.5">Respondé automáticamente los mensajes de compradores con pedidos en curso.</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                <input type="checkbox" name="post_venta_ia[enabled]" value="1"
+                                       id="pv-ia-toggle"
+                                       <%= @pv_ia['enabled'] != false ? 'checked' : '' %>
+                                       class="sr-only peer"
+                                       onchange="document.getElementById('pv-ia-fields').classList.toggle('hidden', !this.checked)">
+                                <div class="w-12 h-6 bg-gray-200 rounded-full peer
+                                            peer-checked:bg-[#fd5101]
+                                            after:content-[''] after:absolute after:top-0.5 after:left-[3px]
+                                            after:bg-white after:rounded-full after:h-5 after:w-5
+                                            after:transition-all peer-checked:after:translate-x-6
+                                            after:shadow-sm"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="pv-ia-fields" class="<%= @pv_ia['enabled'] == false ? 'hidden' : '' %>">
+                        <!-- Modelo -->
+                        <div class="px-4 sm:px-6 py-5 border-b border-gray-50">
+                            <label class="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-widest">Modelo OpenAI</label>
+                            <p class="text-[13px] text-gray-400 mb-3">
+                                <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">gpt-4o-mini</code> es más rápido y económico.
+                                <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">gpt-4o</code> da respuestas de mayor calidad para consultas complejas.
+                            </p>
+                            <div class="flex gap-4">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="post_venta_ia[model]" value="gpt-4o-mini"
+                                           <%= (@pv_ia['model'] || 'gpt-4o-mini') == 'gpt-4o-mini' ? 'checked' : '' %>
+                                           class="accent-[#fd5101]">
+                                    <span class="text-sm text-gray-700 font-medium">gpt-4o-mini <span class="text-xs text-gray-400">(recomendado)</span></span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="post_venta_ia[model]" value="gpt-4o"
+                                           <%= @pv_ia['model'] == 'gpt-4o' ? 'checked' : '' %>
+                                           class="accent-[#fd5101]">
+                                    <span class="text-sm text-gray-700 font-medium">gpt-4o</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Tono general -->
+                        <div class="px-4 sm:px-6 py-5 border-b border-gray-50">
+                            <label class="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-widest">Tono e identidad del agente</label>
+                            <p class="text-[13px] text-gray-400 mb-2">Describe cómo debe hablar el agente. Aplica a todas las ramas. Ej: <em>"Usar usted, tono formal, no usar emojis."</em></p>
+                            <textarea name="post_venta_ia[prompts][tono]" rows="2"
+                                placeholder="Ej: Usá un tono amigable y cercano, en español argentino. Dirigite siempre al cliente como 'vos'."
+                                class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus-brand text-[14px] leading-relaxed resize-none transition hover:border-gray-300"><%= @pv_ia.dig('prompts', 'tono') %></textarea>
+                        </div>
+
+                        <!-- Intenciones -->
+                        <div class="px-4 sm:px-6 py-5 space-y-5">
+                            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Comportamiento por tipo de consulta</p>
+
+                            <!-- Logística -->
+                            <div class="rounded-xl border border-gray-100 overflow-hidden">
+                                <div class="px-4 py-3 intent-head-blue flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-base">🚚</span>
+                                        <span class="font-semibold text-gray-800 text-sm">Logística</span>
+                                        <span class="text-[12px] text-gray-400">tracking, envío, demoras</span>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="post_venta_ia[logistica][enabled]" value="1"
+                                               <%= @pv_ia.dig('logistica', 'enabled') != false ? 'checked' : '' %>
+                                               class="sr-only peer"
+                                               onchange="document.getElementById('pv-logistica-prompt').classList.toggle('hidden', !this.checked)">
+                                        <div class="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-[#fd5101] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5 after:shadow-sm"></div>
+                                    </label>
+                                </div>
+                                <div id="pv-logistica-prompt" class="px-4 py-3 <%= @pv_ia.dig('logistica', 'enabled') == false ? 'hidden' : '' %>">
+                                    <label class="block text-xs text-gray-500 mb-1">Instrucciones adicionales para respuestas de envío</label>
+                                    <textarea name="post_venta_ia[prompts][logistica]" rows="2"
+                                        placeholder="Ej: Nuestros envíos demoran 2-5 días hábiles. No prometas fechas exactas."
+                                        class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus-brand text-[13px] resize-none transition hover:border-gray-300"><%= @pv_ia.dig('prompts', 'logistica') %></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Soporte -->
+                            <div class="rounded-xl border border-gray-100 overflow-hidden">
+                                <div class="px-4 py-3 intent-head-purple flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-base">🔧</span>
+                                        <span class="font-semibold text-gray-800 text-sm">Soporte técnico</span>
+                                        <span class="text-[12px] text-gray-400">instrucciones, compatibilidad</span>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="post_venta_ia[soporte][enabled]" value="1"
+                                               <%= @pv_ia.dig('soporte', 'enabled') != false ? 'checked' : '' %>
+                                               class="sr-only peer"
+                                               onchange="document.getElementById('pv-soporte-fields').classList.toggle('hidden', !this.checked)">
+                                        <div class="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-[#fd5101] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5 after:shadow-sm"></div>
+                                    </label>
+                                </div>
+                                <div id="pv-soporte-fields" class="px-4 py-3 space-y-3 <%= @pv_ia.dig('soporte', 'enabled') == false ? 'hidden' : '' %>">
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">Instrucciones adicionales para soporte</label>
+                                        <textarea name="post_venta_ia[prompts][soporte]" rows="2"
+                                            placeholder="Ej: El producto tiene 1 año de garantía. Para reclamos, pedí foto del defecto."
+                                            class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus-brand text-[13px] resize-none transition hover:border-gray-300"><%= @pv_ia.dig('prompts', 'soporte') %></textarea>
+                                    </div>
+                                    <label class="flex items-center gap-2.5 cursor-pointer">
+                                        <input type="checkbox" name="post_venta_ia[soporte][fallback_to_human]" value="1"
+                                               <%= @pv_ia.dig('soporte', 'fallback_to_human') != false ? 'checked' : '' %>
+                                               class="w-4 h-4 rounded accent-[#fd5101]">
+                                        <span class="text-[13px] text-gray-700">Si la IA no encuentra solución, asignar automáticamente a agente humano (<code class="text-xs bg-gray-100 px-1 rounded">atencion-humana</code>)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Reclamo -->
+                            <div class="rounded-xl border border-gray-100 overflow-hidden">
+                                <div class="px-4 py-3 intent-head-red flex items-center">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-base">⚠️</span>
+                                        <span class="font-semibold text-gray-800 text-sm">Reclamo</span>
+                                        <span class="text-[12px] text-gray-400">daño, devolución, queja — siempre escala a humano</span>
+                                    </div>
+                                </div>
+                                <div class="px-4 py-3 space-y-3">
+                                    <label class="flex items-center gap-2.5 cursor-pointer">
+                                        <input type="checkbox" name="post_venta_ia[reclamo][notify_customer]" value="1"
+                                               <%= @pv_ia.dig('reclamo', 'notify_customer') ? 'checked' : '' %>
+                                               class="w-4 h-4 rounded accent-[#fd5101]"
+                                               onchange="document.getElementById('pv-escalacion-prompt').classList.toggle('hidden', !this.checked)">
+                                        <span class="text-[13px] text-gray-700">Avisar al comprador que un especialista lo va a atender</span>
+                                    </label>
+                                    <div id="pv-escalacion-prompt" class="<%= @pv_ia.dig('reclamo', 'notify_customer') ? '' : 'hidden' %>">
+                                        <label class="block text-xs text-gray-500 mb-1">Mensaje visible al cliente al escalar</label>
+                                        <textarea name="post_venta_ia[prompts][escalacion]" rows="2"
+                                            placeholder="Ej: Lamentamos el inconveniente. Un especialista de nuestro equipo te va a contactar en menos de 24hs."
+                                            class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus-brand text-[13px] resize-none transition hover:border-gray-300"><%= @pv_ia.dig('prompts', 'escalacion') %></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cierre -->
+                            <div class="rounded-xl border border-gray-100 overflow-hidden">
+                                <div class="px-4 py-3 intent-head-green flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-base">✅</span>
+                                        <span class="font-semibold text-gray-800 text-sm">Cierre</span>
+                                        <span class="text-[12px] text-gray-400">agradecimiento, todo bien, despedida</span>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="post_venta_ia[cierre][enabled]" value="1"
+                                               <%= @pv_ia.dig('cierre', 'enabled') != false ? 'checked' : '' %>
+                                               class="sr-only peer"
+                                               onchange="document.getElementById('pv-cierre-fields').classList.toggle('hidden', !this.checked)">
+                                        <div class="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-[#fd5101] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5 after:shadow-sm"></div>
+                                    </label>
+                                </div>
+                                <div id="pv-cierre-fields" class="px-4 py-3 space-y-3 <%= @pv_ia.dig('cierre', 'enabled') == false ? 'hidden' : '' %>">
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">Instrucciones para el mensaje de despedida</label>
+                                        <textarea name="post_venta_ia[prompts][cierre]" rows="2"
+                                            placeholder="Ej: Invitá siempre a seguirnos en Instagram @tienda y a dejar una reseña en ML."
+                                            class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus-brand text-[13px] resize-none transition hover:border-gray-300"><%= @pv_ia.dig('prompts', 'cierre') %></textarea>
+                                    </div>
+                                    <label class="flex items-center gap-2.5 cursor-pointer">
+                                        <input type="checkbox" name="post_venta_ia[cierre][auto_resolve]" value="1"
+                                               <%= @pv_ia.dig('cierre', 'auto_resolve') != false ? 'checked' : '' %>
+                                               class="w-4 h-4 rounded accent-[#fd5101]">
+                                        <span class="text-[13px] text-gray-700">Resolver conversación automáticamente al detectar cierre</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botón guardar -->
+                <div class="flex justify-end pb-8">
+                    <button type="submit"
+                            class="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-colors"
+                            style="background:#fd5101">
+                        Guardar cambios
+                    </button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+
+<script>
+    /* ── Sidebar anti-FOUC ─── */
+    (function() {
+        if (window.innerWidth >= 768 && localStorage.getItem('replyai_sidebar_collapsed') === '1') {
+            const sb = document.getElementById('sidebar');
+            if (sb) {
+                sb.classList.add('collapsed');
+                document.getElementById('sb-chevron-left')?.classList.add('hidden');
+                document.getElementById('sb-chevron-right')?.classList.remove('hidden');
+            }
+        }
+    })();
+
+    function toggleSidebar() {
+        const sb = document.getElementById('sidebar');
+        if (!sb) return;
+        const isCollapsed = sb.classList.toggle('collapsed');
+        document.getElementById('sb-chevron-left')?.classList.toggle('hidden', isCollapsed);
+        document.getElementById('sb-chevron-right')?.classList.toggle('hidden', !isCollapsed);
+        localStorage.setItem('replyai_sidebar_collapsed', isCollapsed ? '1' : '');
+    }
+
+    function openSidebar() {
+        const sb = document.getElementById('sidebar');
+        const ov = document.getElementById('sidebar-overlay');
+        if (!sb) return;
+        sb.classList.add('mobile-open');
+        if (ov) ov.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+        const sb = document.getElementById('sidebar');
+        const ov = document.getElementById('sidebar-overlay');
+        if (!sb) return;
+        sb.classList.remove('mobile-open');
+        if (ov) ov.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    window.addEventListener('resize', function() {
+        if (window.innerWidth >= 768) closeSidebar();
+    });
+
+    /* ── Dark mode ─── */
+    function applyThemeIcons() {
+        const dark = document.documentElement.classList.contains('dark');
+        document.getElementById('icon-sun').classList.toggle('hidden', !dark);
+        document.getElementById('icon-moon').classList.toggle('hidden', dark);
+    }
+
+    function toggleDarkMode() {
+        const dark = document.documentElement.classList.contains('dark');
+        document.documentElement.classList.toggle('dark', !dark);
+        document.documentElement.classList.toggle('light', dark);
+        localStorage.setItem('replyai_theme', dark ? 'light' : 'dark');
+        applyThemeIcons();
+    }
+
+    applyThemeIcons();
+</script>
+</body>
+</html>

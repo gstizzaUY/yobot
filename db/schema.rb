@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_02_10_140338) do
+ActiveRecord::Schema[7.1].define(version: 2026_03_06_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -947,6 +947,17 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_10_140338) do
     t.index ["account_id"], name: "index_macros_on_account_id"
   end
 
+  create_table "meli_categories", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "meli_category_id", null: false
+    t.string "name"
+    t.string "parent_id"
+    t.string "level"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_meli_categories_on_account_id"
+  end
+
   create_table "meli_credentials", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "ml_user_id"
@@ -958,6 +969,89 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_10_140338) do
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_meli_credentials_on_account_id"
     t.index ["ml_user_id"], name: "index_meli_credentials_on_ml_user_id", unique: true
+  end
+
+  create_table "meli_official_stores", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "meli_store_id", null: false
+    t.string "name", null: false
+    t.string "status"
+    t.string "logo"
+    t.text "custom_greeting"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "meli_store_id"], name: "index_meli_official_stores_on_account_id_and_meli_store_id", unique: true
+    t.index ["account_id"], name: "index_meli_official_stores_on_account_id"
+  end
+
+  create_table "meli_orders", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "ml_order_id", null: false
+    t.string "ml_buyer_id"
+    t.string "item_id"
+    t.string "pack_id"
+    t.string "order_status"
+    t.string "shipping_mode"
+    t.boolean "message_sent", default: false, null: false
+    t.datetime "message_sent_at"
+    t.text "message_error"
+    t.boolean "had_questions", default: false, null: false
+    t.boolean "ai_answered", default: false, null: false
+    t.integer "questions_count", default: 0, null: false
+    t.datetime "conversion_checked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "index_meli_orders_on_account_id_and_created_at"
+    t.index ["account_id", "message_sent"], name: "index_meli_orders_on_account_id_and_message_sent"
+    t.index ["account_id", "ml_order_id"], name: "index_meli_orders_on_account_id_and_ml_order_id", unique: true
+    t.index ["account_id"], name: "index_meli_orders_on_account_id"
+  end
+
+  create_table "meli_products", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "meli_item_id", null: false
+    t.string "title"
+    t.string "thumbnail"
+    t.string "status"
+    t.string "category_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "price", precision: 15, scale: 2
+    t.string "currency_id"
+    t.integer "available_quantity"
+    t.integer "sold_quantity"
+    t.string "condition"
+    t.string "listing_type_id"
+    t.string "permalink"
+    t.datetime "date_created"
+    t.datetime "last_updated"
+    t.jsonb "raw_data"
+    t.decimal "base_price", precision: 15, scale: 2
+    t.decimal "original_price", precision: 15, scale: 2
+    t.string "buying_mode"
+    t.string "secure_thumbnail"
+    t.string "warranty"
+    t.string "domain_id"
+    t.string "catalog_product_id"
+    t.decimal "health", precision: 5, scale: 4
+    t.boolean "accepts_mercadopago"
+    t.boolean "free_shipping"
+    t.jsonb "pictures", default: []
+    t.jsonb "attributes_data", default: []
+    t.jsonb "shipping_data", default: {}
+    t.jsonb "tags", default: []
+    t.index ["account_id", "meli_item_id"], name: "index_meli_products_on_account_id_and_meli_item_id", unique: true
+    t.index ["account_id"], name: "index_meli_products_on_account_id"
+    t.index ["condition"], name: "index_meli_products_on_condition"
+    t.index ["price"], name: "index_meli_products_on_price"
+    t.index ["status"], name: "index_meli_products_on_status"
+  end
+
+  create_table "meli_questions", primary_key: "question_id", id: :text, force: :cascade do |t|
+    t.integer "account_id", null: false
+    t.integer "cw_conversation_id"
+    t.string "status", limit: 50, default: "pending"
+    t.timestamptz "created_at", default: -> { "CURRENT_TIMESTAMP" }
   end
 
   create_table "mentions", force: :cascade do |t|
@@ -1113,6 +1207,37 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_10_140338) do
     t.datetime "updated_at", precision: nil, null: false
     t.index ["category_id", "related_category_id"], name: "index_related_categories_on_category_id_and_related_category_id", unique: true
     t.index ["related_category_id", "category_id"], name: "index_related_categories_on_related_category_id_and_category_id", unique: true
+  end
+
+  create_table "reply_ai_documents", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "level"
+    t.string "reference_id"
+    t.string "file_name"
+    t.text "content"
+    t.vector "embedding", limit: 1536
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "source", default: "manual", null: false
+    t.index ["account_id"], name: "index_reply_ai_documents_on_account_id"
+  end
+
+  create_table "reply_ai_pre_memory", id: :serial, force: :cascade do |t|
+    t.string "session_id", limit: 255, null: false
+    t.jsonb "message", null: false
+  end
+
+  create_table "reply_ai_pv_documents", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "level"
+    t.string "reference_id"
+    t.string "file_name"
+    t.text "content"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.vector "embedding", limit: 1536
+    t.string "source", default: "manual", null: false
+    t.index ["account_id"], name: "index_reply_ai_pv_documents_on_account_id"
   end
 
   create_table "reporting_events", force: :cascade do |t|
@@ -1285,6 +1410,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_10_140338) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "inboxes", "portals"
   add_foreign_key "meli_credentials", "accounts"
+  add_foreign_key "meli_official_stores", "accounts"
+  add_foreign_key "meli_orders", "accounts"
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).
       on("accounts").
       after(:insert).

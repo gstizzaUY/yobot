@@ -1,0 +1,564 @@
+{
+  "name": "reply_ai_orders_main",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  c.access_token,\n  a.id as chatwoot_account_id,\n  a.custom_attributes->'config'->'post_sale' as post_sale,\n  c.ml_user_id\nFROM meli_credentials c\nJOIN accounts a ON a.id = c.account_id\nWHERE c.ml_user_id = '{{ $('orders_trigger').item.json.body.user_id }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        0
+      ],
+      "id": "bf8f5210-be47-4f61-a422-8a127ea5213a",
+      "name": "get_order_account_details",
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1c20d4d7-703b-425b-804f-c7a41066f1ea",
+      "name": "orders_trigger"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.mercadolibre.com{{ $('orders_trigger').item.json.body.resource }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "55cbf10b-fb45-46ee-a6de-c29d2ca713d2",
+      "name": "get_order_details",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "J0q3ryllyiG4GRKP",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT message_sent FROM meli_orders\nWHERE account_id = {{ $('get_order_account_details').item.json.chatwoot_account_id }}\n  AND ml_order_id = '{{ $('get_order_details').item.json.id }}'\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "c6bdfec6-ac16-43b6-a5b9-2b7f621c636b",
+      "name": "check_already_sent",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f099b83b-d160-4653-8b30-82b3157713a6",
+              "leftValue": "={{ $json.message_sent }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1040,
+        -96
+      ],
+      "id": "97107cf8-dcd2-445c-8980-154742791571",
+      "name": "already_sent?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO meli_orders (\n  account_id, ml_order_id, ml_buyer_id, item_id, \n  pack_id, order_status, shipping_mode, message_sent, created_at, updated_at\n)\nVALUES (\n  {{ $('get_order_account_details').item.json.chatwoot_account_id }},\n  '{{ $('get_order_details').item.json.id }}',\n  '{{ $('get_order_details').item.json.buyer.id }}',\n  '{{ $('get_order_details').item.json.order_items[0].item.id }}',\n  {{ $('get_order_details').item.json.pack_id !== null ? \"'\" + $('get_order_details').item.json.pack_id + \"'\" : 'NULL' }},\n  '{{ $('get_order_details').item.json.status }}',\n  '{{ $('get_order_details').item.json.shipping?.logistic_type }}',\n  false,\n  NOW(), NOW()\n)\nON CONFLICT (account_id, ml_order_id) DO NOTHING;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1328,
+        -80
+      ],
+      "id": "72dad298-41a4-40cb-ba39-53fff26322ef",
+      "name": "upsert_order",
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "caf0d6d0-fead-43d7-92bb-99ce19968360",
+              "leftValue": "={{ JSON.parse($('get_order_account_details').item.json.post_sale).enabled }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1536,
+        -80
+      ],
+      "id": "68e45599-b616-4a97-ba34-cbdc60edfb76",
+      "name": "check_post_sale_enabled"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.mercadolibre.com/messages/action_guide/packs/{{ $json.packId }}?tag=post_sale",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2000,
+        -192
+      ],
+      "id": "880be38e-1106-412d-84db-6e97a933eef2",
+      "name": "get_action_guide",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "J0q3ryllyiG4GRKP",
+          "name": "Header Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f0477bef-bd32-47df-9424-f6fb5ee14442",
+              "leftValue": "={{ $json.cause }}",
+              "rightValue": "blocked_by_excepted_case",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2272,
+        -224
+      ],
+      "id": "bdd30e4c-6be7-4c1b-b615-9b33948dbbe9",
+      "name": "is_excepted_case?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "da7a519a-4ae5-4eea-8daf-1023c6b837f7",
+              "leftValue": "={{ $json.cap }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2864,
+        -192
+      ],
+      "id": "9bbd0ef9-0cd3-4c15-baad-3d9b9aef587a",
+      "name": "cap_available?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.mercadolibre.com/messages/action_guide/packs/{{ $('get_pack_id').item.json.packId }}/option?tag=post_sale",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"option_id\": \"OTHER\",\n  \"text\": \"{{ $('get_pack_id').item.json.message }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3152,
+        -208
+      ],
+      "id": "ea31602b-b4b2-498a-a74b-bdfbff3ad223",
+      "name": "send_via_action_guide",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "J0q3ryllyiG4GRKP",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const order = $('get_order_details').item.json;\n// Si no tiene pack_id, usamos el order_id como identificador del pack\nconst packId = order.pack_id ?? order.id;\nconst sellerId = $('get_order_account_details').item.json.ml_user_id;\nconst buyerId = order.buyer.id;\nconst message = JSON.parse($('get_order_account_details').item.json.post_sale).message;\n\nreturn [{ json: { packId, sellerId, buyerId, message, orderId: order.id } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        -192
+      ],
+      "id": "57a40310-3a86-463b-b96c-2f75978ce7f1",
+      "name": "get_pack_id"
+    },
+    {
+      "parameters": {
+        "jsCode": "const options = $('get_action_guide').item.json.options ?? [];\nconst other = options.find(o => o.id === 'OTHER');\nconst cap = other?.cap_available ?? 0;\nreturn [{ json: { cap } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2656,
+        -192
+      ],
+      "id": "12b00b18-e37a-40d3-837e-1733d6bc7308",
+      "name": "check_cap_available"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.mercadolibre.com/messages/packs/{{ $('get_pack_id').item.json.packId }}/sellers/{{ $('get_pack_id').item.json.sellerId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": { \"user_id\": {{ $('get_pack_id').item.json.sellerId }} },\n  \"to\": { \"user_id\": {{ $('get_pack_id').item.json.buyerId }} },\n  \"text\": \"{{ $('get_pack_id').item.json.message }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2832,
+        -448
+      ],
+      "id": "25d321e4-42d4-43c6-9f56-1a9b5b59c42a",
+      "name": "send_via_messages",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "J0q3ryllyiG4GRKP",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE meli_orders\nSET message_sent = true, message_sent_at = NOW()\nWHERE account_id = {{ $('get_order_account_details').item.json.chatwoot_account_id }}\n  AND ml_order_id = '{{ $('get_pack_id').item.json.orderId }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3440,
+        -208
+      ],
+      "id": "0c0e525a-bf91-4420-8d38-8d66195a7f5e",
+      "name": "mark_sent",
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alternativa: reemplazar check_order_eligible por un Code node\nconst order = $json;\nconst statusOk = ['confirmed', 'paid'].includes(order.status);\nconst paymentOk = (order.payments ?? []).some(p => p.status === 'approved');\nif (!statusOk || !paymentOk) return [];\nreturn [{ json: order }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        0
+      ],
+      "id": "11a69689-2382-4f36-b073-51106e72af83",
+      "name": "check_order_eligible"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "orders_trigger": {
+      "main": [
+        [
+          {
+            "node": "get_order_account_details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_order_account_details": {
+      "main": [
+        [
+          {
+            "node": "get_order_details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_order_details": {
+      "main": [
+        [
+          {
+            "node": "check_order_eligible",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_already_sent": {
+      "main": [
+        [
+          {
+            "node": "already_sent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "already_sent?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "upsert_order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "upsert_order": {
+      "main": [
+        [
+          {
+            "node": "check_post_sale_enabled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_post_sale_enabled": {
+      "main": [
+        [
+          {
+            "node": "get_pack_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_action_guide": {
+      "main": [
+        [
+          {
+            "node": "is_excepted_case?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "is_excepted_case?": {
+      "main": [
+        [
+          {
+            "node": "send_via_messages",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "check_cap_available",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cap_available?": {
+      "main": [
+        [
+          {
+            "node": "send_via_action_guide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_pack_id": {
+      "main": [
+        [
+          {
+            "node": "get_action_guide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_cap_available": {
+      "main": [
+        [
+          {
+            "node": "cap_available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_via_action_guide": {
+      "main": [
+        [
+          {
+            "node": "mark_sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_via_messages": {
+      "main": [
+        [
+          {
+            "node": "mark_sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_order_eligible": {
+      "main": [
+        [
+          {
+            "node": "check_already_sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "df2e0944-d394-4610-86c2-f91fe4266b58",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6987f0f533040cbfea8c75383320642dcbc7861e6e8b8f304d7a1f91a57b76b5"
+  },
+  "id": "267yHu6ne62J8FZjiMlMc",
+  "tags": []
+}

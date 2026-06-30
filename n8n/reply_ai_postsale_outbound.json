@@ -1,0 +1,114 @@
+{
+  "name": "reply_ai_postsale_outbound",
+  "nodes": [
+    {
+      "id": "pso-wh-001",
+      "name": "chatwoot_webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-600, 0],
+      "webhookId": "postsale-outbound",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "postsale-outbound",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "pso-code-002",
+      "name": "filter_and_extract",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-400, 0],
+      "parameters": {
+        "jsCode": "const data = $input.first().json.body || $input.first().json;\n\n// Solo mensajes outgoing (type 1 o string 'outgoing'), no privados\nconst isOutgoing = data.message_type === 1 || data.message_type === 'outgoing';\nif (!isOutgoing) {\n  return { forward: false, reason: 'not_outgoing', type: data.message_type };\n}\nif (data.private === true) {\n  return { forward: false, reason: 'private' };\n}\n\n// Ignorar mensajes espejados por n8n IA (ya fueron enviados a ML directamente)\nif (data.content_attributes?.source === 'n8n_ai') {\n  return { forward: false, reason: 'ai_mirror' };\n}\n\nconst conv = data.conversation;\nif (!conv) {\n  return { forward: false, reason: 'no_conversation' };\n}\n\nconst attrs = conv.additional_attributes || {};\nif (attrs.type !== 'post-venta') {\n  return { forward: false, reason: 'not_postsale', attrs_type: attrs.type };\n}\n\n// pack_id: desde additional_attributes o meta.source_id\nconst packId  = String(attrs.pack_id || conv.meta?.source_id || '');\n// buyer_user_id: identifier del contacto del contacto almacenado al crear la conversación\nconst buyerId = String(conv.meta?.sender?.identifier || '');\nconst accountId = data.account?.id;\nconst text    = (data.content || '').trim();\n\nif (!packId || !buyerId || !text) {\n  return { forward: false, reason: 'missing_data', packId, buyerId, hasText: !!text };\n}\n\nreturn {\n  forward:        true,\n  pack_id:        packId,\n  buyer_user_id:  buyerId,\n  account_id:     accountId,\n  text\n};\n"
+      }
+    },
+    {
+      "id": "pso-if-003",
+      "name": "should_forward?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-200, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "typeValidation": "strict", "version": 3 },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "f1",
+              "leftValue": "={{ $json.forward }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "pso-pg-004",
+      "name": "get_ml_credentials",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [0, 0],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT c.ml_user_id, c.access_token\nFROM meli_credentials c\nWHERE c.account_id = '{{ $('filter_and_extract').item.json.account_id }}'\nLIMIT 1;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": { "id": "3sMbSrK2N5Vz3Xew", "name": "Postgres chatwoot_development" }
+      }
+    },
+    {
+      "id": "pso-http-005",
+      "name": "send_to_ml",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [200, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.mercadolibre.com/messages/packs/{{ $('filter_and_extract').item.json.pack_id }}/sellers/{{ $('get_ml_credentials').item.json.ml_user_id }}?tag=post_sale",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\n  from: { user_id: String($('get_ml_credentials').item.json.ml_user_id) },\n  to:   { user_id: $('filter_and_extract').item.json.buyer_user_id },\n  text: $('filter_and_extract').item.json.text\n}) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "J0q3ryllyiG4GRKP", "name": "Header Auth account" }
+      }
+    }
+  ],
+  "connections": {
+    "chatwoot_webhook": {
+      "main": [[{ "node": "filter_and_extract", "type": "main", "index": 0 }]]
+    },
+    "filter_and_extract": {
+      "main": [[{ "node": "should_forward?", "type": "main", "index": 0 }]]
+    },
+    "should_forward?": {
+      "main": [
+        [{ "node": "get_ml_credentials", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "get_ml_credentials": {
+      "main": [[{ "node": "send_to_ml", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6987f0f533040cbfea8c75383320642dcbc7861e6e8b8f304d7a1f91a57b76b5"
+  },
+  "id": "reply_ai_postsale_outbound_v1",
+  "tags": []
+}

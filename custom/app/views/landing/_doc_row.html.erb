@@ -1,0 +1,24 @@
+<% doc   = @docs[id] %>
+<% count = @docs_count&.fetch(id, 0) || 0 %>
+<div class="flex items-center gap-2">
+  <% if doc %>
+    <!-- Si existe el documento, mostramos opciones de gestión -->
+    <span class="bg-green-100 text-green-700 text-[10px] font-black px-2 py-1 rounded-md uppercase">Entrenado</span>
+    <% if count > 1 %>
+      <span class="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-0.5 rounded-md" title="<%= count %> documentos cargados">×<%= count %></span>
+    <% end %>
+    <button onclick="openMgrModal('<%= id %>', 'pre', '<%= j title %>')" class="text-xs font-bold text-[#fd5101] underline ml-1">Gestionar</button>
+    <% if doc.file.attached? %>
+      <%= link_to "📄", url_for(doc.file), class: "p-2 bg-gray-100 rounded-lg hover:bg-gray-200", title: "Ver archivo: #{doc.file_name}", target: "_blank" %>
+    <% end %>
+  <% else %>
+    <!-- Si no existe, botón de carga -->
+    <button onclick="openModal('<%= id %>', '<%= level %>', '<%= title %>')" class="text-white px-4 py-1.5 rounded-xl text-xs font-bold shadow-sm transition-colors"
+            style="background:#fd5101" onmouseover="this.style.background='#d94200'" onmouseout="this.style.background='#fd5101'">
+      Subir Docs
+    </button>
+  <% if level == 'product' %>
+     <!-- El seller ya sabe que solo puede si está activo por la opacidad del div padre -->
+  <% end %>
+<% end %>
+</div>
