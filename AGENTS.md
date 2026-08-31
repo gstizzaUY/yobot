@@ -161,7 +161,7 @@ Account.include_mod_with('Concerns::Account')
 ### Verificación post-cambios
 
 ```bash
-# Verificar que todo carga (48 checks)
+# Verificar que todo carga (59 checks)
 docker compose exec rails bundle exec rails runner custom/verify.rb
 
 # Verificar que Rails arranca

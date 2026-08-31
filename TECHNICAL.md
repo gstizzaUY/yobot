@@ -40,6 +40,7 @@
 19. [Modo Recepción Solamente (receive-only)](#19-modo-recepción-solamente-receive-only)
 20. [Operaciones n8n (importación, versiones, smoke tests)](#20-operaciones-n8n-importación-versiones-smoke-tests)
 21. [Paneles Dashboard Apps (Venta ML, Reclamo ML, Producto ML)](#21-paneles-dashboard-apps-venta-ml-reclamo-ml-producto-ml)
+22. [Enterprise sin licencia — blindaje custom](#22-enterprise-sin-licencia-blindaje-custom-2026-08-31)
 
 ---
 
@@ -844,7 +845,7 @@ docker compose exec rails bundle exec rails db:migrate
 
 # 5. Verificar integridad
 docker compose exec rails bundle exec rails runner custom/verify.rb
-# Deben salir todos ✓ (58 checks)
+# Deben salir todos ✓ (59 checks)
 
 # 6. Commit y push
 git add -A
@@ -863,6 +864,7 @@ git push origin master
 Estos archivos NO existen en el upstream de Chatwoot, por lo que no generan conflictos:
 - `custom/` (todo el directorio)
 - `config/initializers/00_custom_load_paths.rb`
+- `config/initializers/custom_enterprise_guard.rb`
 - `config/initializers/reply-ai_routes.rb`
 - `config/initializers/reply_ai_account_associations.rb`
 - `config/initializers/reply_ai_cron.rb`
@@ -876,7 +878,7 @@ Estos archivos NO existen en el upstream de Chatwoot, por lo que no generan conf
 
 ## 16. Script de Verificación
 
-`custom/verify.rb` — 58 checks en 6 categorías:
+`custom/verify.rb` — 59 checks en 6 categorías:
 
 ```bash
 # Local
@@ -894,7 +896,7 @@ rails runner custom/verify.rb
 | 2 | Autoloading | 15 clases cargan (modelos, workers, controller) |
 | 3 | Base de datos | 8 tablas custom existen |
 | 4 | Schema guard | Migraciones registradas, 0 pendientes |
-| 5 | Initializers | 7 archivos presentes, sin duplicado |
+| 5 | Initializers | 8 archivos presentes, sin duplicado |
 | 6 | Asociaciones | Account tiene los 5 `has_many` correctos |
 
 ---
@@ -2275,6 +2277,72 @@ chips semánticos, formatos localizados `es-AR` (fechas/montos).
 3. **"item_id requerido" en pre-venta**: sin venta no había item. Fix: resolver desde
    `additional_attributes` de la conversación (`ml_item_id`/`item_id`).
 4. **NoMethodError `source_id`**: vive en `ContactInbox`, no en `Conversation`.
+
+---
+
+## 22. Enterprise sin licencia — blindaje custom (2026-08-31)
+
+> **Contexto**: esta instalación corre el overlay `enterprise/` **sin licencia oficial**. El estado
+> "enterprise" proviene de `INSTALLATION_PRICING_PLAN = 'enterprise'` en `installation_configs`
+> (editado a mano) más un hub de licencias neutralizado. Este blindaje lo hace robusto frente a
+> actualizaciones de Chatwoot y sobrescrituras del hub, sin tocar archivos core.
+
+### 22.1 Cómo funciona y por qué se rompió
+
+| Pieza upstream | Comportamiento |
+|---|---|
+| `ChatwootHub.sync_with_hub` | POST `https://hub.2.chatwoot.com/ping` (telemetría + versión) |
+| `Enterprise::Internal::CheckNewVersionsJob` | Si el hub responde, **sobrescribe** `INSTALLATION_PRICING_PLAN` (y branding) con `locked=true` |
+| `Internal::ReconcilePlanConfigService` | Si el plan leído es `'community'`: **desactiva los 8 features premium en todas las cuentas** (`enterprise/config/premium_features.yml`) y resetea branding (`premium_installation_config.yml`). **No los re-activa** si el plan vuelve a enterprise |
+| `Enterprise::ChatwootHub#base_url` | Solo honra `CHATWOOT_HUB_URL` en `Rails.env.development?` — **en producción siempre pega al hub real** |
+
+**Incidente 2026-07-01 12:00 UTC**: un redeploy del worker con la imagen v4.15.1 disparó el job
+diario → ping exitoso al hub real → el hub devolvió plan `community` (sin licencia) → plan
+sobrescrito + branding reseteado + 8 features premium desactivados en todas las cuentas.
+
+### 22.2 El blindaje (todo en `custom/`, merge-proof)
+
+| Archivo | Override | Efecto |
+|---|---|---|
+| `custom/lib/custom/chatwoot_hub.rb` | `ChatwootHub#base_url` | `ENV.fetch('CHATWOOT_HUB_URL', 'http://localhost#')` — el ping falla de forma determinista (404/connection refused) → `@instance_info = nil` → `update_plan_info` nunca sobrescribe la BD. El env solo serviría para apuntar a un hub propio futuro |
+| idem | `ChatwootHub#pricing_plan` | Devuelve `'enterprise'` mientras exista `enterprise/` → `ReconcilePlanConfigService` **nunca** desactiva features, aunque la BD diga community |
+| `custom/lib/custom/chatwoot_app.rb` | `ChatwootApp#self_hosted_enterprise?` | Los gates de features premium dependen solo de `enterprise? && !chatwoot_cloud?` — inmunes al valor de BD |
+| `config/initializers/custom_enterprise_guard.rb` | prepend explícito | `ChatwootApp` no usa `prepend_mod_with`; el módulo se precede al singleton en `to_prepare` |
+
+**Orden de resolución**: `ChatwootApp.extensions = ['enterprise', 'custom']` → `Custom::` queda
+primero en el ancestors chain (verificado en producción: `Custom::ChatwootHub |
+Enterprise::ChatwootHub`). Nada en `app/`, `lib/` o `enterprise/` fue modificado.
+
+### 22.3 Estado de referencia (producción, post-reparación 2026-08-31)
+
+- `INSTALLATION_PRICING_PLAN = 'enterprise'` (locked), `INSTALLATION_PRICING_PLAN_QUANTITY = 10000`.
+- Features premium habilitados en todas las cuentas: `disable_branding, audit_logs, sla,
+  custom_roles, captain_integration, captain_document_auto_sync, csat_review_notes,
+  conversation_required_attributes`.
+- **Rollback** (si alguna vez hiciera falta volver al estado "community"): restaurar plan/quantity
+  con los valores previos (backup impreso en la reparación) y `disable_features!(*premium_features)`.
+
+### 22.4 Checklist para el flujo de actualización (§15)
+
+Tras cada merge de upstream, verificar que el blindaje sigue enganchado:
+
+1. `ChatwootHub.singleton_class.ancestors` incluye `Custom::ChatwootHub` **antes** que
+   `Enterprise::ChatwootHub` (si upstream renombró `base_url`/`pricing_plan`, el override deja de
+   aplicar silenciosamente — re-adaptar el módulo).
+2. `ChatwootApp.self_hosted_enterprise?` responde `true` (si upstream renombró el método,
+   re-adaptar `Custom::ChatwootApp`).
+3. `rails runner custom/verify.rb` → 59 checks.
+4. Confirmar que `config/initializers/custom_enterprise_guard.rb` sigue cargando (está en
+   `INITIALIZERS` del verify).
+
+### 22.5 Comportamientos conocidos
+
+- El job diario `CheckNewVersionsJob` **loguea un `NoMethodError (undefined method '[]' for nil)`
+  inofensivo** cuando el ping falla (bug upstream: `update_version_info` no guarda nil). No escribe
+  nada — el crash ocurre antes de cualquier UPDATE. Existe también en local desde febrero.
+- El env `CHATWOOT_HUB_URL` en Easypanel es **opcional** con el blindaje (el default ya es una URL
+  rota). Valor recomendado: `http://localhost#` en los servicios app y worker.
+- `INSTALLATION_ENV=on-premise` es solo metadata de telemetría; no afecta el gate.
 
 ---
 
