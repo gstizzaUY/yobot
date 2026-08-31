@@ -1,6 +1,6 @@
 ﻿# Chatwoot + Reply-AI — Documentación Técnica Unificada
 
-> **Versión**: Chatwoot 4.15.1 + Reply-AI / Meli  
+> **Versión**: Chatwoot 4.17.1 + Reply-AI / Meli  
 > **Última actualización**: 2026-08-31  
 > **Propósito**: Referencia completa para agentes IA y desarrolladores.
 
@@ -567,6 +567,8 @@ Rack::Utils::HTTP_STATUS_CODES[902] = 'Account Suspended'
 | `20260808000000_add_yobot_chunk_id_to_rag_documents.rb` | Añade `yobot_chunk_id` (index único por account) a `reply_ai_documents` y `reply_ai_pv_documents` (migración RAG, 2026-08-08) |
 | `20260808000002_add_retention_to_meli_questions.rb` | Añade `retained_due_lack_of_info` + `suggested_answer` a `meli_questions` (control de confianza, 2026-08-08) |
 | `20260809000000_add_timeline_to_meli_claims.rb` | Añade columna JSONB `timeline` (default `[]`) a `meli_claims` (historial de eventos del reclamo, 2026-08-09) |
+| `20990101000001_add_conversation_lifecycle_to_meli_orders.rb` | (renombrada desde `20260803000000` — colisionó con upstream v4.17.1) Añade ciclo de vida a `meli_orders` (Fase 1) |
+| `20990101000002_add_cw_conversation_ids.rb` | (renombrada desde `20260804000000` — ídem) Añade `cw_conversation_id` a `meli_claims` y `meli_orders` |
 | `20260808000001_create_meli_questions.rb` | Crea `meli_questions` (`if_not_exists` — fix crash loop producción 2026-08-31: la tabla nunca tuvo migración, solo el ALTER de retención explotaba al boot) |
 | `20260808210000_create_reply_ai_pre_memory.rb` | Crea `reply_ai_pre_memory` (`if_not_exists`; memoria de sesión pre-venta usada por `questions_main` en n8n) |
 
@@ -870,9 +872,21 @@ Estos archivos NO existen en el upstream de Chatwoot, por lo que no generan conf
 - `config/initializers/reply_ai_cron.rb`
 - `config/initializers/reply_ai_middleware.rb`
 - `config/initializers/reply_ai_schema_guard.rb`
-- `config/initializers/custom_error_codes.rb`
 - `n8n/` (workflows)
 - `TECHNICAL.md` (este documento)
+
+### 15.1 Lecciones de la actualización a v4.17.1 (2026-08-31)
+
+1. **Mergear el TAG de release** (`git merge v4.17.1`), no `upstream/develop` (la punta puede traer commits sin liberar).
+2. **Colisión de timestamps de migraciones**: antes de commitear el merge, comparar las migraciones nuevas de upstream contra las custom:
+   `git diff --name-only --diff-filter=A <tag_viejo> <tag_nuevo> -- db/migrate/ | grep -f <(ls custom/db/migrate | cut -c1-14)`
+   Una colisión hace que upstream **saltee silenciosamente** su migración (la fila de `schema_migrations` ya existe) y el boot crashee después. Convención nueva: **las migraciones custom nuevas usan el rango `2099...`** (imposible de colisionar).
+3. **Si se renombra una migración ya aplicada**: hacer cirugía en `schema_migrations` (DELETE versión vieja + INSERT nueva) en local **y en producción ANTES del push** — si no, el schema guard del boot intenta re-aplicarla y crashea (y la migración upstream bloqueada no corre).
+4. **Rails 7.2 = conexiones lazy**: `ActiveRecord::Base.connection` ya no conecta de verdad; el primer query sí y puede explotar fuera de rescates viejos. El schema guard ya tolera BD ausente (necesario para el `assets:precompile` del build de la imagen, que corre sin BD).
+5. **Heap de Node**: el Dockerfile usa `NODE_OPTIONS --max-old-space-size=6144` (el dashboard de 4.17 tiene 5070 módulos; con 4096 el `assets:precompile` fallaba en CI).
+6. **`.dockerignore` excluye symlinks de IDE** (`.windsurf`, `CLAUDE.md`): el build context desde Windows no los transfiere (`invalid file request`).
+7. **`docker restart` sobre un contenedor de swarm task crea huérfanos** (el task viejo sigue corriendo + swarm crea reemplazo → tráfico partido). Para redeployar un servicio: `docker service update --force <servicio>` o el botón Deploy de Easypanel.
+8. Tras el deploy: verificar `/api` (`queue_services` + `data_services` en `ok`), el checklist §22.4 y el smoke post-venta.
 
 ---
 
@@ -2352,6 +2366,8 @@ Estos archivos fueron modificados respecto al upstream original de Chatwoot y de
 
 | Archivo | Cambio |
 |---------|--------|
+| `.dockerignore` | + exclusiones de IDE/symlinks (`.windsurf`, `CLAUDE.md`, `.idea`, `.vscode`) |
+| `docker/Dockerfile` | `NODE_OPTIONS --max-old-space-size=6144` (build de assets 4.17) |
 | `.gitignore` | + `docker-compose.override.yaml`, `Procfile.worktree` |
 | `Gemfile` | +2 gems custom |
 | `Gemfile.lock` | Dependencias (regenerar con `bundle install`) |
