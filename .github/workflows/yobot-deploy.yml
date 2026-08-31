@@ -3,6 +3,10 @@ on:
   push:
     branches: [master]
 
+concurrency:
+  group: yobot-deploy-master
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
