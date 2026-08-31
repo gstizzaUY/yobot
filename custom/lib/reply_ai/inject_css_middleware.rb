@@ -92,6 +92,12 @@ module ReplyAi
         body.reply-ai-meli-inbox .reply-box button:has(span.i-ph-sparkle-fill) {
           display: none !important;
         }
+
+        /* ── Imagen de la nota privada "DETALLES DEL PRODUCTO" (pre-venta): bordes redondeados ── */
+        /* La imagen lleva el query param cw_image_width (set por el workflow questions_main). */
+        img[src*="cw_image_width"] {
+          border-radius: 8px;
+        }
       </style>
 
       <script id="reply-ai-reports-patch">
@@ -262,6 +268,65 @@ module ReplyAi
             .observe(document.documentElement, { childList: true, subtree: true });
 
           modify();
+        })();
+      </script>
+
+      <script id="reply-ai-claim-mediation-banner">
+        // Banner de mediación: la conversación activa tiene la label reclamo-mediacion →
+        // los mensajes llegan a MercadoLibre (mediación), no al comprador.
+        (function () {
+          var BANNER_CLASS = 'reply-ai-claim-mediation-banner';
+
+          function getStore() {
+            var appEl = document.getElementById('app');
+            if (!appEl || !appEl.__vue_app__) return null;
+            return appEl.__vue_app__.config.globalProperties.$store || null;
+          }
+
+          function activeConversationLabels(store) {
+            try {
+              var conv = store.getters.getSelectedChatConversation;
+              if (!conv || !conv.id) return [];
+              return store.getters['conversationLabels/getConversationLabels'](conv.id) || [];
+            } catch (e) {
+              return [];
+            }
+          }
+
+          function isMediation(labels) {
+            return labels.some(function (l) { return (l.title || l) === 'reclamo-mediacion'; });
+          }
+
+          function removeBanner() {
+            var el = document.querySelector('.' + BANNER_CLASS);
+            if (el) el.remove();
+          }
+
+          function updateBanner() {
+            var store = getStore();
+            if (!store) return;
+            if (!isMediation(activeConversationLabels(store))) {
+              removeBanner();
+              return;
+            }
+            if (document.querySelector('.' + BANNER_CLASS)) return;
+            var el = document.createElement('div');
+            el.className = BANNER_CLASS;
+            el.style.cssText = [
+              'position:fixed', 'top:68px', 'left:50%', 'transform:translateX(-50%)',
+              'z-index:9999', 'background:#FEF3C7', 'color:#92400E',
+              'font-size:12px', 'font-weight:700', 'padding:7px 14px',
+              'border-radius:9999px', 'border:1px solid #FDE68A',
+              'box-shadow:0 2px 8px rgba(0,0,0,.12)', 'white-space:nowrap'
+            ].join(';') + ';';
+            el.textContent = 'Reclamo en mediación: los mensajes llegan a MercadoLibre, no al comprador.';
+            document.body.appendChild(el);
+          }
+
+          setInterval(updateBanner, 1500);
+          new MutationObserver(updateBanner)
+            .observe(document.documentElement, { childList: true, subtree: true });
+          updateBanner();
         })();
       </script>
     JS

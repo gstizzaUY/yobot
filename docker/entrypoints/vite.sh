@@ -7,6 +7,9 @@ rm -rf /app/tmp/cache/*
 pnpm store prune
 pnpm install --force
 
+unset BUNDLER_VERSION
+bundle install
+
 echo "Ready to run Vite development server."
 
 exec "$@"

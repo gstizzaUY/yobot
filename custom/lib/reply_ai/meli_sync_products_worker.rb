@@ -8,9 +8,31 @@ module ReplyAi
 
     def perform(account_id)
       account = Account.find(account_id)
-      creds   = MeliCredential.find_by(account_id: account_id, status: 'active')
+      creds   = MeliCredential.find_by(account_id: account_id, status: %w[active bridge])
       return unless creds
 
+      if creds.bridge?
+        sync_via_bridge(account)
+      else
+        sync_via_ml(account, creds)
+      end
+    end
+
+    private
+
+    def sync_via_bridge(account)
+      mark_syncing(account, true)
+      data  = ReplyAi::MeliApi.for(account).sync_products
+      items = data.is_a?(Array) ? data : (data['items'] || [])
+      items.each { |item| persist_item(account, item) }
+      Rails.logger.info "[MeliSyncProducts] bridge account=#{account.id} synced=#{items.size}"
+      mark_syncing(account, false)
+    rescue StandardError
+      mark_syncing(account, false)
+      raise
+    end
+
+    def sync_via_ml(account, creds)
       mark_syncing(account, true)
 
       headers = { Authorization: "Bearer #{creds.access_token}" }
@@ -32,53 +54,7 @@ module ReplyAi
           ).body)
 
           items.each do |r|
-            item = r['body']
-            MeliProduct.find_or_initialize_by(account_id: account.id, meli_item_id: item['id']).update!(
-              # Campos básicos
-              title:               item['title'],
-              thumbnail:           item['thumbnail'],
-              status:              item['status'],
-              category_id:         item['category_id'],
-
-              # Precio y stock
-              price:               item['price'],
-              base_price:          item['base_price'],
-              original_price:      item['original_price'],
-              currency_id:         item['currency_id'],
-              available_quantity:  item['available_quantity'],
-              sold_quantity:       item['sold_quantity'],
-
-              # Condición y tipo
-              condition:           item['condition'],
-              listing_type_id:     item['listing_type_id'],
-              buying_mode:         item['buying_mode'],
-
-              # URLs
-              permalink:           item['permalink'],
-              secure_thumbnail:    item['secure_thumbnail'],
-
-              # Descripción y detalles
-              warranty:            item['warranty'],
-              domain_id:           item['domain_id'],
-              catalog_product_id:  item['catalog_product_id'],
-              health:              item['health'],
-              accepts_mercadopago: item['accepts_mercadopago'],
-              free_shipping:       item.dig('shipping', 'free_shipping'),
-
-              # Fechas de ML
-              date_created:        item['date_created'],
-              last_updated:        item['last_updated'],
-
-              # Arrays/objetos
-              pictures:            item['pictures'] || [],
-              attributes_data:     item['attributes'] || [],
-              shipping_data:       item['shipping'] || {},
-              tags:                item['tags'] || [],
-
-              # Respuesta completa (fallback para cualquier campo futuro)
-              raw_data:            item
-            )
-            sync_category(account, item['category_id'])
+            persist_item(account, r['body'])
           end
         end
 
@@ -93,7 +69,58 @@ module ReplyAi
       raise
     end
 
-    private
+    # Persiste un item (shape de ML directo o el items[] del bridge — los campos
+    # ausentes en el shape bridge quedan nil).
+    def persist_item(account, item)
+      return unless item.is_a?(Hash) && item['id'].present?
+
+      MeliProduct.find_or_initialize_by(account_id: account.id, meli_item_id: item['id']).update!(
+        # Campos básicos
+        title:               item['title'],
+        thumbnail:           item['thumbnail'],
+        status:              item['status'],
+        category_id:         item['category_id'],
+
+        # Precio y stock
+        price:               item['price'],
+        base_price:          item['base_price'],
+        original_price:      item['original_price'],
+        currency_id:         item['currency_id'],
+        available_quantity:  item['available_quantity'],
+        sold_quantity:       item['sold_quantity'],
+
+        # Condición y tipo
+        condition:           item['condition'],
+        listing_type_id:     item['listing_type_id'],
+        buying_mode:         item['buying_mode'],
+
+        # URLs
+        permalink:           item['permalink'],
+        secure_thumbnail:    item['secure_thumbnail'],
+
+        # Descripción y detalles
+        warranty:            item['warranty'],
+        domain_id:           item['domain_id'],
+        catalog_product_id:  item['catalog_product_id'],
+        health:              item['health'],
+        accepts_mercadopago: item['accepts_mercadopago'],
+        free_shipping:       item.dig('shipping', 'free_shipping'),
+
+        # Fechas de ML
+        date_created:        item['date_created'],
+        last_updated:        item['last_updated'],
+
+        # Arrays/objetos
+        pictures:            item['pictures'] || [],
+        attributes_data:     item['attributes'] || [],
+        shipping_data:       item['shipping'] || {},
+        tags:                item['tags'] || [],
+
+        # Respuesta completa (fallback para cualquier campo futuro)
+        raw_data:            item
+      )
+      sync_category(account, item['category_id']) if item['category_id'].present?
+    end
 
     def mark_syncing(account, value)
       attrs = (account.custom_attributes || {}).deep_dup

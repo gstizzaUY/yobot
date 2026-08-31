@@ -54,22 +54,28 @@ puts
 puts '2. Autoloading de clases'
 
 MODELS = %w[MeliCredential MeliProduct MeliCategory MeliOfficialStore
-            MeliOrder ReplyAiDocument ReplyAiPvDocument].freeze
+            MeliOrder MeliClaim ReplyAiDocument ReplyAiPvDocument].freeze
 MODELS.each { |m| check("Modelo #{m}") { m.constantize } }
 
 WORKERS = %w[TokenRefreshWorker MeliSyncProductsWorker MeliSyncOfficialStoresWorker
              BulkImportWorker DocumentProcessorWorker PvDocumentProcessorWorker
-             InjectCssMiddleware].freeze
+             ClaimAgentWorker ClaimsSyncWorker InjectCssMiddleware BridgeConfigSyncWorker].freeze
 WORKERS.each { |w| check("Worker ReplyAi::#{w}") { "ReplyAi::#{w}".constantize } }
 
 check('Controller LandingController') { LandingController }
+
+check('Librería ReplyAi::MeliApi') { ReplyAi::MeliApi }
+check('Librería ReplyAi::ClaimAutomation') { ReplyAi::ClaimAutomation }
+check('Librería ReplyAi::ClaimMapper') { ReplyAi::ClaimMapper }
+check('Librería ReplyAi::BridgeApi') { ReplyAi::BridgeApi }
+check('Librería ReplyAi::BridgeConfigMapper') { ReplyAi::BridgeConfigMapper }
 
 # ── 3. Base de datos ─────────────────────────────────────────────────────
 puts
 puts '3. Tablas custom en la base de datos'
 
 TABLES = %w[meli_credentials meli_products meli_categories meli_official_stores
-            meli_orders meli_questions reply_ai_documents reply_ai_pv_documents].freeze
+            meli_orders meli_claims meli_questions reply_ai_documents reply_ai_pv_documents].freeze
 TABLES.each do |t|
   check("Tabla #{t}") { ActiveRecord::Base.connection.table_exists?(t) }
 end
@@ -89,7 +95,7 @@ begin
   migrations = context.migrations
   pending  = migrations.reject { |m| applied.include?(m.version) }
 
-  check("Migraciones encontradas (#{migrations.size})") { migrations.size == 8 }
+  check("Migraciones encontradas (#{migrations.size})") { migrations.size >= 8 }
   check("Migraciones pendientes (#{pending.size})")     { pending.empty? }
 
   if pending.any?
@@ -126,7 +132,7 @@ end
 puts
 puts '6. Asociaciones en modelo Account'
 
-ASSOCIATIONS = %w[meli_products meli_categories meli_credentials
+ASSOCIATIONS = %w[meli_products meli_categories meli_credentials meli_claims
                   reply_ai_documents reply_ai_pv_documents].freeze
 ASSOCIATIONS.each do |assoc|
   check("Account.has_many :#{assoc}") do

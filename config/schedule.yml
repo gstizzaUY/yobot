@@ -80,3 +80,11 @@ reply_ai_token_refresh_job:
   cron: '*/5 * * * *'
   class: 'ReplyAi::TokenRefreshWorker'
   queue: low
+
+# Reply-AI: sync de lectura de mensajes post-venta (ticks read ✓✓ azul) cada 1 minuto.
+# Cada 1 min porque la API de ML tarda >30s en reflejar el `message_date.read` tras la
+# lectura del comprador (el sync por forward corre antes y no lo ve).
+reply_ai_message_read_sync_job:
+  cron: '*/1 * * * *'
+  class: 'ReplyAi::MessageReadSyncWorker'
+  queue: low

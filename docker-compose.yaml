@@ -116,6 +116,19 @@ services:
       - DB_POSTGRESDB_PASSWORD=postgres
       - N8N_ENCRYPTION_KEY=yobot_secret_n8n_key
       - N8N_TRUST_PROXY=true
+      - QUEUE_BULL_REDIS_HOST=redis
+      - QUEUE_BULL_REDIS_PORT=6379
+      # Reply-AI: permitir $env en Code nodes + vars de IA adjuntos
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_VISION_MODEL=gpt-4o-mini
+      - OPENAI_WHISPER_MODEL=whisper-1
+      - TIKA_URL=http://tika:9998
+      # Reply-AI: bridge Yobot (se completan cuando se configure el bridge)
+      - BRIDGE_SECRET=${BRIDGE_SECRET:-}
+      - YOBOT_BRIDGE_URL=${YOBOT_BRIDGE_URL:-}
+      # Reply-AI: modo recepcion solamente (testing)
+      - REPLY_RECEIVE_ONLY=${REPLY_RECEIVE_ONLY:-false}
     volumes:
       - n8n_storage:/home/node/.n8n
     depends_on:
@@ -134,6 +147,19 @@ services:
       - DB_POSTGRESDB_USER=postgres
       - DB_POSTGRESDB_PASSWORD=postgres
       - N8N_ENCRYPTION_KEY=yobot_secret_n8n_key
+      - QUEUE_BULL_REDIS_HOST=redis
+      - QUEUE_BULL_REDIS_PORT=6379
+      # Reply-AI: permitir $env en Code nodes + vars de IA adjuntos
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_VISION_MODEL=gpt-4o-mini
+      - OPENAI_WHISPER_MODEL=whisper-1
+      - TIKA_URL=http://tika:9998
+      # Reply-AI: bridge Yobot (se completan cuando se configure el bridge)
+      - BRIDGE_SECRET=${BRIDGE_SECRET:-}
+      - YOBOT_BRIDGE_URL=${YOBOT_BRIDGE_URL:-}
+      # Reply-AI: modo recepcion solamente (testing)
+      - REPLY_RECEIVE_ONLY=${REPLY_RECEIVE_ONLY:-false}
     volumes:
       - n8n_storage:/home/node/.n8n
     depends_on:

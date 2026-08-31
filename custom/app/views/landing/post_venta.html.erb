@@ -161,49 +161,13 @@
         </div>
 
         <nav class="flex-1 px-3 py-5 overflow-y-auto space-y-6">
-            <!-- Pre-venta -->
-            <div>
-                <p class="sidebar-section-label px-3 mb-2 text-[10px] font-bold tracking-widest uppercase text-white/30">Pre-venta</p>
-                <ul class="space-y-0.5">
-                    <li>
-                        <a href="<%= reply_ai_dashboard_path %>"
-                           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors">
-                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15M14.25 3.104c.251.023.501.05.75.082M19.8 15l-1.575 1.575M5 14.5l-1.575 1.575M19.8 15l1.2 1.2M5 14.5l-1.2 1.2m14.999 0l-6 6m-6-6 6 6"/></svg>
-                            <span class="sidebar-label">Prompts</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="<%= reply_ai_dashboard_path(tab: 'rag') %>"
-                           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors">
-                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
-                            <span class="sidebar-label">Documentos</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-
-            <!-- Post-venta -->
-            <div>
-                <p class="sidebar-section-label px-3 mb-2 text-[10px] font-bold tracking-widest uppercase text-white/30">Post-venta</p>
-                <ul class="space-y-0.5">
-                    <li>
-                        <a href="<%= reply_ai_post_venta_path %>"
-                           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors"
-                           style="background:rgba(253,81,1,0.15); color:#fd5101;">
-                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:#fd5101"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/></svg>
-                            <span class="sidebar-label">Prompts</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-
-            <!-- Conversaciones -->
+            <!-- Conversaciones: consola de Chatwoot -->
             <div>
                 <p class="sidebar-section-label px-3 mb-2 text-[10px] font-bold tracking-widest uppercase text-white/30">Conversaciones</p>
                 <ul class="space-y-0.5">
                     <li>
                         <a href="<%= @magic_link_to_chats %>"
-                           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors">
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-white/80 hover:text-white hover:bg-white/10 transition-colors">
                             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
                             <span class="sidebar-label">Consola de Mensajes</span>
                         </a>
@@ -211,22 +175,30 @@
                 </ul>
             </div>
 
-            <!-- Ajustes -->
+            <!-- MercadoLibre: navegación por pestañas -->
             <div>
-                <p class="sidebar-section-label px-3 mb-2 text-[10px] font-bold tracking-widest uppercase text-white/30">Ajustes</p>
+                <p class="sidebar-section-label px-3 mb-2 text-[10px] font-bold tracking-widest uppercase text-white/30">MercadoLibre</p>
                 <ul class="space-y-0.5">
                     <li>
-                        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/40 cursor-not-allowed">
-                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z"/></svg>
-                            <span class="sidebar-label">Analíticas</span>
-                            <span class="sidebar-badge ml-auto text-[9px] font-bold bg-white/10 text-white/40 px-1.5 py-0.5 rounded-full">Pronto</span>
+                        <a href="<%= reply_ai_dashboard_path(tab: 'preventa') %>"
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors">
+                            <svg class="w-4 h-4 flex-shrink-0 text-[#ffe600]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+                            <span class="sidebar-label">Pre-Venta</span>
                         </a>
                     </li>
                     <li>
-                        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/40 cursor-not-allowed">
-                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.4.604-.4.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.959.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 01-.61-.58v0z"/></svg>
-                            <span class="sidebar-label">Integraciones</span>
-                            <span class="sidebar-badge ml-auto text-[9px] font-bold bg-white/10 text-white/40 px-1.5 py-0.5 rounded-full">Pronto</span>
+                        <a href="<%= reply_ai_post_venta_path %>"
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+                           style="background:rgba(253,81,1,0.15); color:#fd5101;">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:#fd5101"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/></svg>
+                            <span class="sidebar-label">Post-Venta</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<%= reply_ai_dashboard_path(tab: 'informes') %>"
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z"/></svg>
+                            <span class="sidebar-label">Informes</span>
                         </a>
                     </li>
                 </ul>
@@ -474,6 +446,14 @@
                     </div>
                 </div>
 
+                <!-- Automatización de Reclamos — se configura en el dashboard principal -->
+                <div class="bg-white rounded-2xl border border-gray-100 p-5 flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                        <h3 class="font-semibold text-gray-800 text-lg">Automatización de Reclamos</h3>
+                        <p class="text-[13px] text-gray-400 mt-0.5">Reglas PNR/PDD, montos máximos y modo supervisado.</p>
+                    </div>
+                    <a href="/dashboard?panel=panel-reclamos" class="text-sm font-bold px-4 py-2 rounded-xl bg-[#fd5101] text-white hover:bg-brand-dark transition-colors">Configurar →</a>
+                </div>
                 <!-- Botón guardar -->
                 <div class="flex justify-end pb-8">
                     <button type="submit"

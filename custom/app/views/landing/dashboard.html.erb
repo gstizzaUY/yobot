@@ -322,105 +322,30 @@
         <!-- Navegación principal -->
         <nav class="flex-1 px-3 py-5 overflow-y-auto space-y-1 overflow-x-hidden">
 
-            <!-- ── Canal: MercadoLibre ── -->
-            <div id="channel-meli">
-                <!-- Header del canal (colapsable) -->
-                <button onclick="toggleChannel('meli')"
-                        class="sidebar-channel-btn w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-white/50 hover:text-white/80 hover:bg-white/5 transition-colors text-left">
+            <!-- ── Conversaciones: consola de Chatwoot ── -->
+            <div>
+                <p class="sidebar-section-label px-3 pb-1 text-[9px] font-bold tracking-widest uppercase text-white/25">Conversaciones</p>
+                <ul class="space-y-0.5">
+                    <li>
+                        <a href="<%= @magic_link_to_chats %>" id="btn-to-chats"
+                           class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-white/80 hover:text-white hover:bg-white/10 transition-colors">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+                            <span class="sidebar-label">Consola de Mensajes</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ── Canal: MercadoLibre (config en pestañas del contenido) ── -->
+            <div id="channel-meli" class="mt-1">
+                <a href="#" onclick="showMainTab('preventa'); return false;"
+                   class="sidebar-channel-btn w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-white/70 hover:text-white/90 hover:bg-white/10 transition-colors text-left">
                     <svg class="w-4 h-4 flex-shrink-0 text-[#ffe600]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
                     <span class="sidebar-label text-[11px] font-bold tracking-widest uppercase">MercadoLibre</span>
-                    <svg id="meli-chevron" class="w-3 h-3 ml-auto flex-shrink-0 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
-                </button>
-
-                <div id="channel-meli-items" class="mt-0.5 space-y-3 pl-2">
-
-                    <!-- Pre-venta -->
-                    <div>
-                        <p class="sidebar-section-label px-3 pt-2 pb-1 text-[9px] font-bold tracking-widest uppercase text-white/25">Pre-venta</p>
-                        <ul class="space-y-0.5">
-                            <li>
-                                <a href="#" onclick="showPanel('panel-pv-ajustes'); return false;"
-                                   class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors"
-                                   data-panel="panel-pv-ajustes">
-                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
-                                    <span class="sidebar-label">Ajustes del bot</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" onclick="showPanel('panel-pv-instrucciones'); return false;"
-                                   class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors"
-                                   data-panel="panel-pv-instrucciones">
-                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
-                                    <span class="sidebar-label">Instrucciones</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" onclick="showPanel('panel-pv-docs'); return false;"
-                                   class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors"
-                                   data-panel="panel-pv-docs">
-                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
-                                    <span class="sidebar-label">Documentos</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" onclick="showPanel('panel-pv-saludos'); return false;"
-                                   class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors"
-                                   data-panel="panel-pv-saludos">
-                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z"/></svg>
-                                    <span class="sidebar-label">Saludos</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Post-venta -->
-                    <div>
-                        <p class="sidebar-section-label px-3 pb-1 text-[9px] font-bold tracking-widest uppercase text-white/25">Post-venta</p>
-                        <ul class="space-y-0.5">
-                            <li>
-                                <a href="#" onclick="showPanel('panel-postventa-ajustes'); return false;"
-                                   class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors"
-                                   data-panel="panel-postventa-ajustes">
-                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
-                                    <span class="sidebar-label">Ajustes del bot</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" onclick="showPanel('panel-postventa-prompts'); return false;"
-                                   class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors"
-                                   data-panel="panel-postventa-prompts">
-                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/></svg>
-                                    <span class="sidebar-label">Prompts</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" onclick="showPanel('panel-postventa-docs'); return false;"
-                                   class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors"
-                                   data-panel="panel-postventa-docs">
-                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
-                                    <span class="sidebar-label">Documentos</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Herramientas -->
-                    <div>
-                        <p class="sidebar-section-label px-3 pb-1 text-[9px] font-bold tracking-widest uppercase text-white/25">Herramientas</p>
-                        <ul class="space-y-0.5">
-                            <li>
-                                <a href="#" onclick="showPanel('panel-bulk-import'); return false;"
-                                   class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors"
-                                   data-panel="panel-bulk-import">
-                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/></svg>
-                                    <span class="sidebar-label">Importación Masiva</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                </div>
+                    <svg class="w-3 h-3 ml-auto flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                </a>
             </div>
+
 
             <!-- ── Canal: Redes Sociales ── -->
             <div id="channel-social" class="mt-1">
@@ -570,42 +495,6 @@
                 </div>
             </div>
 
-            <div class="border-t border-white/10 pt-3 mt-2 space-y-1">
-                <!-- Conversaciones -->
-                <div>
-                    <p class="sidebar-section-label px-3 pb-1 text-[9px] font-bold tracking-widest uppercase text-white/25">Conversaciones</p>
-                    <ul class="space-y-0.5">
-                        <li>
-                            <a href="<%= @magic_link_to_chats %>" id="btn-to-chats"
-                               class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors">
-                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
-                                <span class="sidebar-label">Consola de Mensajes</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Ajustes -->
-                <div>
-                    <p class="sidebar-section-label px-3 pb-1 text-[9px] font-bold tracking-widest uppercase text-white/25">Ajustes</p>
-                    <ul class="space-y-0.5">
-                        <li>
-                            <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-white/40 cursor-not-allowed">
-                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z"/></svg>
-                                <span class="sidebar-label">Analíticas</span>
-                                <span class="sidebar-badge ml-auto text-[9px] font-bold bg-white/10 text-white/40 px-1.5 py-0.5 rounded-full">Pronto</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-white/40 cursor-not-allowed">
-                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.4.604-.4.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.959.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 01-.61-.58v0z"/></svg>
-                                <span class="sidebar-label">Integraciones</span>
-                                <span class="sidebar-badge ml-auto text-[9px] font-bold bg-white/10 text-white/40 px-1.5 py-0.5 rounded-full">Pronto</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
         </nav>
 
         <!-- Cuenta de usuario (fondo del sidebar) -->
@@ -670,6 +559,50 @@
 
         <!-- Área de scroll del contenido -->
         <main class="flex-1 overflow-y-auto px-4 py-5 sm:px-8 sm:py-7">
+
+            <!-- ══════ TABS PRINCIPALES ══════ -->
+            <div class="mb-5">
+                <div class="flex gap-1 bg-white dark:bg-[#1c1e22] border border-gray-100 dark:border-[#2d3139] rounded-2xl p-1 w-fit">
+                    <button id="maintab-preventa" onclick="showMainTab('preventa')"
+                            class="main-tab px-5 py-2.5 rounded-xl text-sm font-bold text-gray-500 transition-colors">Pre-Venta</button>
+                    <button id="maintab-postventa" onclick="showMainTab('postventa')"
+                            class="main-tab px-5 py-2.5 rounded-xl text-sm font-bold text-gray-500 transition-colors">Post-Venta</button>
+                    <button id="maintab-informes" onclick="showMainTab('informes')"
+                            class="main-tab px-5 py-2.5 rounded-xl text-sm font-bold text-gray-500 transition-colors">Informes</button>
+                </div>
+
+                <!-- Sync de configuración Yobot -->
+                <div id="pv-sync-row" class="flex items-center gap-3 mt-3">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">La configuración de este vendedor se sincroniza desde Yobot (bridge).</p>
+                    <button type="button" onclick="syncBridgeConfig()"
+                            class="text-xs font-semibold text-white px-3 py-1.5 rounded-lg transition-colors" style="background:#fd5101">
+                        Sincronizar ahora
+                    </button>
+                </div>
+
+                <!-- Sub-pestañas Pre-Venta -->
+                <div id="subtabs-preventa" class="flex gap-1 mt-3 overflow-x-auto hidden">
+                    <button onclick="showSubTab('preventa', 'ajustes')"       data-sub="ajustes"       class="sub-tab px-4 py-2 rounded-lg text-sm font-semibold text-gray-500 transition-colors whitespace-nowrap">Ajustes del bot</button>
+                    <button onclick="showSubTab('preventa', 'instrucciones')"  data-sub="instrucciones" class="sub-tab px-4 py-2 rounded-lg text-sm font-semibold text-gray-500 transition-colors whitespace-nowrap">Instrucciones</button>
+                    <button onclick="showSubTab('preventa', 'saludos')"       data-sub="saludos"       class="sub-tab px-4 py-2 rounded-lg text-sm font-semibold text-gray-500 transition-colors whitespace-nowrap">Saludos</button>
+                    <button onclick="showSubTab('preventa', 'docs')"          data-sub="docs"          class="sub-tab px-4 py-2 rounded-lg text-sm font-semibold text-gray-500 transition-colors whitespace-nowrap">Documentos</button>
+                </div>
+
+                <!-- Sub-pestañas Post-Venta -->
+                <div id="subtabs-postventa" class="flex gap-1 mt-3 overflow-x-auto hidden">
+                    <button onclick="showSubTab('postventa', 'ventas')"    data-sub="ventas"    class="sub-tab px-4 py-2 rounded-lg text-sm font-semibold text-gray-500 transition-colors whitespace-nowrap">Ventas</button>
+                    <button onclick="showSubTab('postventa', 'ajustes')"   data-sub="ajustes"   class="sub-tab px-4 py-2 rounded-lg text-sm font-semibold text-gray-500 transition-colors whitespace-nowrap">Ajustes del bot</button>
+                    <button onclick="showSubTab('postventa', 'prompts')"   data-sub="prompts"   class="sub-tab px-4 py-2 rounded-lg text-sm font-semibold text-gray-500 transition-colors whitespace-nowrap">Prompts</button>
+                    <button onclick="showSubTab('postventa', 'docs')"      data-sub="docs"      class="sub-tab px-4 py-2 rounded-lg text-sm font-semibold text-gray-500 transition-colors whitespace-nowrap">Documentos</button>
+                    <button onclick="showSubTab('postventa', 'reclamos')"  data-sub="reclamos"  class="sub-tab px-4 py-2 rounded-lg text-sm font-semibold text-gray-500 transition-colors whitespace-nowrap">Reclamos</button>
+                </div>
+
+                <!-- Sub-pestañas Informes -->
+                <div id="subtabs-informes" class="flex gap-1 mt-3 overflow-x-auto hidden">
+                    <button onclick="showSubTab('informes', 'preventa')"  data-sub="preventa"  class="sub-tab px-4 py-2 rounded-lg text-sm font-semibold text-gray-500 transition-colors whitespace-nowrap">Pre-Venta</button>
+                    <button onclick="showSubTab('informes', 'postventa')" data-sub="postventa" class="sub-tab px-4 py-2 rounded-lg text-sm font-semibold text-gray-500 transition-colors whitespace-nowrap">Post-Venta</button>
+                </div>
+            </div>
 
             <!-- ══════ CHECKLIST PRIMEROS PASOS ══════ -->
             <%
@@ -935,6 +868,52 @@
                         </div>
                     </div>
 
+                    <!-- Control de confianza pre-venta -->
+                    <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden mt-5">
+                        <div class="px-4 sm:px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#fff4ef">
+                                <svg class="w-5 h-5" style="color:#fd5101" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-800 text-lg">Control de confianza</h3>
+                                <p class="text-[13px] text-gray-400">Si la IA no encuentra información suficiente, retiene la pregunta (no responde) y la deja lista para un agente.</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0 ml-auto">
+                                <input type="checkbox" name="require_rag_or_confidence" value="1"
+                                       <%= @require_rag_or_confidence ? 'checked' : '' %>
+                                       class="sr-only peer"
+                                       onchange="document.getElementById('confidence-categories').classList.toggle('hidden', !this.checked)">
+                                <div class="w-12 h-6 bg-gray-200 rounded-full peer
+                                            peer-checked:bg-[#fd5101]
+                                            after:content-[''] after:absolute after:top-0.5 after:left-[3px]
+                                            after:bg-white after:rounded-full after:h-5 after:w-5
+                                            after:transition-all peer-checked:after:translate-x-6
+                                            after:shadow-sm"></div>
+                            </label>
+                        </div>
+                        <div id="confidence-categories" class="<%= @require_rag_or_confidence ? '' : 'hidden' %>">
+                            <div class="px-4 sm:px-6 py-4">
+                                <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Categorías con retención activa</p>
+                                <% cats = @master_categories + @sub_categories %>
+                                <% if cats.any? %>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                        <% cats.each do |cat| %>
+                                            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                                                <input type="checkbox" name="confidence_categories[<%= cat.meli_category_id %>]" value="1"
+                                                       <%= @confidence_by_category[cat.meli_category_id.to_s] ? 'checked' : '' %>
+                                                       class="rounded border-gray-300 text-[#fd5101] focus:ring-[#fd5101]">
+                                                <%= cat.name %>
+                                            </label>
+                                        <% end %>
+                                    </div>
+                                    <p class="text-[11px] text-gray-400 mt-2">Sin marcar: usa la configuración global.</p>
+                                <% else %>
+                                    <p class="text-[13px] text-gray-400">Sincronizá tu catálogo para elegir categorías (aplica a todo por defecto).</p>
+                                <% end %>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex justify-end">
                         <button type="submit" class="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-colors" style="background:#fd5101">Guardar cambios</button>
                     </div>
@@ -1143,6 +1122,15 @@
 
             <!-- ─── Panel: Documentos ─── -->
             <div id="panel-pv-docs" class="main-content hidden">
+                <!-- Migración RAG desde Yobot (perfil MIGRADO, 2026-08-08) -->
+                <% rag_syncing_pre = @account.custom_attributes&.dig('syncing_rag_pre') %>
+                <form action="<%= migrate_rag_pre_path %>" method="POST" class="px-4 sm:px-6 pt-4">
+                    <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+                    <button type="submit" <%= rag_syncing_pre ? 'disabled' : '' %>
+                        class="px-4 py-2 rounded-lg text-sm font-bold text-white transition-colors <%= rag_syncing_pre ? 'opacity-50 cursor-not-allowed' : '' %>" style="background:#fd5101">
+                        <%= rag_syncing_pre ? 'Importando documentos de Yobot...' : 'Importar documentos de Yobot' %>
+                    </button>
+                </form>
                 <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
 
                     <!-- Sub-tabs RAG -->
@@ -1213,28 +1201,142 @@
                         </div>
 
                         <!-- Productos -->
-                        <div id="rag-prods" class="rag-content hidden">
-                            <% if @is_syncing %>
-                                <div id="sync-banner" class="py-16 text-center">
-                                    <div class="animate-spin inline-block w-10 h-10 border-4 border-t-transparent rounded-full mb-4"
-                                         style="border-color:#fd5101; border-top-color:transparent"></div>
-                                    <p class="font-bold text-gray-600 text-sm">Sincronizando productos de MercadoLibre...</p>
-                                    <p id="sync-count" class="text-xs text-gray-400 mt-1">Calculando...</p>
+<div id="rag-prods" class="rag-content hidden">
+<% if @is_syncing %>
+<div id="sync-banner" class="py-16 text-center">
+<div class="animate-spin inline-block w-10 h-10 border-4 border-t-transparent rounded-full mb-4"
+style="border-color:#fd5101; border-top-color:transparent"></div>
+<p class="font-bold text-gray-600 text-sm">Sincronizando productos de MercadoLibre...</p>
+<p id="sync-count" class="text-xs text-gray-400 mt-1">Calculando...</p>
+</div>
+<div id="products-container"></div>
+<% else %>
+<div id="products-container">
+<%= render partial: 'products_table' %>
+</div>
+<% end %>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ─── Panel: Reclamos MercadoLibre ─── -->
+<div id="panel-reclamos" class="main-content hidden">
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div>
+            <h3 class="font-semibold text-gray-800 text-lg dark:text-gray-200">Reclamos MercadoLibre</h3>
+            <p class="text-[13px] text-gray-400 mt-0.5">Automatización de reclamos y acceso a la gestión. La conversación del reclamo vive en la bandeja <strong>Reclamos (MercadoLibre)</strong> de Chatwoot.</p>
+        </div>
+        <a href="/dashboard/claims" class="text-sm font-bold px-4 py-2 rounded-xl bg-[#fd5101] text-white hover:bg-brand-dark transition-colors">
+            Ver tabla de reclamos →
+        </a>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div class="px-4 sm:px-6 py-5 border-b border-gray-50">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                    <h3 class="font-semibold text-gray-800 text-lg">Automatización de Reclamos</h3>
+                    <p class="text-[13px] text-gray-400 mt-0.5">Reglas automáticas (PNR → evidencia, PDD → devolución/reembolso). Lo que no cubren las reglas lo analiza el agente IA.</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                    <input type="checkbox" name="automatizacion_reclamos[enabled]" value="1"
+                           id="auto-reclamos-toggle"
+                           <%= @automatizacion_reclamos['enabled'] != false ? 'checked' : '' %>
+                           class="sr-only peer"
+                           onchange="document.getElementById('auto-reclamos-fields').classList.toggle('hidden', !this.checked)">
+                                    <div class="w-12 h-6 bg-gray-200 rounded-full peer
+                                                peer-checked:bg-[#fd5101]
+                                                after:content-[''] after:absolute after:top-0.5 after:left-[3px]
+                                                after:bg-white after:rounded-full after:h-5 after:w-5
+                                                after:transition-all peer-checked:after:translate-x-6
+                                                after:shadow-sm"></div>
+                                </label>
                                 </div>
-                                <div id="products-container"></div>
-                            <% else %>
-                                <div id="products-container">
-                                    <%= render partial: 'products_table' %>
-                                </div>
-                            <% end %>
+                            </div>
+                        </div>
+        <div id="auto-reclamos-fields" class="px-4 sm:px-6 py-5 space-y-4 <%= @automatizacion_reclamos['enabled'] == false ? 'hidden' : '' %>">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label class="flex items-center gap-2.5 cursor-pointer bg-gray-50 dark:bg-[#1e2025] rounded-xl px-3 py-2.5">
+                    <input type="checkbox" name="automatizacion_reclamos[auto_enviar_evidencia_pnr]" value="1"
+                           <%= @automatizacion_reclamos['autoEnviarEvidenciaPNR'] != false ? 'checked' : '' %>
+                           class="w-4 h-4 rounded accent-[#fd5101]">
+                    <span class="text-[13px] text-gray-700">PNR → enviar evidencia de envío automáticamente</span>
+                </label>
+                <label class="flex items-center gap-2.5 cursor-pointer bg-gray-50 dark:bg-[#1e2025] rounded-xl px-3 py-2.5">
+                    <input type="checkbox" name="automatizacion_reclamos[auto_aceptar_devolucion_pdd]" value="1"
+                           <%= @automatizacion_reclamos['autoAceptarDevolucionPDD'] != false ? 'checked' : '' %>
+                           class="w-4 h-4 rounded accent-[#fd5101]">
+                    <span class="text-[13px] text-gray-700">PDD → aceptar devolución automáticamente</span>
+                </label>
+                <label class="flex items-center gap-2.5 cursor-pointer bg-gray-50 dark:bg-[#1e2025] rounded-xl px-3 py-2.5">
+                    <input type="checkbox" name="automatizacion_reclamos[auto_reembolso_parcial]" value="1"
+                           <%= @automatizacion_reclamos['autoReembolsoParcial'] != false ? 'checked' : '' %>
+                           class="w-4 h-4 rounded accent-[#fd5101]">
+                    <span class="text-[13px] text-gray-700">PDD → ofrecer reembolso parcial (oferta más baja)</span>
+                </label>
+                <label class="flex items-center gap-2.5 cursor-pointer bg-gray-50 dark:bg-[#1e2025] rounded-xl px-3 py-2.5">
+                    <input type="checkbox" name="automatizacion_reclamos[auto_aprobar_devolucion_simple]" value="1"
+                           <%= @automatizacion_reclamos['autoAprobarDevolucionSimple'] ? 'checked' : '' %>
+                           class="w-4 h-4 rounded accent-[#fd5101]">
+                    <span class="text-[13px] text-gray-700">Aprobar devoluciones simples (cambio de opinión, talle, etc.)</span>
+                </label>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Monto máx. automático ($)</label>
+                    <input type="number" step="0.01" name="automatizacion_reclamos[monto_maximo_auto]"
+                           value="<%= @automatizacion_reclamos['montoMaximoAuto'] %>"
+                           class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus-brand">
+                    <p class="text-[11px] text-gray-400 mt-1">0 = sin límite. Por encima, deriva a humano.</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Monto máx. devolución simple ($)</label>
+                    <input type="number" step="0.01" name="automatizacion_reclamos[monto_maximo_devolucion_auto]"
+                           value="<%= @automatizacion_reclamos['montoMaximoDevolucionAuto'] %>"
+                           class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus-brand">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Tipos excluidos (coma)</label>
+                    <input type="text" name="automatizacion_reclamos[tipos_excluidos]"
+                           value="<%= Array(@automatizacion_reclamos['tipos_excluidos']).join(', ') %>"
+                           placeholder="Ej: fulfillment, shipping"
+                           class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus-brand">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Retraso de respuesta (segundos)</label>
+                    <input type="number" name="automatizacion_reclamos[delay_respuesta]" min="0" max="900"
+                           value="<%= @automatizacion_reclamos['delayRespuesta'] || 60 %>"
+                           class="w-32 p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus-brand">
+                </div>
+            </div>
+            <label class="flex items-center gap-2.5 cursor-pointer">
+                <input type="checkbox" name="automatizacion_reclamos[modo_agente_supervisado]" value="1"
+                       <%= @automatizacion_reclamos['modoAgenteSupervisado'] ? 'checked' : '' %>
+                       class="w-4 h-4 rounded accent-[#fd5101]">
+                <span class="text-[13px] text-gray-700">Modo supervisado: el agente IA pide confirmación antes de aceptar devoluciones o hacer reembolsos</span>
+            </label>
+        </div>
+    </div>
+
+<!-- ─────────────────── PANELES POST-VENTA ─────────────────── -->
+<form action="<%= update_post_venta_path %>" method="POST" class="space-y-6">
+                <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+
+                <!-- ─── Panel: Ventas (Post-venta) ─── -->
+                <div id="panel-postventa-ventas" class="main-content hidden">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+                        <div>
+                            <h3 class="font-semibold text-gray-800 text-lg dark:text-gray-200">Ventas MercadoLibre</h3>
+                            <p class="text-[13px] text-gray-400 mt-0.5">Órdenes registradas. La columna <strong>Preguntas</strong> muestra si el comprador hizo preguntas pre-venta sobre el mismo producto y enlaza a la conversación.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                        <div id="sales-list-body" class="p-4 sm:p-6">
+                            <div class="flex items-center justify-center py-10 text-sm text-gray-400">Cargando ventas…</div>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- ═══════════════ PANELES POST-VENTA ═══════════════ -->
-            <form action="<%= update_post_venta_path %>" method="POST" class="space-y-6">
-                <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
 
                 <!-- ─── Panel: Ajustes del bot (Post-venta) ─── -->
                 <div id="panel-postventa-ajustes" class="main-content hidden">
@@ -1260,6 +1362,7 @@
                                 </label>
                             </div>
                         </div>
+
                         <div class="px-4 sm:px-6 py-5">
                             <label class="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-widest">Modelo OpenAI</label>
                             <p class="text-[13px] text-gray-400 mb-3">
@@ -1279,6 +1382,22 @@
                                            class="accent-[#fd5101]">
                                     <span class="text-sm text-gray-700 font-medium">gpt-4o</span>
                                 </label>
+                            </div>
+                        </div>
+
+                        <!-- Delay de respuesta post-venta (sincronizado desde Yobot) -->
+                        <div class="border-t border-gray-50 dark:border-gray-800 px-4 sm:px-6 py-4 flex items-center gap-4 flex-wrap">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="post_venta_ia[delay_enabled]" value="1"
+                                       <%= @pv_ia.dig('delay', 'enabled') ? 'checked' : '' %>
+                                       class="rounded border-gray-300 text-[#fd5101] focus:ring-[#fd5101]">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Retraso de respuesta post-venta</span>
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" name="post_venta_ia[delay_seconds]" min="0" max="900"
+                                       value="<%= @pv_ia.dig('delay', 'seconds') || 0 %>"
+                                       class="w-24 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#21242c] text-sm">
+                                <span class="text-xs text-gray-400">segundos (0–900)</span>
                             </div>
                         </div>
                     </div>
@@ -1430,6 +1549,15 @@
 
             <!-- ─── Panel: Documentos Post-venta ─── -->
             <div id="panel-postventa-docs" class="main-content hidden">
+                <!-- Migración RAG desde Yobot (perfil MIGRADO, 2026-08-08) -->
+                <% rag_syncing_post = @account.custom_attributes&.dig('syncing_rag_post') %>
+                <form action="<%= migrate_rag_post_path %>" method="POST" class="px-4 sm:px-6 pt-4">
+                    <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+                    <button type="submit" <%= rag_syncing_post ? 'disabled' : '' %>
+                        class="px-4 py-2 rounded-lg text-sm font-bold text-white transition-colors <%= rag_syncing_post ? 'opacity-50 cursor-not-allowed' : '' %>" style="background:#fd5101">
+                        <%= rag_syncing_post ? 'Importando documentos de Yobot (post-venta)...' : 'Importar documentos de Yobot (post-venta)' %>
+                    </button>
+                </form>
                 <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
 
                     <!-- Sub-tabs RAG PV -->
@@ -1513,6 +1641,99 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- ─── Importación Masiva Post-Venta ─── -->
+                <div class="mt-6 bg-white dark:bg-[#1c1e22] rounded-2xl border border-gray-100 dark:border-[#2d3139] overflow-hidden">
+                    <div class="border-b border-gray-100 dark:border-gray-800 px-6 py-5">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Importación Masiva desde Excel / CSV</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            Subí un archivo con múltiples productos a la vez. Cada fila genera un documento RAG de post-venta asociado al item de MercadoLibre correspondiente.
+                        </p>
+                    </div>
+                    <div class="p-6 space-y-6">
+
+                        <!-- Paso 1: Subir archivo y detectar columnas -->
+                        <div id="pv-bulk-step-1" class="bg-gray-50 dark:bg-[#21242c] border border-gray-200 dark:border-gray-700 rounded-2xl p-6 space-y-4">
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="flex-shrink-0 w-7 h-7 rounded-full bg-[#fd5101] text-white text-xs font-bold flex items-center justify-center">1</span>
+                                <h4 class="text-base font-semibold text-gray-800 dark:text-gray-100">Seleccioná el archivo</h4>
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Formatos soportados: <strong>.xlsx</strong>, <strong>.xls</strong>, <strong>.csv</strong>. La primera fila debe contener los encabezados.</p>
+
+                            <div class="flex gap-3 items-start flex-wrap">
+                                <input type="file" id="pv-bulk-file-input" accept=".csv,.xlsx,.xls"
+                                       class="block text-sm text-gray-600 dark:text-gray-300 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-[#fd5101]/10 file:text-[#fd5101] hover:file:bg-[#fd5101]/20 cursor-pointer">
+                                <button onclick="bulkUploadPreview('pv-bulk')"
+                                        class="py-2 px-5 bg-[#fd5101] text-white text-sm font-semibold rounded-xl hover:bg-orange-600 transition">
+                                    Detectar columnas
+                                </button>
+                            </div>
+                            <div id="pv-bulk-upload-status" class="hidden text-sm text-gray-500 dark:text-gray-400 italic"></div>
+                        </div>
+
+                        <!-- Paso 2: Mapeo de columnas -->
+                        <div id="pv-bulk-step-2" class="hidden bg-gray-50 dark:bg-[#21242c] border border-gray-200 dark:border-gray-700 rounded-2xl p-6 space-y-5">
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="flex-shrink-0 w-7 h-7 rounded-full bg-[#fd5101] text-white text-xs font-bold flex items-center justify-center">2</span>
+                                <h4 class="text-base font-semibold text-gray-800 dark:text-gray-100">Mapeá las columnas</h4>
+                            </div>
+
+                            <div id="pv-bulk-filename-badge" class="inline-flex items-center gap-2 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-full font-medium"></div>
+
+                            <!-- Columna item_id -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Columna con el <strong>Item ID de MercadoLibre</strong> <span class="text-red-500">*</span>
+                                </label>
+                                <select id="pv-bulk-item-id-col" class="w-full sm:w-64 text-sm border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 bg-white dark:bg-[#21242c] text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#fd5101]/40">
+                                </select>
+                            </div>
+
+                            <!-- Columnas de contenido -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Columnas que forman el <strong>contenido del documento</strong> <span class="text-red-500">*</span>
+                                    <span class="text-gray-400 font-normal">(seleccioná una o más)</span>
+                                </label>
+                                <div id="pv-bulk-content-cols" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
+                            </div>
+
+                            <!-- Preview de filas -->
+                            <div>
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Vista previa (primeras 3 filas)</p>
+                                <div id="pv-bulk-preview-table" class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 text-xs"></div>
+                            </div>
+
+                            <!-- Submit -->
+                            <form id="pv-bulk-import-form" action="<%= bulk_import_path %>" method="POST">
+                                <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+                                <input type="hidden" name="token" id="pv-bulk-token">
+                                <input type="hidden" name="item_id_col" id="pv-bulk-hidden-item-id-col">
+                                <input type="hidden" id="pv-bulk-mode" value="pv">
+                                <input type="hidden" name="mode" id="pv-bulk-hidden-mode" value="pv">
+                                <!-- content_cols se inyectan por JS antes del submit -->
+                                <div id="pv-bulk-content-cols-hidden"></div>
+
+                                <button type="button" onclick="bulkSubmit('pv-bulk')"
+                                        class="mt-2 py-2.5 px-7 bg-[#fd5101] text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition shadow-md">
+                                    Importar documentos
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Nota informativa -->
+                        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-5">
+                            <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">¿Cómo funciona?</h4>
+                            <ul class="text-sm text-blue-700 dark:text-blue-400 space-y-1 list-disc list-inside">
+                                <li>Cada fila del archivo genera un <strong>documento RAG de post-venta separado</strong> asociado al item ID indicado.</li>
+                                <li>Si el mismo item ID aparece en varias filas, se crean múltiples documentos para ese producto (la búsqueda devuelve los más relevantes).</li>
+                                <li>Los embeddings se generan en segundo plano. Según el volumen puede tardar unos minutos.</li>
+                                <li>Los documentos importados conviven con los cargados manualmente. Podés mezclar ambos métodos.</li>
+                            </ul>
+                        </div>
+
+                    </div>
+                </div>
             </div><!-- /panel-postventa-docs -->
 
             <!-- ═══════════════ PANEL: IMPORTACIÓN MASIVA ═══════════════ -->
@@ -1538,7 +1759,7 @@
                         <div class="flex gap-3 items-start flex-wrap">
                             <input type="file" id="bulk-file-input" accept=".csv,.xlsx,.xls"
                                    class="block text-sm text-gray-600 dark:text-gray-300 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-[#fd5101]/10 file:text-[#fd5101] hover:file:bg-[#fd5101]/20 cursor-pointer">
-                            <button onclick="bulkUploadPreview()"
+                            <button onclick="bulkUploadPreview('bulk')"
                                     class="py-2 px-5 bg-[#fd5101] text-white text-sm font-semibold rounded-xl hover:bg-orange-600 transition">
                                 Detectar columnas
                             </button>
@@ -1597,7 +1818,7 @@
                             <!-- content_cols se inyectan por JS antes del submit -->
                             <div id="bulk-content-cols-hidden"></div>
 
-                            <button type="button" onclick="bulkSubmit()"
+                            <button type="button" onclick="bulkSubmit('bulk')"
                                     class="mt-2 py-2.5 px-7 bg-[#fd5101] text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition shadow-md">
                                 Importar documentos
                             </button>
@@ -1617,6 +1838,35 @@
 
                 </div>
             </div><!-- /panel-bulk-import -->
+
+            <!-- ─── Panel: Informes Pre-Venta ─── -->
+            <div id="panel-informes-preventa" class="main-content hidden">
+                <div class="bg-white dark:bg-[#1c1e22] rounded-2xl border border-gray-100 dark:border-[#2d3139] overflow-hidden">
+                    <div class="px-4 sm:px-6 py-5 border-b border-gray-50 dark:border-[#2d3139] flex items-center justify-between gap-3 flex-wrap">
+                        <div>
+                            <h3 class="font-bold text-base">Informes — Pre-Venta</h3>
+                            <p class="text-[13px] text-gray-500">Preguntas retenidas por el control de confianza (falta de información suficiente).</p>
+                        </div>
+                        <button type="button" onclick="loadConfidenceReport()"
+                                class="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl border border-[#ffd0b8] text-[#fd5101] hover:bg-[#fff4ef] transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+                            Actualizar
+                        </button>
+                    </div>
+                    <div id="confidence-report-body" class="p-4 sm:p-6">
+                        <div class="flex items-center justify-center py-10 text-sm text-gray-400">Cargando…</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── Panel: Informes Post-Venta (placeholder) ─── -->
+            <div id="panel-informes-postventa" class="main-content hidden">
+                <div class="bg-white dark:bg-[#1c1e22] rounded-2xl border border-gray-100 dark:border-[#2d3139] p-10 text-center">
+                    <div class="text-4xl mb-4">📊</div>
+                    <h3 class="font-bold text-base mb-1">Informes — Post-Venta</h3>
+                    <p class="text-sm text-gray-500">Pronto: reportes detallados de reclamos, post-venta y rendimiento del bot en etapa post-venta.</p>
+                </div>
+            </div>
 
         </main>
     </div><!-- fin contenido principal -->
@@ -2063,29 +2313,183 @@
     });
     /* ─────────────────────────────────────────────────────────── */
 
-    // ── Panel navigation ──────────────────────────────────────────
-    function showPanel(panelId) {
-        document.querySelectorAll('.main-content').forEach(c => c.classList.add('hidden'));
-        const el = document.getElementById(panelId);
-        if (el) el.classList.remove('hidden');
-        document.querySelectorAll('.sidebar-link').forEach(link => {
-            const active = link.dataset.panel === panelId;
-            link.style.background = active ? 'rgba(253,81,1,0.15)' : '';
-            link.style.color      = active ? '#fd5101' : '';
-            link.style.fontWeight = active ? '700' : '';
+    // ── Panel navigation (tabs principales + sub-pestañas) ──────────
+    const PANEL_MAP = {
+        'preventa':  { 'ajustes': 'panel-pv-ajustes', 'instrucciones': 'panel-pv-instrucciones', 'saludos': 'panel-pv-saludos', 'docs': 'panel-pv-docs' },
+        'postventa': { 'ventas': 'panel-postventa-ventas', 'ajustes': 'panel-postventa-ajustes', 'prompts': 'panel-postventa-prompts', 'docs': 'panel-postventa-docs', 'reclamos': 'panel-reclamos' },
+        'informes':  { 'preventa': 'panel-informes-preventa', 'postventa': 'panel-informes-postventa' }
+    };
+    const TAB_TITLES = {
+        'preventa':  { 'ajustes': 'Ajustes del bot — Pre-venta', 'instrucciones': 'Instrucciones — Pre-venta', 'saludos': 'Saludos — Pre-venta', 'docs': 'Documentos — Pre-venta' },
+        'postventa': { 'ventas': 'Ventas — Post-venta', 'ajustes': 'Ajustes del bot — Post-venta', 'prompts': 'Prompts — Post-venta', 'docs': 'Documentos — Post-venta', 'reclamos': 'Reclamos — Post-venta' },
+        'informes':  { 'preventa': 'Informes — Pre-Venta', 'postventa': 'Informes — Post-Venta' }
+    };
+    const DOCS_BULK = ['panel-pv-docs', 'panel-bulk-import'];
+    const LEGACY_PANEL = {
+        'panel-pv-ajustes': ['preventa', 'ajustes'], 'panel-pv-instrucciones': ['preventa', 'instrucciones'],
+        'panel-pv-saludos': ['preventa', 'saludos'], 'panel-pv-docs': ['preventa', 'docs'],
+        'panel-bulk-import': ['preventa', 'docs'], 'panel-postventa-ventas': ['postventa', 'ventas'],
+        'panel-postventa-ajustes': ['postventa', 'ajustes'],
+        'panel-postventa-prompts': ['postventa', 'prompts'], 'panel-postventa-docs': ['postventa', 'docs'],
+        'panel-reclamos': ['postventa', 'reclamos']
+    };
+
+    function setActiveMain(tab) {
+        document.querySelectorAll('.main-tab').forEach(b => {
+            const active = b.id === 'maintab-' + tab;
+            b.style.background = active ? 'rgba(253,81,1,0.12)' : '';
+            b.style.color      = active ? '#fd5101' : '';
         });
-        const titles = {
-            'panel-pv-ajustes':        'Ajustes del bot — Pre-venta',
-            'panel-pv-instrucciones':  'Instrucciones — Pre-venta',
-            'panel-pv-docs':           'Documentos',
-            'panel-pv-saludos':        'Saludos',
-            'panel-postventa-ajustes': 'Ajustes del bot — Post-venta',
-            'panel-postventa-prompts': 'Prompts — Post-venta',
-            'panel-postventa-docs':    'Documentos — Post-venta',
-        };
+    }
+
+    function setActiveSub(tab, sub) {
+        document.querySelectorAll('#subtabs-' + tab + ' .sub-tab').forEach(b => {
+            const active = b.dataset.sub === sub;
+            b.style.background = active ? 'rgba(253,81,1,0.12)' : '';
+            b.style.color      = active ? '#fd5101' : '';
+        });
+    }
+
+    function showMainTab(tab) {
+        if (!PANEL_MAP[tab]) return;
+        document.querySelectorAll('[id^="subtabs-"]').forEach(el => el.classList.add('hidden'));
+        const bar = document.getElementById('subtabs-' + tab);
+        if (bar) bar.classList.remove('hidden');
+        setActiveMain(tab);
+        showSubTab(tab, Object.keys(PANEL_MAP[tab])[0]);
+    }
+
+    function showSubTab(tab, sub) {
+        if (!PANEL_MAP[tab] || !PANEL_MAP[tab][sub]) return;
+        document.querySelectorAll('.main-content').forEach(c => c.classList.add('hidden'));
+        const targets = (tab === 'preventa' && sub === 'docs') ? DOCS_BULK : [PANEL_MAP[tab][sub]];
+        targets.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('hidden');
+        });
+        setActiveMain(tab);
+        setActiveSub(tab, sub);
+        if (tab === 'informes' && sub === 'preventa') loadConfidenceReport();
+        if (tab === 'preventa' && sub === 'docs') switchRagById('rag-prods');
+        if (tab === 'postventa' && sub === 'docs') switchPvRagById('pv-rag-prods');
+        if (tab === 'postventa' && sub === 'ventas') { loadSales(); startSalesPolling(); }
+        else stopSalesPolling();
         const h2 = document.querySelector('#page-title h2');
-        if (h2 && titles[panelId]) h2.textContent = titles[panelId];
-        history.replaceState(null, '', '?panel=' + panelId);
+        if (h2 && TAB_TITLES[tab] && TAB_TITLES[tab][sub]) h2.textContent = TAB_TITLES[tab][sub];
+        history.replaceState(null, '', '?tab=' + tab + '&sub=' + sub);
+    }
+
+    // Backward compat: showPanel(panelId) con los ids viejos
+    function showPanel(panelId) {
+        const legacy = LEGACY_PANEL[panelId];
+        if (legacy) showSubTab(legacy[0], legacy[1]);
+    }
+
+    // ── Informe de control de confianza (preguntas retenidas) ──────────
+    function loadConfidenceReport() {
+        const body = document.getElementById('confidence-report-body');
+        if (!body) return;
+        body.innerHTML = '<div class="flex items-center justify-center py-10 text-sm text-gray-400">Cargando…</div>';
+        fetch('/dashboard/confidence-report', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.questions || data.questions.length === 0) {
+                    body.innerHTML = '<div class="text-center py-10"><div class="text-3xl mb-3">✅</div>' +
+                        '<p class="text-sm text-gray-500">No hay preguntas retenidas. El control de confianza se aplica cuando la IA no encuentra información suficiente.</p></div>';
+                    return;
+                }
+                const rows = data.questions.map(q => {
+                    const conv = q.conversation_id
+                        ? '<a href="/app/accounts/<%= @account.id %>/conversations/' + q.conversation_id + '" target="_blank" class="text-[#fd5101] font-semibold hover:underline">#' + q.conversation_id + '</a>'
+                        : '<span class="text-gray-400">—</span>';
+                    const date = q.created_at ? new Date(q.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+                    return '<tr class="border-t border-gray-100 dark:border-[#2d3139] align-top">' +
+                        '<td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 max-w-[280px]">' + esc(q.question_text || '—') + '</td>' +
+                        '<td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">' + esc(q.product_title || '—') + '</td>' +
+                        '<td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-[280px]">' + esc(q.suggested_answer || '—') + '</td>' +
+                        '<td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">' + date + '</td>' +
+                        '<td class="px-4 py-3 text-sm">' + conv + '</td>' +
+                        '</tr>';
+                }).join('');
+                body.innerHTML =
+                    '<div class="overflow-x-auto">' +
+                    '<table class="w-full text-left">' +
+                    '<thead><tr class="text-xs text-gray-400 uppercase tracking-wider">' +
+                    '<th class="px-4 py-2">Pregunta</th><th class="px-4 py-2">Producto</th><th class="px-4 py-2">Sugerencia</th><th class="px-4 py-2">Fecha</th><th class="px-4 py-2">Conversación</th>' +
+                    '</tr></thead><tbody>' + rows + '</tbody></table>' +
+                    '<p class="text-[11px] text-gray-400 mt-3">Total: ' + data.total + ' preguntas retenidas.</p>' +
+                    '</div>';
+            })
+            .catch(() => {
+                body.innerHTML = '<p class="text-sm text-red-400 py-6 text-center">Error al cargar el informe.</p>';
+            });
+    }
+
+    // ── Tabla de ventas post-venta ─────────────────────────────────────
+    function loadSales() {
+        const body = document.getElementById('sales-list-body');
+        if (!body) return;
+        body.innerHTML = '<div class="flex items-center justify-center py-10 text-sm text-gray-400">Cargando ventas…</div>';
+        fetch('/dashboard/sales/data', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(data => {
+                if (!data || data.length === 0) {
+                    body.innerHTML = '<div class="text-center py-10"><p class="text-sm text-gray-500">Todavía no hay ventas registradas. Las ventas aparecen al recibir la primera notificación de orden o mensaje post-venta.</p></div>';
+                    return;
+                }
+                const rows = data.map(s => {
+                    const date = s.date_created || s.created_at
+                        ? new Date(s.date_created || s.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        : '—';
+                    const statusLabels = { paid: 'Pagada', cancelled: 'Cancelada', payment_required: 'Pago requerido', payment_in_process: 'Pago en proceso', shipped: 'Enviada', delivered: 'Entregada' };
+                    const statusLabel = statusLabels[s.order_status] || s.order_status || '—';
+                    const total = s.total_amount ? (s.currency_id || '') + ' ' + s.total_amount : '—';
+                    const preguntas = s.questions && s.questions.count > 0 && s.questions.conversation_display_id
+                        ? '<a href="/app/accounts/<%= @account.id %>/conversations/' + s.questions.conversation_display_id + '" target="_blank" class="text-[#fd5101] font-semibold hover:underline">' + s.questions.count + ' pregunta(s) →</a>'
+                        : '<span class="text-gray-400">Sin preguntas</span>';
+                    return '<tr class="border-t border-gray-100 dark:border-[#2d3139] align-top">' +
+                        '<td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">' + date + '</td>' +
+                        '<td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-semibold">' + esc(s.ml_order_id || '—') + '</td>' +
+                        '<td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 max-w-[260px]">' + esc(s.item_title || '—') + '</td>' +
+                        '<td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">' + esc(s.buyer_nickname || '—') + '</td>' +
+                        '<td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-center">' + (s.quantity || '—') + '</td>' +
+                        '<td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">' + esc(total) + '</td>' +
+                        '<td class="px-4 py-3 text-sm">' +
+                        '<span class="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full ' + (s.order_status === 'paid' ? 'bg-green-100 text-green-700' : s.order_status === 'cancelled' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500') + '">' + esc(statusLabel) + '</span>' +
+                        '</td>' +
+                        '<td class="px-4 py-3 text-sm">' + preguntas + '</td>' +
+                        '</tr>';
+                }).join('');
+                body.innerHTML =
+                    '<div class="overflow-x-auto">' +
+                    '<table class="w-full text-left">' +
+                    '<thead><tr class="text-xs text-gray-400 uppercase tracking-wider">' +
+                    '<th class="px-4 py-2">Fecha</th><th class="px-4 py-2">ID Venta</th><th class="px-4 py-2">Producto</th><th class="px-4 py-2">Comprador</th><th class="px-4 py-2 text-center">Cant.</th><th class="px-4 py-2">Total</th><th class="px-4 py-2">Estado</th><th class="px-4 py-2">Preguntas</th>' +
+                    '</tr></thead><tbody>' + rows + '</tbody></table>' +
+                    '<p class="text-[11px] text-gray-400 mt-3">Total: ' + data.length + ' ventas.</p>' +
+                    '</div>';
+            })
+            .catch(() => {
+                body.innerHTML = '<p class="text-sm text-red-400 py-6 text-center">Error al cargar las ventas.</p>';
+            });
+    }
+    // Polling: refresca la tabla mientras el panel de ventas esté visible.
+    let salesPollTimer = null;
+    function startSalesPolling() {
+        if (salesPollTimer) return;
+        salesPollTimer = setInterval(function () {
+            const panel = document.getElementById('panel-postventa-ventas');
+            if (panel && !panel.classList.contains('hidden')) loadSales();
+        }, 30000);
+    }
+    function stopSalesPolling() {
+        if (salesPollTimer) { clearInterval(salesPollTimer); salesPollTimer = null; }
+    }
+
+    function esc(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
     }
 
     function toggleChannel(name) {
@@ -2096,20 +2500,35 @@
         if (chevron) chevron.style.transform = hidden ? 'rotate(-90deg)' : '';
     }
 
-    // Activar panel por parámetro URL (o default panel-pv-ajustes)
+    // Sincroniza la configuración del bridge desde Yobot (POST; evita form anidado)
+    function syncBridgeConfig() {
+        fetch('<%= bridge_sync_config_path %>', {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || '<%= form_authenticity_token %>' }
+        }).then(r => { if (r.ok) window.location.reload(); })
+          .catch(() => { alert('No se pudo sincronizar la configuración. Revisá los logs.'); });
+    }
+
+    // Activar tab por parámetro URL (o default Pre-Venta · Ajustes)
     (function() {
         const p     = new URLSearchParams(location.search);
-        const panel = p.get('panel');
-        const tab   = p.get('tab'); // backward compat
-        if (panel) {
-            showPanel(panel);
-            if (panel === 'panel-pv-docs') switchRagById('rag-global');
-            if (panel === 'panel-postventa-docs') switchPvRagById('pv-rag-global');
-        } else if (tab === 'prods')    { showPanel('panel-pv-docs'); switchRagById('rag-prods'); }
-        else if (tab === 'pv-prods')   { showPanel('panel-postventa-docs'); switchPvRagById('pv-rag-prods'); }
-        else if (tab === 'cats')    { showPanel('panel-pv-docs'); switchRagById('rag-cats'); }
-        else if (tab === 'rag')     { showPanel('panel-pv-docs'); switchRagById('rag-global'); }
-        else                        { showPanel('panel-pv-ajustes'); }
+        const tab   = p.get('tab');
+        const sub   = p.get('sub');
+        const panel = p.get('panel'); // backward compat
+        if (tab === 'prods' || tab === 'cats' || tab === 'rag') {
+            showSubTab('preventa', 'docs');
+            switchRagById('rag-' + (tab === 'prods' ? 'prods' : tab));
+        } else if (tab === 'pv-prods') {
+            showSubTab('postventa', 'docs');
+            switchPvRagById('pv-rag-prods');
+        } else if (tab && PANEL_MAP[tab]) {
+            showMainTab(tab);
+            if (sub && PANEL_MAP[tab][sub]) showSubTab(tab, sub);
+        } else if (panel && LEGACY_PANEL[panel]) {
+            showSubTab(LEGACY_PANEL[panel][0], LEGACY_PANEL[panel][1]);
+        } else {
+            showMainTab('preventa');
+        }
     })();
 
     // ── Dark mode ────────────────────────────────────────
@@ -2729,16 +3148,20 @@
 
     // ══════════════════════════════════════════════════════════════════
     // IMPORTACIÓN MASIVA
-    // ══════════════════════════════════════════════════════════════════
+    // ═══════════════ IMPORTACIÓN MASIVA (pre: 'bulk' · post-venta: 'pv-bulk') ═══════════════
 
     // Variables de estado para el wizard
     let bulkColumns   = [];
     let bulkSampleRows = [];
 
+    function bulkEl(prefix, id) {
+        return document.getElementById(prefix + '-' + id);
+    }
+
     // PASO 1: sube el archivo y recibe las columnas detectadas
-    function bulkUploadPreview() {
-        const fileInput = document.getElementById('bulk-file-input');
-        const statusEl  = document.getElementById('bulk-upload-status');
+    function bulkUploadPreview(prefix) {
+        const fileInput = bulkEl(prefix, 'file-input');
+        const statusEl  = bulkEl(prefix, 'upload-status');
 
         if (!fileInput.files.length) {
             statusEl.textContent = 'Seleccioná un archivo primero.';
@@ -2764,45 +3187,45 @@
             bulkColumns    = data.columns || [];
             bulkSampleRows = data.sample_rows || [];
 
-            document.getElementById('bulk-filename-badge').innerHTML =
+            bulkEl(prefix, 'filename-badge').innerHTML =
                 '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>'
                 + data.filename;
 
-            document.getElementById('bulk-token').value = data.token;
+            bulkEl(prefix, 'token').value = data.token;
 
             // Llenar selector item_id
-            const itemSel = document.getElementById('bulk-item-id-col');
+            const itemSel = bulkEl(prefix, 'item-id-col');
             itemSel.innerHTML = bulkColumns.map(c =>
                 `<option value="${c}">${c}</option>`
             ).join('');
 
             // Construir checkboxes para content_cols
-            const colsDiv = document.getElementById('bulk-content-cols');
+            const colsDiv = bulkEl(prefix, 'content-cols');
             colsDiv.innerHTML = bulkColumns.map(c => `
                 <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
-                    <input type="checkbox" class="bulk-content-col-cb rounded border-gray-300 text-[#fd5101] focus:ring-[#fd5101]" value="${c}">
+                    <input type="checkbox" class="${prefix}-content-col-cb rounded border-gray-300 text-[#fd5101] focus:ring-[#fd5101]" value="${c}">
                     <span class="truncate">${c}</span>
                 </label>
             `).join('');
 
             // Render tabla preview (máx 3 filas)
-            bulkRenderPreview();
+            bulkRenderPreview(prefix);
 
             statusEl.classList.add('hidden');
-            document.getElementById('bulk-step-2').classList.remove('hidden');
-            document.getElementById('bulk-step-2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            bulkEl(prefix, 'step-2').classList.remove('hidden');
+            bulkEl(prefix, 'step-2').scrollIntoView({ behavior: 'smooth', block: 'start' });
         })
         .catch(e => { statusEl.textContent = 'Error al analizar el archivo: ' + e.message; });
     }
 
     // Renderiza la tabla de preview con las columnas seleccionadas como contenido
-    function bulkRenderPreview() {
-        const itemCol     = document.getElementById('bulk-item-id-col')?.value;
-        const checkedCols = [...document.querySelectorAll('.bulk-content-col-cb:checked')].map(c => c.value);
+    function bulkRenderPreview(prefix) {
+        const itemCol     = bulkEl(prefix, 'item-id-col')?.value;
+        const checkedCols = [...document.querySelectorAll('.' + prefix + '-content-col-cb:checked')].map(c => c.value);
         const allCols     = itemCol ? [itemCol, ...checkedCols.filter(c => c !== itemCol)] : checkedCols;
 
         if (!bulkSampleRows.length || !allCols.length) {
-            document.getElementById('bulk-preview-table').innerHTML = '<p class="p-3 text-gray-400 text-xs italic">Seleccioná las columnas para ver la vista previa.</p>';
+            bulkEl(prefix, 'preview-table').innerHTML = '<p class="p-3 text-gray-400 text-xs italic">Seleccioná las columnas para ver la vista previa.</p>';
             return;
         }
 
@@ -2815,39 +3238,39 @@
             '<tr>' + allCols.map(c => `<td class="${tdClass}" title="${(row[c]||'').replace(/"/g,'&quot;')}">${row[c] || ''}</td>`).join('') + '</tr>'
         ).join('');
 
-        document.getElementById('bulk-preview-table').innerHTML =
+        bulkEl(prefix, 'preview-table').innerHTML =
             `<table class="${tableClass}"><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
     }
 
     // Escuchar cambios en los checkboxes para actualizar el preview
     document.addEventListener('change', function(e) {
-        if (e.target.classList.contains('bulk-content-col-cb') || e.target.id === 'bulk-item-id-col') {
-            bulkRenderPreview();
+        if (e.target.matches('.bulk-content-col-cb, .pv-bulk-content-col-cb') || e.target.id === 'bulk-item-id-col' || e.target.id === 'pv-bulk-item-id-col') {
+            bulkRenderPreview(e.target.id.startsWith('pv-bulk') ? 'pv-bulk' : 'bulk');
         }
     });
 
     // PASO 2: construye los campos ocultos y hace submit del form
-    function bulkSubmit() {
-        const itemCol     = document.getElementById('bulk-item-id-col').value;
-        const checkedCols = [...document.querySelectorAll('.bulk-content-col-cb:checked')].map(c => c.value);
-        const mode        = document.getElementById('bulk-mode').value;
-        const token       = document.getElementById('bulk-token').value;
+    function bulkSubmit(prefix) {
+        const itemCol     = bulkEl(prefix, 'item-id-col').value;
+        const checkedCols = [...document.querySelectorAll('.' + prefix + '-content-col-cb:checked')].map(c => c.value);
+        const mode        = bulkEl(prefix, 'mode').value;
+        const token       = bulkEl(prefix, 'token').value;
 
         if (!itemCol) { alert('Seleccioná la columna de Item ID.'); return; }
         if (!checkedCols.length) { alert('Seleccioná al menos una columna de contenido.'); return; }
 
-        document.getElementById('bulk-hidden-item-id-col').value = itemCol;
-        document.getElementById('bulk-hidden-mode').value = mode;
+        bulkEl(prefix, 'hidden-item-id-col').value = itemCol;
+        bulkEl(prefix, 'hidden-mode').value = mode;
 
         // Inyectar content_cols como inputs array
-        const hiddenDiv = document.getElementById('bulk-content-cols-hidden');
+        const hiddenDiv = bulkEl(prefix, 'content-cols-hidden');
         hiddenDiv.innerHTML = checkedCols.map(c =>
             `<input type="hidden" name="content_cols[]" value="${c.replace(/"/g, '&quot;')}">`
         ).join('');
 
         if (!confirm(`¿Confirmás la importación?\n\nItem ID: ${itemCol}\nColumnas de contenido: ${checkedCols.join(', ')}\nDestino: ${mode === 'pv' ? 'Post-venta' : 'Pre-venta'}\n\nLos documentos se generarán en segundo plano.`)) return;
 
-        document.getElementById('bulk-import-form').submit();
+        bulkEl(prefix, 'import-form').submit();
     }
 </script>
 </body>

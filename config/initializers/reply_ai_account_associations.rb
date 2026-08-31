@@ -6,7 +6,10 @@ Rails.application.config.to_prepare do
     has_many :meli_products,    dependent: :destroy, class_name: 'MeliProduct'
     has_many :meli_categories,  dependent: :destroy, class_name: 'MeliCategory'
     has_many :meli_credentials, dependent: :destroy, class_name: 'MeliCredential'
+    has_many :meli_orders,      dependent: :destroy, class_name: 'MeliOrder'
+    has_many :meli_official_stores, dependent: :destroy, class_name: 'MeliOfficialStore'
     has_many :reply_ai_documents,    dependent: :destroy, class_name: 'ReplyAiDocument'
     has_many :reply_ai_pv_documents, dependent: :destroy, class_name: 'ReplyAiPvDocument'
+    has_many :meli_claims,           dependent: :destroy, class_name: 'MeliClaim'
   end
 end

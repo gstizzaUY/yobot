@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_06_20_000000) do
+ActiveRecord::Schema[7.1].define(version: 2026_08_09_000000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1003,6 +1003,32 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_20_000000) do
     t.index ["account_id"], name: "index_meli_categories_on_account_id"
   end
 
+  create_table "meli_claims", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "claim_id", null: false
+    t.string "resource"
+    t.bigint "resource_id"
+    t.string "claim_type"
+    t.string "stage"
+    t.string "status"
+    t.string "reason_id"
+    t.jsonb "players", default: []
+    t.jsonb "expected_resolutions", default: []
+    t.boolean "affects_reputation", default: false
+    t.bigint "sale_id"
+    t.string "pending_action"
+    t.string "agent_status", default: "idle"
+    t.jsonb "agent_log", default: []
+    t.jsonb "raw_data", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "cw_conversation_id"
+    t.jsonb "timeline", default: [], null: false
+    t.index ["account_id", "claim_id"], name: "index_meli_claims_on_account_id_and_claim_id", unique: true
+    t.index ["account_id", "status"], name: "index_meli_claims_on_account_id_and_status"
+    t.index ["account_id"], name: "index_meli_claims_on_account_id"
+  end
+
   create_table "meli_credentials", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "ml_user_id"
@@ -1012,6 +1038,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_20_000000) do
     t.string "status", default: "pending"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "bridge_enabled", default: false, null: false
     t.index ["account_id"], name: "index_meli_credentials_on_account_id"
     t.index ["ml_user_id"], name: "index_meli_credentials_on_ml_user_id", unique: true
   end
@@ -1046,7 +1073,23 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_20_000000) do
     t.datetime "conversion_checked_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "estado_conversacion", default: "activa", null: false
+    t.string "handoff_reason"
+    t.string "last_sentiment"
+    t.integer "consecutive_enojado", default: 0, null: false
+    t.integer "repeat_count", default: 0, null: false
+    t.jsonb "ultimos_mensajes_comprador", default: [], null: false
+    t.string "blocked_substatus"
+    t.datetime "last_message_at"
+    t.bigint "cw_conversation_id"
+    t.string "item_title"
+    t.string "buyer_nickname"
+    t.decimal "total_amount", precision: 12, scale: 2
+    t.string "currency_id"
+    t.integer "quantity"
+    t.datetime "date_created"
     t.index ["account_id", "created_at"], name: "index_meli_orders_on_account_id_and_created_at"
+    t.index ["account_id", "estado_conversacion"], name: "index_meli_orders_on_account_id_and_estado_conversacion"
     t.index ["account_id", "message_sent"], name: "index_meli_orders_on_account_id_and_message_sent"
     t.index ["account_id", "ml_order_id"], name: "index_meli_orders_on_account_id_and_ml_order_id", unique: true
     t.index ["account_id"], name: "index_meli_orders_on_account_id"
@@ -1097,6 +1140,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_20_000000) do
     t.integer "cw_conversation_id"
     t.string "status", limit: 50, default: "pending"
     t.timestamptz "created_at", default: -> { "CURRENT_TIMESTAMP" }
+    t.boolean "retained_due_lack_of_info", default: false
+    t.text "suggested_answer"
   end
 
   create_table "mentions", force: :cascade do |t|
@@ -1272,6 +1317,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_20_000000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "source", default: "manual", null: false
+    t.string "yobot_chunk_id"
+    t.index ["account_id", "yobot_chunk_id"], name: "idx_rag_docs_account_yobot_chunk", unique: true
     t.index ["account_id"], name: "index_reply_ai_documents_on_account_id"
   end
 
@@ -1290,6 +1337,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_20_000000) do
     t.datetime "updated_at", null: false
     t.vector "embedding", limit: 1536
     t.string "source", default: "manual", null: false
+    t.string "yobot_chunk_id"
+    t.index ["account_id", "yobot_chunk_id"], name: "idx_rag_pv_docs_account_yobot_chunk", unique: true
     t.index ["account_id"], name: "index_reply_ai_pv_documents_on_account_id"
   end
 
@@ -1502,6 +1551,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_20_000000) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "inboxes", "portals"
+  add_foreign_key "meli_claims", "accounts"
   add_foreign_key "meli_credentials", "accounts"
   add_foreign_key "meli_official_stores", "accounts"
   add_foreign_key "meli_orders", "accounts"
