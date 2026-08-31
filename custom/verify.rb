@@ -116,6 +116,7 @@ INITIALIZERS = %w[
   reply_ai_cron
   reply_ai_middleware
   reply_ai_schema_guard
+  custom_enterprise_guard
 ].freeze
 
 INITIALIZERS.each do |name|
