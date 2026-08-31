@@ -15,3 +15,9 @@ vendor/bundle
 .DS_Store
 *.swp
 *~
+
+# IDE configs y symlinks (el build context de Windows no puede transferirlos)
+.windsurf
+.idea
+.vscode
+CLAUDE.md
