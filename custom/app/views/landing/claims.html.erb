@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="csrf-token" content="<%= form_authenticity_token %>">
+    <script>
+        (function() {
+            var saved = localStorage.getItem('replyai_theme');
+            if (saved === 'light') { document.documentElement.className = 'light'; }
+            else                   { document.documentElement.className = 'dark'; }
+        })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/brand-assets/logo_reply-ai_thumbnail.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+                    colors: {
+                        brand: {
+                            DEFAULT: '#fd5101', dark: '#d94200',
+                            light: '#ff7c3f', pale: '#fff4ef', border: '#ffd0b8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <title>Reclamos ML | reply-ai</title>
+    <style>
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 99px; }
+        html.dark ::-webkit-scrollbar-thumb { background: #2d3139; }
+
+        .focus-brand:focus { outline: none; box-shadow: 0 0 0 3px rgba(253,81,1,.25); }
+
+        body {
+            font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            font-size: 15px; line-height: 1.5;
+        }
+
+        html.dark { color-scheme: dark; }
+        html.dark body            { background-color: #151718 !important; color: #ecedee; }
+        html.dark .bg-white    { background-color: #1c1e22 !important; }
+        html.dark .bg-gray-50  { background-color: #1e2025 !important; }
+        html.dark .bg-gray-100 { background-color: #21242c !important; }
+        html.dark .border-gray-50  { border-color: #252830 !important; }
+        html.dark .border-gray-100 { border-color: #2d3139 !important; }
+        html.dark .border-gray-200 { border-color: #2d3139 !important; }
+        html.dark .text-gray-900 { color: #ecedee !important; }
+        html.dark .text-gray-800 { color: #e0e2e8 !important; }
+        html.dark .text-gray-700 { color: #c4c9d4 !important; }
+        html.dark .text-gray-600 { color: #9aa2b4 !important; }
+        html.dark .text-gray-500 { color: #9aa2b4 !important; }
+        html.dark .text-gray-400 { color: #6c737e !important; }
+        html.dark input[type="number"], html.dark input[type="text"], html.dark textarea, html.dark select {
+            background-color: #21242c !important;
+            border-color: #2d3139 !important;
+            color: #ecedee !important;
+        }
+        html.dark #topbar { background-color: #1c1e22 !important; border-bottom-color: #2d3139 !important; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="flex-shrink-0 w-64 bg-[#0f1117] flex flex-col">
+        <div id="sidebar-logo-area" class="flex items-center gap-3 px-5 py-5">
+            <img src="/brand-assets/logo_reply-ai_thumbnail.png" class="w-9 h-9 rounded-xl" alt="reply-ai">
+            <span class="sidebar-logo-text font-extrabold text-white text-lg tracking-tight">reply-ai</span>
+        </div>
+        <nav class="flex-1 px-3 space-y-4 overflow-y-auto">
+            <!-- Conversaciones: consola de Chatwoot -->
+            <div>
+                <p class="sidebar-section-label px-3 mb-1 text-[9px] font-bold tracking-widest uppercase text-white/25">Conversaciones</p>
+                <a href="/go_to_chats?account_id=<%= @account.id %>" class="sidebar-label flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-white/80 hover:text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+                    Consola de Mensajes
+                </a>
+            </div>
+
+            <!-- MercadoLibre: navegación por pestañas -->
+            <div>
+                <p class="sidebar-section-label px-3 mb-1 text-[9px] font-bold tracking-widest uppercase text-white/25">MercadoLibre</p>
+                <a href="/dashboard?tab=preventa" class="sidebar-label flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 flex-shrink-0 text-[#ffe600]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+                    Pre-Venta
+                </a>
+                <a href="/dashboard/post-venta" class="sidebar-label flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
+                    Post-Venta
+                </a>
+                <a href="/dashboard?tab=informes" class="sidebar-label flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z"/></svg>
+                    Informes
+                </a>
+                <a href="/dashboard/claims" class="sidebar-label flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-white bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+                    Reclamos
+                    <span id="sidebar-claims-badge" class="ml-auto hidden sidebar-badge text-[11px] font-bold bg-[#fd5101] text-white rounded-full px-2 py-0.5"></span>
+                </a>
+            </div>
+        </nav>
+    </aside>
+
+    <div class="flex-1 flex flex-col min-w-0">
+        <!-- Topbar -->
+        <header id="topbar" class="flex-shrink-0 h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 transition-colors duration-200">
+            <div class="flex items-center gap-3">
+                <h1 class="text-lg font-bold text-gray-800">Reclamos MercadoLibre</h1>
+                <span id="stats-pendientes" class="hidden text-xs font-bold bg-amber-100 text-amber-700 dark:text-amber-300 rounded-full px-2.5 py-1"></span>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="/go_to_chats?account_id=<%= @account.id %>" class="text-sm font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors">Ir a los chats</a>
+                <button id="theme-toggle" onclick="toggleTheme()" class="w-9 h-9 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-[#21242c] transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Contenido -->
+        <main class="flex-1 p-4 sm:p-6 overflow-auto">
+            <div class="max-w-7xl mx-auto">
+                <!-- Acciones -->
+                <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+                    <p class="text-sm text-gray-500">Reclamos abiertos y acciones del agente IA. Los reclamos se sincronizan desde MercadoLibre.</p>
+                    <button onclick="syncClaims()" class="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl bg-[#fd5101] text-white hover:bg-brand-dark transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+                        Sincronizar
+                    </button>
+                </div>
+
+                <!-- Tabla -->
+                <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-xs font-bold text-gray-500 uppercase tracking-widest border-b border-gray-100">
+                                    <th class="px-4 py-3">Reclamo</th>
+                                    <th class="px-4 py-3">Tipo / Motivo</th>
+                                    <th class="px-4 py-3">Etapa</th>
+                                    <th class="px-4 py-3">Estado</th>
+                                    <th class="px-4 py-3">Orden</th>
+                                    <th class="px-4 py-3">Agente IA</th>
+                                    <th class="px-4 py-3">Actualizado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="claims-tbody" class="divide-y divide-gray-50">
+                                <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Cargando reclamos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Drawer detalle -->
+    <div id="detail-overlay" class="hidden fixed inset-0 bg-black/40 z-40" onclick="closeDetail()"></div>
+    <div id="detail-drawer" class="hidden fixed top-0 right-0 bottom-0 w-full sm:w-[720px] bg-gray-50 dark:bg-[#151718] z-50 shadow-2xl overflow-y-auto">
+        <div id="detail-body" class="p-5 space-y-4"></div>
+    </div>
+
+    <script>
+        const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+        let currentClaim = null;
+
+        function toggleTheme() {
+            const d = document.documentElement;
+            d.className = d.className === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('replyai_theme', d.className);
+        }
+
+        function esc(s) { return (s || '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+        function api(url, opts = {}) {
+            const headers = Object.assign({ 'X-CSRF-Token': CSRF }, opts.headers || {});
+            return fetch(url, Object.assign({ headers: headers }, opts))
+                .then(r => r.json().catch(() => ({ error: 'Respuesta inválida' })));
+        }
+
+        const STAGE_LABEL = { claim: 'Reclamo', dispute: 'Mediación' };
+        const STATUS_LABEL = { opened: 'Abierto', closed: 'Cerrado' };
+        const AGENT_LABEL = { idle: 'Inactivo', running: 'Procesando', pending: 'Requiere acción', done: 'Resuelto', escalate: 'Derivado', error: 'Error', cancelled: 'Cancelado' };
+        const TYPE_LABEL = { mediations: 'Mediación', return: 'Devolución', fulfillment: 'Fulfillment', order: 'Orden', shipping: 'Envío' };
+
+        function chip(text, color) {
+            return '<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ' + color + '">' + esc(text) + '</span>';
+        }
+
+        function agentChip(status) {
+            const map = { idle: 'bg-gray-100 text-gray-500', running: 'bg-blue-50 text-blue-600', pending: 'bg-amber-100 text-amber-700', done: 'bg-green-100 text-green-700', escalate: 'bg-purple-100 text-purple-700', error: 'bg-red-100 text-red-600', cancelled: 'bg-gray-200 text-gray-600' };
+            return chip(AGENT_LABEL[status] || status, map[status] || 'bg-gray-100 text-gray-500');
+        }
+
+        function loadClaims() {
+            api('/dashboard/claims/data').then(claims => {
+                const tbody = document.getElementById('claims-tbody');
+                if (!claims.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Sin reclamos. Usá "Sincronizar" para traer los abiertos desde MercadoLibre.</td></tr>';
+                    document.getElementById('stats-pendientes').classList.add('hidden');
+                    return;
+                }
+                const pend = claims.filter(c => c.pending_action).length;
+                const stats = document.getElementById('stats-pendientes');
+                stats.textContent = pend + ' requieren acción';
+                stats.classList.toggle('hidden', !pend);
+                document.getElementById('sidebar-claims-badge').textContent = pend;
+                document.getElementById('sidebar-claims-badge').classList.toggle('hidden', !pend);
+
+                tbody.innerHTML = claims.map(c => `
+                    <tr onclick="openDetail(${c.id})" class="cursor-pointer hover:bg-gray-50 dark:hover:bg-[#21242c] transition-colors">
+                        <td class="px-4 py-3 font-semibold">#${esc(c.claim_id)}</td>
+                        <td class="px-4 py-3">${chip(TYPE_LABEL[c.claim_type] || c.claim_type || '—', 'bg-gray-100 text-gray-600')} <span class="text-xs text-gray-500">${esc(c.reason_id)}</span></td>
+                        <td class="px-4 py-3">${chip(STAGE_LABEL[c.stage] || c.stage || '—', c.stage === 'dispute' ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600')}</td>
+                        <td class="px-4 py-3">${chip(STATUS_LABEL[c.status] || c.status || '—', c.status === 'opened' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600')}</td>
+                        <td class="px-4 py-3 text-xs text-gray-500">${c.order ? esc(c.order.ml_order_id) : '—'}</td>
+                        <td class="px-4 py-3">${agentChip(c.agent_status)}</td>
+                        <td class="px-4 py-3 text-xs text-gray-400">${new Date(c.updated_at).toLocaleString()}</td>
+                    </tr>`).join('');
+            });
+        }
+
+        function syncClaims() {
+            api('/dashboard/claims/sync', { method: 'POST' }).then(r => {
+                alert(r.sincronizados !== undefined ? 'Reclamos sincronizados: ' + r.sincronizados : (r.error || 'Error'));
+                loadClaims();
+            });
+        }
+
+        function openDetail(id) {
+            api('/dashboard/claims/' + id).then(c => {
+                currentClaim = c;
+                document.getElementById('detail-body').innerHTML = renderDetail(c);
+                loadChat(id);
+                loadEvidences(id);
+                loadAgent(id);
+                document.getElementById('detail-overlay').classList.remove('hidden');
+                document.getElementById('detail-drawer').classList.remove('hidden');
+            });
+        }
+
+        function closeDetail() {
+            document.getElementById('detail-overlay').classList.add('hidden');
+            document.getElementById('detail-drawer').classList.add('hidden');
+        }
+
+        function renderDetail(c) {
+            const order = c.order ? 'Orden ' + esc(c.order.ml_order_id) + ' · Estado conv: ' + esc(c.order.estado_conversacion) : 'Sin orden vinculada';
+            const actions = [];
+            actions.push(`<button onclick="act('refund', 'Reembolso total', this)" class="action-btn bg-red-50 text-red-600 hover:bg-red-100">Reembolso total</button>`);
+            actions.push(`<button onclick="act('partial-refund', 'Reembolso parcial (oferta menor)', this)" class="action-btn bg-amber-50 text-amber-700 hover:bg-amber-100">Reembolso parcial</button>`);
+            actions.push(`<button onclick="act('allow-return', 'Aceptar devolución', this)" class="action-btn bg-green-50 text-green-700 hover:bg-green-100">Aceptar devolución</button>`);
+            actions.push(`<button onclick="act('open-dispute', 'Abrir mediación', this)" class="action-btn bg-purple-50 text-purple-700 hover:bg-purple-100">Abrir mediación</button>`);
+            return `
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h2 class="text-xl font-bold">Reclamo #${esc(c.claim_id)}</h2>
+                        <p class="text-sm text-gray-500 mt-0.5">${esc(TYPE_LABEL[c.claim_type] || c.claim_type)} · Motivo: <strong>${esc(c.reason_id)}</strong> · ${chip(STAGE_LABEL[c.stage] || c.stage, c.stage === 'dispute' ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600')} ${chip(STATUS_LABEL[c.status] || c.status, c.status === 'opened' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600')}</p>
+                        <p class="text-xs text-gray-500 mt-1">${order}${c.affects_reputation ? ' · <span class="text-red-500 font-semibold">Afecta reputación</span>' : ''}</p>
+                    </div>
+                    <button onclick="closeDetail()" class="text-gray-400 hover:text-gray-600 dark:hover:text-white">✕</button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="bg-white rounded-2xl border border-gray-100 p-4">
+                        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Agente IA</h3>
+                        <div id="agent-panel"><span class="text-sm text-gray-400">Cargando...</span></div>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-gray-100 p-4 sm:col-span-2">
+                        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Resoluciones esperadas</h3>
+                        <pre class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap max-h-40 overflow-auto">${esc(JSON.stringify(c.expected_resolutions, null, 2))}</pre>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-gray-100 p-4">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Acciones</h3>
+                    <div class="flex flex-wrap gap-2">${actions.join('')}</div>
+                    <div id="action-result" class="mt-3 text-sm"></div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-gray-100 p-4">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Mensajes del reclamo</h3>
+                    <div id="chat-box" class="space-y-2 max-h-72 overflow-y-auto mb-3"><p class="text-sm text-gray-400">Cargando...</p></div>
+                    <div class="flex gap-2">
+                        <input id="chat-input" type="text" placeholder="Escribí un mensaje al comprador/mediador..."
+                            class="flex-1 p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus-brand">
+                        <button onclick="sendChat()" class="px-4 py-2 rounded-xl bg-[#fd5101] text-white text-sm font-bold hover:bg-brand-dark">Enviar</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-gray-100 p-4">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Evidencias</h3>
+                    <div id="evidences-box" class="space-y-2 mb-3"><p class="text-sm text-gray-400">Cargando...</p></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1">Tracking (PNR)</label>
+                            <div class="flex gap-2">
+                                <input id="ev-tracking" type="text" placeholder="tracking_number"
+                                    class="flex-1 p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus-brand">
+                                <button onclick="sendTrackingEvidence()" class="px-3 py-2 rounded-xl bg-gray-800 text-white text-xs font-bold">Enviar</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1">Archivo (imagen/PDF)</label>
+                            <div class="flex gap-2">
+                                <input id="ev-file" type="file" class="flex-1 text-xs p-2 bg-gray-50 border border-gray-200 rounded-xl">
+                                <button onclick="sendFileEvidence()" class="px-3 py-2 rounded-xl bg-gray-800 text-white text-xs font-bold">Subir</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button onclick="loadReturns()" class="action-btn bg-blue-50 text-blue-600 hover:bg-blue-100">Ver devolución</button>
+                    <button onclick="loadChanges()" class="action-btn bg-teal-50 text-teal-700 hover:bg-teal-100">Ver cambio</button>
+                </div>
+                <div id="returns-box" class="hidden bg-white rounded-2xl border border-gray-100 p-4"></div>
+            `;
+        }
+
+        function loadAgent(id) {
+            api('/dashboard/claims/' + id + '/agent-pending').then(r => {
+                const box = document.getElementById('agent-panel');
+                if (!box) return;
+                let html = '<div class="flex items-center gap-2 mb-2">' + agentChip(r.agent_status) + '</div>';
+                if (r.pending) {
+                    html += `<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs">
+                        <p class="font-bold text-amber-800 mb-1">Acción pendiente de confirmación</p>
+                        <p class="text-amber-700 break-all">${esc(r.pending.tool)} ${esc(JSON.stringify(r.pending.args))}</p>
+                        <div class="flex gap-2 mt-2">
+                            <button onclick="agentExec(${id})" class="px-3 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs">Ejecutar</button>
+                            <button onclick="agentCancel(${id})" class="px-3 py-1.5 rounded-lg bg-gray-300 text-gray-700 font-bold text-xs">Cancelar</button>
+                        </div>
+                    </div>`;
+                } else {
+                    html += '<button onclick="agentRerun(' + id + ')" class="text-xs font-bold text-blue-600 hover:underline">Re-ejecutar agente</button>';
+                }
+                box.innerHTML = html;
+            });
+        }
+
+        function agentExec(id) { api('/dashboard/claims/' + id + '/agent-execute', { method: 'POST' }).then(() => { openDetail(id); loadClaims(); }); }
+        function agentCancel(id) { api('/dashboard/claims/' + id + '/agent-cancel', { method: 'POST' }).then(() => { openDetail(id); loadClaims(); }); }
+        function agentRerun(id) { api('/dashboard/claims/' + id + '/agent-rerun', { method: 'POST' }).then(() => { openDetail(id); loadClaims(); }); }
+
+        function act(action, label, btn) {
+            btn.disabled = true;
+            btn.textContent = 'Procesando...';
+            api('/dashboard/claims/' + currentClaim.id + '/' + action, { method: 'POST' }).then(r => {
+                btn.disabled = false;
+                btn.textContent = label;
+                const box = document.getElementById('action-result');
+                box.innerHTML = r.ok || !r.error
+                    ? '<p class="text-green-600 font-semibold">Acción ejecutada correctamente.</p>'
+                    : '<p class="text-red-500 font-semibold">' + esc(r.error) + '</p>';
+            });
+        }
+
+        function loadChat(id) {
+            api('/dashboard/claims/' + id + '/messages').then(msgs => {
+                const box = document.getElementById('chat-box');
+                const list = Array.isArray(msgs) ? msgs : (msgs.messages || []);
+                if (!list.length) { box.innerHTML = '<p class="text-sm text-gray-400">Sin mensajes.</p>'; return; }
+                box.innerHTML = list.map(m => `
+                    <div class="rounded-xl px-3 py-2 text-sm ${m.from_seller ? 'bg-[#fff4ef] text-gray-800 dark:text-gray-200 ml-8' : 'bg-gray-100 text-gray-700 dark:text-gray-300 mr-8'}">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase">${m.from_seller ? 'Vendedor' : 'Comprador'}</span>
+                        <p>${esc(m.text || m.message || '')}</p>
+                        <p class="text-[10px] text-gray-400 mt-0.5">${m.date_created ? new Date(m.date_created).toLocaleString() : ''}</p>
+                    </div>`).join('');
+            });
+        }
+
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+            api('/dashboard/claims/' + currentClaim.id + '/message', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text }) })
+                .then(r => { if (!r.error) { input.value = ''; loadChat(currentClaim.id); } else { alert(r.error); } });
+        }
+
+        function loadEvidences(id) {
+            api('/dashboard/claims/' + id + '/evidences').then(evs => {
+                const box = document.getElementById('evidences-box');
+                const list = Array.isArray(evs) ? evs : (evs.evidences || []);
+                if (!list.length) { box.innerHTML = '<p class="text-sm text-gray-400">Sin evidencias.</p>'; return; }
+                box.innerHTML = list.map(e => `<p class="text-xs text-gray-600 dark:text-gray-300">• ${esc(e.evidence_type || e.type || 'evidencia')} — ${esc(e.status || '')} <span class="text-gray-400">${e.date_created ? new Date(e.date_created).toLocaleString() : ''}</span></p>`).join('');
+            });
+        }
+
+        function sendTrackingEvidence() {
+            const number = document.getElementById('ev-tracking').value.trim();
+            if (!number) return alert('Ingresá el tracking');
+            api('/dashboard/claims/' + currentClaim.id + '/evidence', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: JSON.stringify({ tracking_number: number, carrier: 'other' }) }) })
+                .then(r => r.error ? alert(r.error) : (document.getElementById('ev-tracking').value = '', loadEvidences(currentClaim.id)));
+        }
+
+        function sendFileEvidence() {
+            const file = document.getElementById('ev-file').files[0];
+            if (!file) return alert('Seleccioná un archivo');
+            const fd = new FormData();
+            fd.append('file', file);
+            fetch('/dashboard/claims/' + currentClaim.id + '/evidence', { method: 'POST', headers: { 'X-CSRF-Token': CSRF }, body: fd })
+                .then(r => r.json()).then(r => r.error ? alert(r.error) : loadEvidences(currentClaim.id));
+        }
+
+        function loadReturns() {
+            const box = document.getElementById('returns-box');
+            box.classList.remove('hidden');
+            api('/dashboard/returns/' + currentClaim.id).then(data => {
+                const returns = Array.isArray(data) ? data : (data.returns || []);
+                box.innerHTML = '<h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Devolución</h3>' +
+                    (returns.length ? returns.map(r => `<p class="text-sm">• Devolución ${esc(r.id)} — ${esc(r.status)} — ${esc(r.reason)}</p>`).join('')
+                        : '<p class="text-sm text-gray-400">Sin devolución asociada.</p>');
+            });
+        }
+
+        function loadChanges() {
+            const box = document.getElementById('returns-box');
+            box.classList.remove('hidden');
+            api('/dashboard/changes/' + currentClaim.id).then(data => {
+                const changes = Array.isArray(data) ? data : (data.changes || []);
+                box.innerHTML = '<h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Cambio</h3>' +
+                    (changes.length ? changes.map(c => `<p class="text-sm">• Cambio ${esc(c.id)} — ${esc(c.status)}</p>`).join('')
+                        : '<p class="text-sm text-gray-400">Sin cambio asociado.</p>');
+            });
+        }
+
+        // Polling
+        loadClaims();
+        setInterval(loadClaims, 15000);
+        if (currentClaim) { setInterval(() => { if (currentClaim) { loadAgent(currentClaim.id); loadChat(currentClaim.id); } }, 20000); }
+    </script>
+</body>
+</html>
