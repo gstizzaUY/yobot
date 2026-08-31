@@ -1,114 +1,381 @@
 {
   "name": "reply_ai_postsale_outbound",
+  "active": true,
   "nodes": [
     {
-      "id": "pso-wh-001",
+      "id": "1e94424f-a6e5-49b9-830b-ee2f447b51d3",
       "name": "chatwoot_webhook",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [-600, 0],
+      "position": [
+        -1008,
+        -608
+      ],
       "webhookId": "postsale-outbound",
       "parameters": {
-        "httpMethod": "POST",
         "path": "postsale-outbound",
-        "responseMode": "onReceived",
-        "options": {}
-      }
+        "options": {},
+        "httpMethod": "POST",
+        "responseData": "allEntries",
+        "responseMode": "lastNode"
+      },
+      "typeVersion": 2
     },
     {
-      "id": "pso-code-002",
+      "id": "28c355bd-7c08-493b-ab05-0b09be3f2b32",
       "name": "filter_and_extract",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [-400, 0],
+      "position": [
+        -816,
+        -608
+      ],
       "parameters": {
         "jsCode": "const data = $input.first().json.body || $input.first().json;\n\n// Solo mensajes outgoing (type 1 o string 'outgoing'), no privados\nconst isOutgoing = data.message_type === 1 || data.message_type === 'outgoing';\nif (!isOutgoing) {\n  return { forward: false, reason: 'not_outgoing', type: data.message_type };\n}\nif (data.private === true) {\n  return { forward: false, reason: 'private' };\n}\n\n// Ignorar mensajes espejados por n8n IA (ya fueron enviados a ML directamente)\nif (data.content_attributes?.source === 'n8n_ai') {\n  return { forward: false, reason: 'ai_mirror' };\n}\n\nconst conv = data.conversation;\nif (!conv) {\n  return { forward: false, reason: 'no_conversation' };\n}\n\nconst attrs = conv.additional_attributes || {};\nif (attrs.type !== 'post-venta') {\n  return { forward: false, reason: 'not_postsale', attrs_type: attrs.type };\n}\n\n// pack_id: desde additional_attributes o meta.source_id\nconst packId  = String(attrs.pack_id || conv.meta?.source_id || '');\n// buyer_user_id: identifier del contacto del contacto almacenado al crear la conversación\nconst buyerId = String(conv.meta?.sender?.identifier || '');\nconst accountId = data.account?.id;\nconst text    = (data.content || '').trim();\n\nif (!packId || !buyerId || !text) {\n  return { forward: false, reason: 'missing_data', packId, buyerId, hasText: !!text };\n}\n\nreturn {\n  forward:        true,\n  pack_id:        packId,\n  buyer_user_id:  buyerId,\n  account_id:     accountId,\n  text\n};\n"
-      }
+      },
+      "typeVersion": 2
     },
     {
-      "id": "pso-if-003",
+      "id": "8a86df00-0272-4d45-863c-46315c1c260d",
       "name": "should_forward?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [-200, 0],
+      "position": [
+        -608,
+        -608
+      ],
       "parameters": {
+        "options": {},
         "conditions": {
-          "options": { "typeValidation": "strict", "version": 3 },
+          "options": {
+            "version": 3,
+            "typeValidation": "strict"
+          },
           "combinator": "and",
           "conditions": [
             {
               "id": "f1",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              },
               "leftValue": "={{ $json.forward }}",
-              "rightValue": true,
-              "operator": { "type": "boolean", "operation": "equals" }
+              "rightValue": true
             }
           ]
-        },
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 2.3
     },
     {
-      "id": "pso-pg-004",
+      "id": "08a03a70-ed74-4098-b3c6-5402d3dc428d",
       "name": "get_ml_credentials",
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [0, 0],
+      "position": [
+        -416,
+        -608
+      ],
       "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT c.ml_user_id, c.access_token\nFROM meli_credentials c\nWHERE c.account_id = '{{ $('filter_and_extract').item.json.account_id }}'\nLIMIT 1;",
-        "options": {}
+        "query": "SELECT c.ml_user_id, c.access_token, c.status, c.bridge_enabled,\n       (SELECT a.custom_attributes->>'receive_only' FROM accounts a WHERE a.id = c.account_id) AS receive_only\nFROM meli_credentials c\nWHERE c.account_id = '{{ $('filter_and_extract').item.json.account_id }}'\nORDER BY c.id ASC\nLIMIT 1;",
+        "options": {},
+        "operation": "executeQuery"
       },
       "credentials": {
-        "postgres": { "id": "3sMbSrK2N5Vz3Xew", "name": "Postgres chatwoot_development" }
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      },
+      "typeVersion": 2.6
+    },
+    {
+      "id": "294d783e-970f-414b-8f0f-f7a8faa4d87e",
+      "name": "send_to_ml",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -208,
+        -608
+      ],
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_ml_credentials').first().json;\nconst data = $('filter_and_extract').first().json;\nconst text = data.text || '';\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nif ($env.REPLY_RECEIVE_ONLY === 'true' && account.receive_only === 'true') return { receive_only: true, text: text, skipped: true };\nif (isBridge) {\n  if (!$env.BRIDGE_SECRET || !$env.YOBOT_BRIDGE_URL) throw new Error('Bridge: BRIDGE_SECRET/YOBOT_BRIDGE_URL no configurados en n8n');\n  const body = JSON.stringify({ ml_user_id: String(account.ml_user_id), pack_id: data.pack_id, text: text });\n  const signature = (await (await fetch('http://rails:3000/bridge/sign', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json', 'X-Bridge-Secret': $env.BRIDGE_SECRET },\n  body: JSON.stringify({ body })\n})).json()).signature;\n  const res = await fetch($env.YOBOT_BRIDGE_URL + '/api/bridge/send-message', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + $env.BRIDGE_SECRET, 'X-Bridge-Signature': signature }, body: body });\n  if (!res.ok) throw new Error('Bridge send-message: ' + res.status);\n  const sent = await res.json();\n  await markDelivered(sent);\n  return sent;\n}\nconst res = await fetch('https://api.mercadolibre.com/messages/packs/' + data.pack_id + '/sellers/' + account.ml_user_id + '?tag=post_sale', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (data.access_token || account.access_token) }, body: JSON.stringify({ from: { user_id: String(account.ml_user_id) }, to: { user_id: data.buyer_user_id }, text: text }) });\nif (!res.ok) throw new Error('ML send: ' + res.status);\nconst sent = await res.json();\nawait markDelivered(sent);\nreturn sent;\n\n// Tras un envio exitoso: burbuja a delivered (doble check gris) + persiste ml_message_id de ML\n// (content_attributes) para el sync de lectura (read, doble check azul). Best-effort.\nasync function markDelivered(sent) {\n  const cwMessageId = $('chatwoot_webhook').item.json.body.id;\n  const mlMessageId = String(sent.message_id || sent.id || '');\n  if (!cwMessageId || !mlMessageId) return;\n  try {\n    await fetch('http://rails:3000/api/bridge/message-status', {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json', 'x-internal-secret': 'reply_ai_internal_2026' },\n      body: JSON.stringify({ account_id: data.account_id, message_id: cwMessageId, status: 'delivered', ml_message_id: mlMessageId })\n    });\n  } catch (e) {}\n}"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "ra-ps-remove-manual-label-01",
+      "name": "chatwoot_remove_manual_label",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        -608
+      ],
+      "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('chatwoot_webhook').item.json.body.account.id }}/conversations/{{ $('chatwoot_webhook').item.json.body.conversation.id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\n  \"labels\": []\n}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        }
       }
     },
     {
-      "id": "pso-http-005",
-      "name": "send_to_ml",
+      "id": "ra-ps-add-manual-answered-01",
+      "name": "chatwoot_add_manual_answer_completed",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [200, 0],
+      "position": [
+        208,
+        -608
+      ],
       "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('chatwoot_webhook').item.json.body.account.id }}/conversations/{{ $('chatwoot_webhook').item.json.body.conversation.id }}/labels",
         "method": "POST",
-        "url": "=https://api.mercadolibre.com/messages/packs/{{ $('filter_and_extract').item.json.pack_id }}/sellers/{{ $('get_ml_credentials').item.json.ml_user_id }}?tag=post_sale",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "options": {},
+        "jsonBody": "{\n  \"labels\": [\"respondida_manualmente\"]\n}",
         "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({\n  from: { user_id: String($('get_ml_credentials').item.json.ml_user_id) },\n  to:   { user_id: $('filter_and_extract').item.json.buyer_user_id },\n  text: $('filter_and_extract').item.json.text\n}) }}",
-        "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": { "id": "J0q3ryllyiG4GRKP", "name": "Header Auth account" }
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        }
       }
     }
   ],
   "connections": {
-    "chatwoot_webhook": {
-      "main": [[{ "node": "filter_and_extract", "type": "main", "index": 0 }]]
-    },
-    "filter_and_extract": {
-      "main": [[{ "node": "should_forward?", "type": "main", "index": 0 }]]
-    },
     "should_forward?": {
       "main": [
-        [{ "node": "get_ml_credentials", "type": "main", "index": 0 }],
-        []
+        [
+          {
+            "node": "get_ml_credentials",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chatwoot_webhook": {
+      "main": [
+        [
+          {
+            "node": "filter_and_extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter_and_extract": {
+      "main": [
+        [
+          {
+            "node": "should_forward?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "get_ml_credentials": {
-      "main": [[{ "node": "send_to_ml", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "send_to_ml",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_to_ml": {
+      "main": [
+        [
+          {
+            "node": "chatwoot_remove_manual_label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chatwoot_remove_manual_label": {
+      "main": [
+        [
+          {
+            "node": "chatwoot_add_manual_answer_completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
   "settings": {
+    "binaryMode": "separate",
+    "availableInMCP": false,
     "executionOrder": "v1"
   },
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "6987f0f533040cbfea8c75383320642dcbc7861e6e8b8f304d7a1f91a57b76b5"
+  "pinData": {
+    "chatwoot_webhook": [
+      {
+        "json": {
+          "headers": {
+            "accept": "application/json",
+            "user-agent": "rest-client/2.1.0 (linux-musl x86_64) ruby/3.4.4p34",
+            "content-type": "application/json",
+            "content-length": "2195",
+            "accept-encoding": "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
+            "host": "n8n-main:5678"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "account": {
+              "id": 31,
+              "name": "PRUEBA ML"
+            },
+            "additional_attributes": {},
+            "content_attributes": {},
+            "content_type": "text",
+            "content": "bien",
+            "conversation": {
+              "additional_attributes": {
+                "type": "post-venta",
+                "pack_id": "2000011515238368",
+                "order_id": "2000011515238368"
+              },
+              "can_reply": true,
+              "channel": "Channel::Api",
+              "contact_inbox": {
+                "id": 56,
+                "contact_id": 8,
+                "inbox_id": 42,
+                "source_id": "2000011515238368",
+                "created_at": "2026-03-06T12:27:31.400Z",
+                "updated_at": "2026-03-06T12:27:31.400Z",
+                "hmac_verified": false,
+                "pubsub_token": "t9WcmVe5LfkGXWJpiikq2xBt"
+              },
+              "id": 3,
+              "inbox_id": 42,
+              "messages": [
+                {
+                  "id": 554,
+                  "content": "bien",
+                  "account_id": 31,
+                  "inbox_id": 42,
+                  "conversation_id": 3,
+                  "message_type": 1,
+                  "created_at": 1772800405,
+                  "updated_at": "2026-03-06T12:33:25.473Z",
+                  "private": false,
+                  "status": "sent",
+                  "source_id": null,
+                  "content_type": "text",
+                  "content_attributes": {},
+                  "sender_type": "User",
+                  "sender_id": 26,
+                  "external_source_ids": {},
+                  "additional_attributes": {},
+                  "processed_message_content": "bien",
+                  "sentiment": {},
+                  "conversation": {
+                    "assignee_id": null,
+                    "unread_count": 0,
+                    "last_activity_at": 1772800405,
+                    "contact_inbox": {
+                      "source_id": "2000011515238368"
+                    }
+                  },
+                  "sender": {
+                    "id": 26,
+                    "name": "Cuenta Prueba",
+                    "available_name": "Cuenta Prueba",
+                    "avatar_url": "",
+                    "type": "user",
+                    "availability_status": null,
+                    "thumbnail": ""
+                  }
+                }
+              ],
+              "labels": [
+                "atencion-humana",
+                "atencion-prioritaria"
+              ],
+              "meta": {
+                "sender": {
+                  "additional_attributes": {},
+                  "custom_attributes": {},
+                  "email": null,
+                  "id": 8,
+                  "identifier": "1368182436",
+                  "name": "TTEST95491",
+                  "phone_number": null,
+                  "thumbnail": "",
+                  "blocked": false,
+                  "type": "contact"
+                },
+                "assignee": null,
+                "assignee_type": null,
+                "team": {
+                  "id": 36,
+                  "name": "post-venta"
+                },
+                "hmac_verified": false
+              },
+              "status": "open",
+              "custom_attributes": {},
+              "snoozed_until": null,
+              "unread_count": 0,
+              "first_reply_created_at": "2026-03-06T12:27:36.750Z",
+              "priority": null,
+              "waiting_since": 1772800395,
+              "agent_last_seen_at": 1772800400,
+              "contact_last_seen_at": 0,
+              "last_activity_at": 1772800405,
+              "timestamp": 1772800405,
+              "created_at": 1772800051,
+              "updated_at": 1772800405.5031838
+            },
+            "created_at": "2026-03-06T12:33:25.473Z",
+            "id": 554,
+            "inbox": {
+              "id": 42,
+              "name": "Post-venta (MercadoLibre)"
+            },
+            "message_type": "outgoing",
+            "private": false,
+            "sender": {
+              "id": 26,
+              "name": "Cuenta Prueba",
+              "email": "cuentaprueba@email.com",
+              "type": "user"
+            },
+            "source_id": null,
+            "event": "message_created"
+          },
+          "webhookUrl": "http://localhost:5678/webhook/postsale-outbound",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
   },
-  "id": "reply_ai_postsale_outbound_v1",
+  "versionId": "21517fe6-ff92-41d6-b136-d56081cad5ad",
+  "id": "Ba44aWzQyoy6Q7lGju43W",
+  "meta": null,
   "tags": []
 }

@@ -1,560 +1,463 @@
 {
   "name": "reply_ai_questions_main",
+  "active": true,
   "nodes": [
     {
+      "id": "508f5e70-1cd5-4840-b5a1-4534573b7279",
+      "name": "meli_notifications",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        -6208,
+        -304
+      ],
+      "webhookId": "9979f346-6abc-46d1-a3e6-12db669f1b37",
       "parameters": {
-        "httpMethod": "POST",
         "path": "9979f346-6abc-46d1-a3e6-12db669f1b37",
         "options": {
           "responseCode": {
             "values": {}
           }
-        }
+        },
+        "httpMethod": "POST"
       },
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
-      "position": [
-        -6208,
-        -304
-      ],
-      "id": "508f5e70-1cd5-4840-b5a1-4534573b7279",
-      "name": "meli_notifications",
-      "webhookId": "9979f346-6abc-46d1-a3e6-12db669f1b37",
-      "retryOnFail": false
+      "retryOnFail": false,
+      "typeVersion": 2.1
     },
     {
-      "parameters": {
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "loose",
-                  "version": 3
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.body.topic }}",
-                    "rightValue": "=questions",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "e58b0ef7-a365-4f6e-942f-03e40a41a9f1"
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "=Questions"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "loose",
-                  "version": 3
-                },
-                "conditions": [
-                  {
-                    "id": "5f2484dc-5009-4901-857e-af84ab30840d",
-                    "leftValue": "={{ $json.body.topic }}",
-                    "rightValue": "orders_v2",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "Orders"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "loose",
-                  "version": 3
-                },
-                "conditions": [
-                  {
-                    "id": "bf757b7d-b6fa-4ee3-9480-09e2b75fb20a",
-                    "leftValue": "={{ $json.body.topic }}",
-                    "rightValue": "messages",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "Messages"
-            }
-          ]
-        },
-        "looseTypeValidation": true,
-        "options": {
-          "ignoreCase": false
-        }
-      },
+      "id": "0f14b1ec-ab6d-4ec5-9905-4fa926260ac8",
+      "name": "notification_type",
       "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.4,
       "position": [
         -5984,
         -320
       ],
-      "id": "0f14b1ec-ab6d-4ec5-9905-4fa926260ac8",
-      "name": "notification_type",
-      "alwaysOutputData": false,
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "=Questions",
+              "conditions": {
+                "options": {
+                  "version": 3,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "e58b0ef7-a365-4f6e-942f-03e40a41a9f1",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.body.topic }}",
+                    "rightValue": "=questions"
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "Orders",
+              "conditions": {
+                "options": {
+                  "version": 3,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "5f2484dc-5009-4901-857e-af84ab30840d",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.body.topic }}",
+                    "rightValue": "orders_v2"
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "Messages",
+              "conditions": {
+                "options": {
+                  "version": 3,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "bf757b7d-b6fa-4ee3-9480-09e2b75fb20a",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.body.topic }}",
+                    "rightValue": "messages"
+                  }
+                ]
+              },
+              "renameOutput": true
+            }
+          ]
+        },
+        "options": {
+          "ignoreCase": false
+        },
+        "looseTypeValidation": true
+      },
       "executeOnce": false,
+      "notesInFlow": false,
       "retryOnFail": false,
-      "notesInFlow": false
+      "typeVersion": 3.4,
+      "alwaysOutputData": false
     },
     {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT \n  c.access_token, \n  c.refresh_token,\n  c.expires_at as token_expires_at,\n  a.custom_attributes->'config'->'prompts' as prompts,\n  a.custom_attributes->'config'->'chatGPTEnabled' as bot_enabled,\n  a.custom_attributes->'config'->'response_delay' as delay,\n  a.custom_attributes->'config'->'shipping_instructions' as shipping_instructions,\n  a.custom_attributes->'config'->'post_sale' as post_sale,\n  a.id as chatwoot_account_id,\n  -- Buscamos el ID del inbox por nombre\n  (SELECT id FROM inboxes \n   WHERE account_id = a.id \n   AND name ILIKE '%Pre-venta (MercadoLibre)%' \n   LIMIT 1) as meli_inbox_id,\n  -- Buscamos el ID del equipo por nombre\n  (SELECT id FROM teams \n   WHERE account_id = a.id \n   AND name ILIKE '%Pre-venta%' \n   LIMIT 1) as meli_team_id,\n  -- Saludos por tienda oficial\n  (SELECT jsonb_object_agg(meli_store_id, custom_greeting)\n   FROM meli_official_stores\n   WHERE account_id = a.id\n   AND custom_greeting IS NOT NULL AND custom_greeting <> ''\n  ) as store_greetings\nFROM meli_credentials c\nJOIN accounts a ON a.id = c.account_id\nWHERE c.ml_user_id = '{{ $('meli_notifications').item.json.body.user_id }}';",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        -4720,
-        -448
-      ],
       "id": "a03272a7-c9c6-4636-82a9-6701db9564e3",
       "name": "get_account_details",
-      "alwaysOutputData": false,
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -4896,
+        -448
+      ],
+      "parameters": {
+        "query": "SELECT \n  c.access_token, \n  c.refresh_token,\n  c.status,\n  c.bridge_enabled,\n  c.ml_user_id,\n  c.expires_at,\n  a.custom_attributes->'config'->'prompts' as prompts,\n  a.custom_attributes->'config'->'chatGPTEnabled' as bot_enabled,\n  a.custom_attributes->'config'->'response_delay' as delay,\n  a.custom_attributes->'config'->'shipping_instructions' as shipping_instructions,\n  a.custom_attributes->'config'->'requireRagOrConfidence' as require_rag_or_confidence,\n  a.custom_attributes->'config'->'confidenceByCategory' as confidence_by_category,\n  a.custom_attributes->'config'->'post_sale' as post_sale,\n  a.custom_attributes->>'receive_only' as receive_only,\n  a.id as chatwoot_account_id,\n  -- Buscamos el ID del inbox por nombre\n  (SELECT id FROM inboxes \n   WHERE account_id = a.id \n   AND name ILIKE '%Pre-venta (MercadoLibre)%' \n   LIMIT 1) as meli_inbox_id,\n  -- Buscamos el ID del equipo por nombre\n  (SELECT id FROM teams \n   WHERE account_id = a.id \n   AND name ILIKE '%Pre-venta%' \n   LIMIT 1) as meli_team_id,\n  -- Saludos por tienda oficial\n  (SELECT jsonb_object_agg(meli_store_id, custom_greeting)\n   FROM meli_official_stores\n   WHERE account_id = a.id\n   AND custom_greeting IS NOT NULL AND custom_greeting <> ''\n  ) as store_greetings\nFROM meli_credentials c\nJOIN accounts a ON a.id = c.account_id\nWHERE c.ml_user_id = '{{ $('meli_notifications').item.json.body.user_id }}';",
+        "options": {},
+        "operation": "executeQuery"
+      },
       "credentials": {
         "postgres": {
           "id": "3sMbSrK2N5Vz3Xew",
           "name": "Postgres chatwoot_development"
         }
-      }
+      },
+      "typeVersion": 2.6,
+      "alwaysOutputData": false
     },
     {
-      "parameters": {
-        "url": "=https://api.mercadolibre.com{{ $('notification_type').item.json.body.resource }}",
-        "options": {},
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $json.access_token || $(\"get_account_details\").item.json.access_token }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        -4336,
-        -432
-      ],
       "id": "339636f1-8067-4c4b-adcf-6ef10c536304",
-      "name": "get_queston_details"
+      "name": "get_queston_details",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -4272,
+        -448
+      ],
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst trigger = $('meli_notifications').first().json.body;\nconst account = $('get_account_details').first().json;\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nif (isBridge) {\n  const q = trigger.question || {};\n  if (!q.id) throw new Error('Bridge: datos de pregunta incompletos (pendiente forward completo de Yobot)');\n  return q;\n}\nconst res = await fetch('https://api.mercadolibre.com' + trigger.resource, { headers: { Authorization: 'Bearer ' + account.access_token } });\nif (!res.ok) throw new Error('ML question fetch: ' + res.status);\nreturn await res.json();"
+      },
+      "typeVersion": 2
     },
     {
-      "parameters": {
-        "url": "=https://api.mercadolibre.com/items/{{ $('get_queston_details').item.json.item_id }}",
-        "options": {},
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $json.access_token || $(\"get_account_details\").item.json.access_token }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "id": "59e3c958-f801-4a45-8c38-a594c123ab75",
+      "name": "get_item_details",
+      "type": "n8n-nodes-base.code",
       "position": [
         -3888,
         -432
       ],
-      "id": "59e3c958-f801-4a45-8c38-a594c123ab75",
-      "name": "get_item_details"
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nconst q = $('get_queston_details').first().json;\nif (isBridge) {\n  const item = ($('meli_notifications').first().json.body.item) || {};\n  if (!item.id) return {};\n  return item;\n}\nif (!q.item_id) return {};\nconst res = await fetch('https://api.mercadolibre.com/items/' + q.item_id, { headers: { Authorization: 'Bearer ' + account.access_token } });\nif (!res.ok) throw new Error('ML item fetch: ' + res.status);\nreturn await res.json();"
+      },
+      "typeVersion": 2
     },
     {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "f84f1ee9-4704-469a-a833-ae49605442e8",
-              "leftValue": "={{ $json.catalog_listing }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
+      "id": "2ca342aa-d000-4358-ba14-fd40685bec4a",
+      "name": "item_is_catalog_listing?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
       "position": [
         -3680,
         -432
       ],
-      "id": "2ca342aa-d000-4358-ba14-fd40685bec4a",
-      "name": "item_is_catalog_listing?"
-    },
-    {
       "parameters": {
-        "url": "=https://api.mercadolibre.com/items/{{ $json.id }}/description",
         "options": {},
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "conditions": {
+          "options": {
+            "version": 3,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "=Bearer {{ $json.access_token || $(\"get_account_details\").item.json.access_token }}"
+              "id": "f84f1ee9-4704-469a-a833-ae49605442e8",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.catalog_listing }}",
+              "rightValue": true
             }
           ]
         }
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "typeVersion": 2.3
+    },
+    {
+      "id": "4214dcc0-4a95-4fe5-89bb-1c9547e7f9a8",
+      "name": "get_catalog_description",
+      "type": "n8n-nodes-base.code",
+      "onError": "continueErrorOutput",
       "position": [
         -3440,
         -608
       ],
-      "id": "4214dcc0-4a95-4fe5-89bb-1c9547e7f9a8",
-      "name": "get_catalog_description",
-      "alwaysOutputData": true,
-      "onError": "continueErrorOutput"
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nif (isBridge) return null;\nconst item = $input.first().json || {};\nif (!item.id) return { plain_text: '' };\nconst res = await fetch('https://api.mercadolibre.com/items/' + item.id + '/description', { headers: { Authorization: 'Bearer ' + account.access_token } });\nif (!res.ok) return { plain_text: '' };\nreturn await res.json();"
+      },
+      "typeVersion": 2,
+      "alwaysOutputData": true
     },
     {
-      "parameters": {
-        "url": "=https://api.mercadolibre.com/items/{{ $json.id }}/description",
-        "options": {},
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $json.access_token || $(\"get_account_details\").item.json.access_token }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "id": "47eaeb36-f9f8-4306-bf05-4d0121de5f16",
+      "name": "get_item_description",
+      "type": "n8n-nodes-base.code",
       "position": [
         -3168,
         -416
       ],
-      "id": "47eaeb36-f9f8-4306-bf05-4d0121de5f16",
-      "name": "get_item_description"
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nconst item = $input.first().json || {};\nif (isBridge) {\n  const fwd = ($('meli_notifications').first().json.body.item) || {};\n  return { plain_text: fwd.description || '' };\n}\nif (!item.id) return { plain_text: '' };\nconst res = await fetch('https://api.mercadolibre.com/items/' + item.id + '/description', { headers: { Authorization: 'Bearer ' + account.access_token } });\nif (!res.ok) return { plain_text: '' };\nreturn await res.json();"
+      },
+      "typeVersion": 2
     },
     {
-      "parameters": {
-        "url": "=https://api.mercadolibre.com/items/{{ $('item_is_catalog_listing?').item.json.item_relations[0].id }}",
-        "options": {},
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $json.access_token || $(\"get_account_details\").item.json.access_token }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "id": "e6581100-d503-4671-aea2-72eb4018ae27",
+      "name": "get_relationship_item_description",
+      "type": "n8n-nodes-base.code",
       "position": [
         -3168,
         -624
       ],
-      "id": "e6581100-d503-4671-aea2-72eb4018ae27",
-      "name": "get_relationship_item_description"
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nif (isBridge) return null;\nconst rel = ($('item_is_catalog_listing?').first().json.item_relations || [])[0];\nif (!rel || !rel.id) return null;\nconst res = await fetch('https://api.mercadolibre.com/items/' + rel.id + '/description', { headers: { Authorization: 'Bearer ' + account.access_token } });\nif (!res.ok) return null;\nreturn await res.json();"
+      },
+      "typeVersion": 2
     },
     {
-      "parameters": {
-        "promptType": "define",
-        "text": "={{ $('context:assembler').item.json.ai_payload.question }}",
-        "options": {
-          "systemMessage": "=# MISI\u00d3N\nResponder preguntas de clientes como un vendedor experto de MercadoLibre.\nResponder de forma natural, profesional y en el idioma de la pregunta. Si no tienes la informaci\u00f3n espec\u00edfica, usa tu mejor juicio para responder.\n\n# REGLAS CR\u00cdTICAS\n1. PROHIBIDO dar informaci\u00f3n de contacto: nombre real de la empresa (fuera de la firma), email, tel\u00e9fono o ubicaci\u00f3n f\u00edsica.\n2. No respondas con el nombre del producto incluido en la respuesta si no es estrictamente necesario.\n3. Responde con frases profesionales que induzcan a la venta.\n4. Deduce de qu\u00e9 pa\u00eds es la pregunta en base a los datos de la publicaci\u00f3n y responde con expresiones propias de ese pa\u00eds (ej: Argentina, M\u00e9xico, Uruguay, etc).\n5. SIEMPRE responde en el MISMO IDIOMA en que te hicieron la pregunta.\n6. Si las instrucciones del vendedor o el saludo est\u00e1n en un idioma diferente al de la pregunta, TRAD\u00daCELOS al idioma de la pregunta manteniendo el tono.\n\n# CONOCIMIENTO DEL PRODUCTO (CONTEXTO T\u00c9CNICO)\n{{ $('context:assembler').item.json.ai_payload.full_context }}\n\n# INSTRUCCIONES PARTICULARES DEL VENDEDOR\n- Precio: {{ $('context:assembler').item.json.ai_payload.user_prompts.precio }}\n- Medios de Pago: {{ $('context:assembler').item.json.ai_payload.user_prompts.mediosPago }}\n- Garant\u00eda: {{ $('context:assembler').item.json.ai_payload.user_prompts.garantia }}\n- Env\u00edos (tipo: {{ $('context:assembler').item.json.ai_payload.shipping_type }}): {{ $('context:assembler').item.json.ai_payload.resolved_shipping }}\n- Condici\u00f3n: {{ $('context:assembler').item.json.ai_payload.user_prompts.condicionProducto }}\n- Instrucciones Adicionales: {{ $('context:assembler').item.json.ai_payload.user_prompts.otros }}\n\n# SALUDO Y CIERRE\n{{ $('context:assembler').item.json.ai_payload.resolved_greeting ? 'Al final de tu respuesta, incluye este saludo: \"' + $('context:assembler').item.json.ai_payload.resolved_greeting + '\". Si est\u00e1 en un idioma diferente al de la pregunta, trad\u00facelo naturalmente.' : 'Termina con un saludo comercial breve y profesional en el idioma del cliente.' }}"
-        }
-      },
+      "id": "e8636f69-5de2-4718-a66c-76376cd6aa5e",
+      "name": "AI Agent",
       "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 3.1,
       "position": [
         -944,
         -848
       ],
-      "id": "e8636f69-5de2-4718-a66c-76376cd6aa5e",
-      "name": "AI Agent"
+      "parameters": {
+        "text": "={{ $('context:assembler').item.json.ai_payload.question }}",
+        "options": {
+          "systemMessage": "=# MISIÓN\nResponder preguntas de clientes como un vendedor experto de MercadoLibre.\nResponder de forma natural, profesional y en el idioma de la pregunta. Si no tienes la información específica, usa tu mejor juicio para responder.\n\n# REGLAS CRÍTICAS\n1. PROHIBIDO dar información de contacto: nombre real de la empresa (fuera de la firma), email, teléfono o ubicación física.\n2. No respondas con el nombre del producto incluido en la respuesta si no es estrictamente necesario.\n3. Responde con frases profesionales que induzcan a la venta.\n4. Deduce de qué país es la pregunta en base a los datos de la publicación y responde con expresiones propias de ese país (ej: Argentina, México, Uruguay, etc).\n5. SIEMPRE responde en el MISMO IDIOMA en que te hicieron la pregunta.\n6. Si las instrucciones del vendedor o el saludo están en un idioma diferente al de la pregunta, TRADÚCELOS al idioma de la pregunta manteniendo el tono.\n\n# CONOCIMIENTO DEL PRODUCTO (CONTEXTO TÉCNICO)\n{{ $('context:assembler').item.json.ai_payload.full_context }}\n\n# INSTRUCCIONES PARTICULARES DEL VENDEDOR\n- Precio: {{ $('context:assembler').item.json.ai_payload.user_prompts.precio }}\n- Medios de Pago: {{ $('context:assembler').item.json.ai_payload.user_prompts.mediosPago }}\n- Garantía: {{ $('context:assembler').item.json.ai_payload.user_prompts.garantia }}\n- Envíos (tipo: {{ $('context:assembler').item.json.ai_payload.shipping_type }}): {{ $('context:assembler').item.json.ai_payload.resolved_shipping }}\n- Condición: {{ $('context:assembler').item.json.ai_payload.user_prompts.condicionProducto }}\n- Instrucciones Adicionales: {{ $('context:assembler').item.json.ai_payload.user_prompts.otros }}\n\n# CONTROL DE CONFIANZA\n{{ $('context:assembler').item.json.ai_payload.require_conf ? 'Si la información disponible en el contexto NO es suficiente para responder con precisión, responde EXACTAMENTE con este formato: [SIN_INFORMACION] <la mejor respuesta que darías si tuvieras la información>. En ese caso NO agregues nada más. Si la información alcanza, responde normalmente.' : '' }}\n\n# SALUDO Y CIERRE\n{{ $('context:assembler').item.json.ai_payload.resolved_greeting ? 'Al final de tu respuesta, incluye este saludo: \"' + $('context:assembler').item.json.ai_payload.resolved_greeting + '\". Si está en un idioma diferente al de la pregunta, tradúcelo naturalmente.' : 'Termina con un saludo comercial breve y profesional en el idioma del cliente.' }}"
+        },
+        "promptType": "define"
+      },
+      "typeVersion": 3.1
     },
     {
-      "parameters": {
-        "model": {
-          "__rl": true,
-          "value": "gpt-4o-mini",
-          "mode": "list",
-          "cachedResultName": "gpt-4o-mini"
-        },
-        "builtInTools": {},
-        "options": {
-          "temperature": 0.7
-        }
-      },
+      "id": "67e168a7-f7c5-4d19-af9d-6d0263003842",
+      "name": "OpenAI Chat Model",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
-      "typeVersion": 1.3,
       "position": [
         -944,
         -480
       ],
-      "id": "67e168a7-f7c5-4d19-af9d-6d0263003842",
-      "name": "OpenAI Chat Model",
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.7
+        },
+        "builtInTools": {}
+      },
       "credentials": {
         "openAiApi": {
           "id": "vHC1imcsHYCcvLxh",
           "name": "OpenAi account"
         }
-      }
+      },
+      "typeVersion": 1.3
     },
     {
-      "parameters": {
-        "sessionIdType": "customKey",
-        "sessionKey": "={{ $('get_queston_details').item.json.from.id }}_{{ $('get_item_details').item.json.id }}",
-        "tableName": "reply_ai_pre_memory",
-        "contextWindowLength": 10
-      },
+      "id": "4edc1532-cc29-492d-80f9-dc637e550dd2",
+      "name": "Postgres Chat Memory",
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
-      "typeVersion": 1.3,
       "position": [
         -848,
         -608
       ],
-      "id": "4edc1532-cc29-492d-80f9-dc637e550dd2",
-      "name": "Postgres Chat Memory",
+      "parameters": {
+        "tableName": "reply_ai_pre_memory",
+        "sessionKey": "={{ $('get_queston_details').item.json.from.id }}_{{ $('get_item_details').item.json.id }}",
+        "sessionIdType": "customKey",
+        "contextWindowLength": 10
+      },
       "credentials": {
         "postgres": {
           "id": "3sMbSrK2N5Vz3Xew",
           "name": "Postgres chatwoot_development"
         }
-      }
+      },
+      "typeVersion": 1.3
     },
     {
-      "parameters": {
-        "amount": "={{ $('context:assembler').item.json.ai_payload.delay.seconds }}"
-      },
+      "id": "4e7fad7a-fa41-4fd6-ad90-f66c075c84aa",
+      "name": "Wait",
       "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
       "position": [
         -400,
         -848
       ],
-      "id": "4e7fad7a-fa41-4fd6-ad90-f66c075c84aa",
-      "name": "Wait",
-      "webhookId": "ba4b5d28-7f68-448d-afcd-5d8e659ef53a"
+      "webhookId": "ba4b5d28-7f68-448d-afcd-5d8e659ef53a",
+      "parameters": {
+        "amount": "={{ $('context:assembler').item.json.ai_payload.delay.seconds }}"
+      },
+      "typeVersion": 1.1
     },
     {
-      "parameters": {
-        "jsCode": "function getSafeData(nodeName) {\n  try {\n    return $(nodeName).first().json;\n  } catch (e) {\n    return null;\n  }\n}\n\nconst item = getSafeData(\"get_item_details\");\nconst accountDetails = getSafeData(\"get_account_details\");\nconst itemDescNode = getSafeData(\"get_item_description\");\nconst catalogDescNode = getSafeData(\"get_catalog_description\");\nconst catalogDetailsNode = getSafeData(\"get_relationship_item_description\");\nconst questionDetails = getSafeData(\"get_queston_details\");\nconst ragNode = getSafeData(\"rag_search\");\n\nconst price = item.price;\nconst originalPrice = item.original_price;\nconst hasOffer = originalPrice && originalPrice > price;\n\n// --- EXTRACCI\u00d3N DE DATOS ADICIONALES ---\n// Buscamos el SKU en los atributos\nconst sku = item.attributes?.find(a => a.id === 'SELLER_SKU')?.value_name || 'No definido';\n// Obtenemos una imagen de alta resoluci\u00f3n (la primera de la galer\u00eda)\nconst bigImage = item.pictures && item.pictures.length > 0 ? item.pictures[0].secure_url : item.thumbnail;\n// Formateamos la condici\u00f3n\nconst condition = item.condition === 'new' ? 'Nuevo' : (item.condition === 'used' ? 'Usado' : item.condition);\n\nconst prompts = accountDetails?.prompts || {};\n// Resoluci\u00f3n de saludo por tienda (fallback \u2192 saludoGeneral)\nconst officialStoreId  = item.official_store_id?.toString();\nconst storeGreetings   = accountDetails?.store_greetings || {};\nconst resolvedGreeting = (officialStoreId && storeGreetings[officialStoreId])\n                         || prompts?.saludoGeneral\n                         || '';\n// --- DETECCI\u00d3N Y RESOLUCI\u00d3N DE TIPO DE ENV\u00cdO ---\nconst shipping     = item.shipping || {};\nconst logisticType = shipping.logistic_type || '';\nconst shippingMode = shipping.mode || '';\nconst localPickup  = shipping.local_pick_up === true;\nconst shippingTags = shipping.tags || [];\n\nlet shippingKey;\n\n// 1. Fulfillment siempre gana (logistic_type es definitivo)\nif      (logisticType === 'fulfillment') {\n  shippingKey = 'fulfillment';\n}\n// 2. Flex (por tags, independiente del mode)\nelse if (shippingTags.includes('self_service_in') || shippingTags.includes('flex')) {\n  shippingKey = 'flex';\n}\n// 3. mode es el campo m\u00e1s confiable para me1/me2 (drop_off aplica a ambos)\nelse if (shippingMode === 'me2' || logisticType === 'cross_docking') {\n  shippingKey = 'me2';\n}\nelse if (shippingMode === 'me1' || logisticType === 'xd_drop_off') {\n  shippingKey = 'me1';\n}\n// 4. drop_off sin mode expl\u00edcito \u2192 me1\nelse if (logisticType === 'drop_off') {\n  shippingKey = 'me1';\n}\n// 5. Retiro en local\nelse if (localPickup || logisticType === 'not_specified') {\n  shippingKey = 'pickup';\n}\n// 6. Personalizado / self_service / custom\nelse {\n  shippingKey = 'custom';\n}\n\nconst shippingInstructions = accountDetails?.shipping_instructions || {};\nconst resolvedShipping     = shippingInstructions[shippingKey]\n                             || prompts?.envios\n                             || '';\nconst itemDesc = itemDescNode?.plain_text || \"\";\nconst catalogDesc = catalogDescNode?.plain_text || \"\";\nconst ragContext = ragNode?.context || \"\";\n\n// Contexto para la IA\nlet contextData = `--- INFORMACI\u00d3N DEL PRODUCTO ---\nT\u00edtulo: ${item.title}\nID MeLi: ${item.id}\nSKU: ${sku}\nPrecio: ${item.currency_id} ${item.price}\nStock: ${item.available_quantity}\nAtributos: ${item.attributes ? item.attributes.map(a => `${a.name}: ${a.value_name}`).join(', ') : 'N/A'}\\n`;\n\nif (catalogDetailsNode) {\n  contextData += `--- FICHA T\u00c9CNICA EXTRA ---\\n${catalogDetailsNode.attributes?.map(a => `${a.name}: ${a.value_name}`).join('\\n')}\\n`;\n}\n\n// --- DISE\u00d1O DE LA \"CARD\" PARA CHATWOOT ---\n// Usamos blockquotes (>) para dar efecto de contenedor/card\nconst productNote = `\n### \ud83d\udce6 DETALLES DEL PRODUCTO\n> [![${item.title}](${bigImage})](${item.permalink})\n> \n> **[${item.title}](${item.permalink})**\n>\n> \ud83c\udd94 **ID MeLi:** \\`${item.id}\\` | \ud83d\udd22 **SKU:** \\`${sku}\\`\n> \ud83d\udcb0 **Precio:** ${item.currency_id} ${price.toLocaleString()} ${hasOffer ? `(\ud83d\udd25 ~~${item.currency_id} ${originalPrice.toLocaleString()}~~)` : ''}\n> \ud83d\udce6 **Stock:** ${item.available_quantity} unidades | \ud83d\udcc8 **Ventas:** ${item.sold_quantity}\n> \ud83d\udee0\ufe0f **Estado:** ${condition} | \ud83d\udcc2 **Categor\u00eda:** ${item.category_id}\n> \ud83d\udd17 **Garant\u00eda:** ${item.warranty || 'No especificada'}\n---\n`.trim();\n\nreturn {\n  ai_payload: {\n    question: questionDetails?.text || \"Pregunta no encontrada\",\n    full_context: contextData\n      + \"\\n--- DESCRIPCI\u00d3N ---\\n\" + itemDesc + \"\\n\" + catalogDesc\n      + (ragContext ? \"\\n--- BASE DE CONOCIMIENTO ---\\n\" + ragContext : \"\"),\n    user_prompts: prompts,\n    delay: accountDetails?.delay || { seconds: 30 },\n    chatwoot_account_id: accountDetails?.chatwoot_account_id,\n    product_note_markdown: productNote,\n    access_token: accountDetails?.access_token,\n    resolved_greeting:  resolvedGreeting,\n    resolved_shipping:  resolvedShipping,\n    shipping_type:      shippingKey,\n  }\n};"
-      },
+      "id": "a7a8b607-809c-4fce-a90d-1bfe5af7cb77",
+      "name": "context:assembler",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
       "position": [
         -2512,
         -512
       ],
-      "id": "a7a8b607-809c-4fce-a90d-1bfe5af7cb77",
-      "name": "context:assembler"
+      "parameters": {
+        "jsCode": "function getSafeData(nodeName) {\n  try {\n    return $(nodeName).first().json;\n  } catch (e) {\n    return null;\n  }\n}\n\nconst item = getSafeData(\"get_item_details\");\nconst accountDetails = getSafeData(\"get_account_details\");\nconst itemDescNode = getSafeData(\"get_item_description\");\nconst catalogDescNode = getSafeData(\"get_catalog_description\");\nconst catalogDetailsNode = getSafeData(\"get_relationship_item_description\");\nconst questionDetails = getSafeData(\"get_queston_details\");\n\n// --- CONTROL DE CONFIANZA (retención por falta de información, 2026-08-08) ---\nconst requireRagOrConfidence = accountDetails?.require_rag_or_confidence === true;\nconst confidenceByCategory   = accountDetails?.confidence_by_category || {};\nconst categoryId = String(item.category_id || '');\nconst requireConf = Object.prototype.hasOwnProperty.call(confidenceByCategory, categoryId)\n  ? confidenceByCategory[categoryId] === true\n  : requireRagOrConfidence;\n\nconst ragNode = getSafeData(\"rag_search\");\n\nconst price = item.price;\nconst originalPrice = item.original_price;\nconst hasOffer = originalPrice && originalPrice > price;\n\n// --- EXTRACCIÓN DE DATOS ADICIONALES ---\n// Buscamos el SKU en los atributos\nconst sku = item.attributes?.find(a => a.id === 'SELLER_SKU')?.value_name || 'No definido';\n// Obtenemos una imagen de alta resolución (la primera de la galería)\nconst bigImage = item.pictures && item.pictures.length > 0 ? item.pictures[0].secure_url : item.thumbnail;\n// Nota privada: imagen al 50% vía el renderer nativo de Chatwoot (cw_image_width).\nconst noteImage = bigImage.includes('?') ? bigImage + '&cw_image_width=50%25' : bigImage + '?cw_image_width=50%25';\n// Formateamos la condición\nconst condition = item.condition === 'new' ? 'Nuevo' : (item.condition === 'used' ? 'Usado' : item.condition);\n\nconst prompts = accountDetails?.prompts || {};\n// Resolución de saludo por tienda (fallback → saludoGeneral)\nconst officialStoreId  = item.official_store_id?.toString();\nconst storeGreetings   = accountDetails?.store_greetings || {};\nconst resolvedGreeting = (officialStoreId && storeGreetings[officialStoreId])\n                         || prompts?.saludoGeneral\n                         || '';\n// --- DETECCIÓN Y RESOLUCIÓN DE TIPO DE ENVÍO ---\nconst shipping     = item.shipping || {};\nconst logisticType = shipping.logistic_type || '';\nconst shippingMode = shipping.mode || '';\nconst localPickup  = shipping.local_pick_up === true;\nconst shippingTags = shipping.tags || [];\n\nlet shippingKey;\n\n// 1. Fulfillment siempre gana (logistic_type es definitivo)\nif      (logisticType === 'fulfillment') {\n  shippingKey = 'fulfillment';\n}\n// 2. Flex (por tags, independiente del mode)\nelse if (shippingTags.includes('self_service_in') || shippingTags.includes('flex')) {\n  shippingKey = 'flex';\n}\n// 3. mode es el campo más confiable para me1/me2 (drop_off aplica a ambos)\nelse if (shippingMode === 'me2' || logisticType === 'cross_docking') {\n  shippingKey = 'me2';\n}\nelse if (shippingMode === 'me1' || logisticType === 'xd_drop_off') {\n  shippingKey = 'me1';\n}\n// 4. drop_off sin mode explícito → me1\nelse if (logisticType === 'drop_off') {\n  shippingKey = 'me1';\n}\n// 5. Retiro en local\nelse if (localPickup || logisticType === 'not_specified') {\n  shippingKey = 'pickup';\n}\n// 6. Personalizado / self_service / custom\nelse {\n  shippingKey = 'custom';\n}\n\nconst shippingInstructions = accountDetails?.shipping_instructions || {};\nconst resolvedShipping     = shippingInstructions[shippingKey]\n                             || prompts?.envios\n                             || '';\nconst itemDesc = itemDescNode?.plain_text || \"\";\nconst catalogDesc = catalogDescNode?.plain_text || \"\";\nconst ragContext = ragNode?.context || \"\";\n\n// Contexto para la IA\nlet contextData = `--- INFORMACIÓN DEL PRODUCTO ---\nTítulo: ${item.title}\nID MeLi: ${item.id}\nSKU: ${sku}\nPrecio: ${item.currency_id} ${item.price}\nStock: ${item.available_quantity}\nAtributos: ${item.attributes ? item.attributes.map(a => `${a.name}: ${a.value_name}`).join(', ') : 'N/A'}\\n`;\n\nif (catalogDetailsNode) {\n  contextData += `--- FICHA TÉCNICA EXTRA ---\\n${catalogDetailsNode.attributes?.map(a => `${a.name}: ${a.value_name}`).join('\\n')}\\n`;\n}\n\n// --- DISEÑO DE LA \"CARD\" PARA CHATWOOT ---\n// Usamos blockquotes (>) para dar efecto de contenedor/card\nconst productNote = `\n**DETALLES DEL PRODUCTO**\n[![${item.title}](${noteImage})](${item.permalink})\n**[${item.title}](${item.permalink})**\n**ID MeLi:** ${item.id} | **SKU:** ${sku}\n**Precio:** ${item.currency_id} ${price.toLocaleString()}${hasOffer ? ` (oferta: ${item.currency_id} ${originalPrice.toLocaleString()})` : ''}\n**Stock:** ${item.available_quantity} unidades | **Ventas:** ${item.sold_quantity}\n**Estado:** ${condition} | **Categoría:** ${item.category_id}\n**Garantía:** ${item.warranty || 'No especificada'}\n`.trim();\n\nreturn {\n  ai_payload: {\n    question: questionDetails?.text || \"Pregunta no encontrada\",\n    full_context: contextData\n      + \"\\n--- DESCRIPCIÓN ---\\n\" + itemDesc + \"\\n\" + catalogDesc\n      + (ragContext ? \"\\n--- BASE DE CONOCIMIENTO ---\\n\" + ragContext : \"\"),\n    user_prompts: prompts,\n    delay: accountDetails?.delay || { seconds: 30 },\n    chatwoot_account_id: accountDetails?.chatwoot_account_id,\n    product_note_markdown: productNote,\n    access_token: accountDetails?.access_token,\n    resolved_greeting:  resolvedGreeting,\n    resolved_shipping:  resolvedShipping,\n    require_conf:        requireConf,\n    shipping_type:      shippingKey,\n  }\n};"
+      },
+      "typeVersion": 2
     },
     {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "WITH ins AS (\n  INSERT INTO meli_questions (question_id, account_id, status)\n  VALUES (\n    '{{ $json.body.resource.split(\"/\").pop() }}',\n    (SELECT account_id FROM meli_credentials WHERE ml_user_id = '{{ $json.body.user_id.toString() }}'),\n    'processing'\n  )\n  ON CONFLICT (question_id) DO NOTHING\n  RETURNING question_id\n)\nSELECT\n  '{{ $json.body.resource.split(\"/\").pop() }}' AS question_id,\n  EXISTS (SELECT 1 FROM ins) AS is_new;",
-        "options": {}
-      },
+      "id": "7c7e61ed-a991-412e-91ff-82761d6472a8",
+      "name": "check_idempotency",
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
       "position": [
         -5472,
         -432
       ],
-      "id": "7c7e61ed-a991-412e-91ff-82761d6472a8",
-      "name": "check_idempotency",
+      "parameters": {
+        "query": "WITH ins AS (\n  INSERT INTO meli_questions (question_id, account_id, status)\n  VALUES (\n    '{{ $json.body.resource.split(\"/\").pop() }}',\n    (SELECT account_id FROM meli_credentials WHERE ml_user_id = '{{ $json.body.user_id.toString() }}'),\n    'processing'\n  )\n  ON CONFLICT (question_id) DO NOTHING\n  RETURNING question_id\n)\nSELECT\n  '{{ $json.body.resource.split(\"/\").pop() }}' AS question_id,\n  EXISTS (SELECT 1 FROM ins) AS is_new;",
+        "options": {},
+        "operation": "executeQuery"
+      },
       "credentials": {
         "postgres": {
           "id": "3sMbSrK2N5Vz3Xew",
           "name": "Postgres chatwoot_development"
         }
-      }
+      },
+      "typeVersion": 2.6
     },
     {
-      "parameters": {
-        "url": "=https://api.mercadolibre.com/users/{{ $('get_queston_details').item.json.from.id }}",
-        "options": {},
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $json.access_token || $(\"get_account_details\").item.json.access_token }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "id": "20fcaa9f-0cda-40e2-82a6-3d1a4cbd3cee",
+      "name": "get_buyer_details",
+      "type": "n8n-nodes-base.code",
       "position": [
         -4064,
-        -432
+        -448
       ],
-      "id": "20fcaa9f-0cda-40e2-82a6-3d1a4cbd3cee",
-      "name": "get_buyer_details"
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nconst trigger = $('meli_notifications').first().json.body;\nif (isBridge) {\n  const buyer = trigger.buyer || {};\n  return { id: buyer.id, nickname: buyer.nickname };\n}\nconst fromId = $('get_queston_details').first().json.from?.id;\nif (!fromId) return {};\nconst res = await fetch('https://api.mercadolibre.com/users/' + fromId, { headers: { Authorization: 'Bearer ' + account.access_token } });\nif (!res.ok) return {};\nreturn await res.json();"
+      },
+      "typeVersion": 2
     },
     {
-      "parameters": {
-        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/contacts/search?q={{ $('get_queston_details').item.json.from.id }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "api_access_token",
-              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "id": "d31f4e0e-ec7e-4aea-bbf4-fbbde9ad55bb",
+      "name": "chatwoot_search_contact",
+      "type": "n8n-nodes-base.code",
       "position": [
         -2656,
         -848
       ],
-      "id": "d31f4e0e-ec7e-4aea-bbf4-fbbde9ad55bb",
-      "name": "chatwoot_search_contact"
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst isBridge = account.bridge_enabled === true;\nconst trigger = $('meli_notifications').first().json.body;\nif (isBridge) {\n  const contactId = trigger.contact_id || trigger.buyer?.id;\n  return { payload: contactId ? [{ id: String(contactId) }] : [], meta: { count: contactId ? 1 : 0 } };\n}\nconst fromId = $('get_queston_details').first().json.from?.id;\nif (!fromId) return { payload: [], meta: { count: 0 } };\nconst res = await fetch('https://w1206-app.site/api/v1/accounts/' + account.chatwoot_account_id + '/contacts/search?q=' + fromId, { headers: { api_access_token: 'TSL8r4ctWYzXJF9fiAS1Z8RV' } });\nif (!res.ok) return { payload: [], meta: { count: 0 } };\nreturn await res.json();"
+      },
+      "typeVersion": 2
     },
     {
-      "parameters": {
-        "method": "POST",
-        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/contacts",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "api_access_token",
-              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"inbox_id\": {{ $('get_account_details').item.json.meli_inbox_id }},\n  \"name\": \"{{ $('get_buyer_details').item.json.nickname }}\",\n  \"identifier\": \"{{ $('get_buyer_details').item.json.id }}\"\n}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "id": "58285456-a79c-4812-b281-607f4b98ba55",
+      "name": "chatwoot_contact_create",
+      "type": "n8n-nodes-base.code",
       "position": [
         -2272,
         -672
       ],
-      "id": "58285456-a79c-4812-b281-607f4b98ba55",
-      "name": "chatwoot_contact_create",
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst isBridge = account.bridge_enabled === true;\nconst trigger = $('meli_notifications').first().json.body;\nif (isBridge) {\n  return { payload: { id: trigger.contact_id || null } };\n}\nconst buyer = $('get_buyer_details').first().json;\nconst res = await fetch('https://w1206-app.site/api/v1/accounts/' + account.chatwoot_account_id + '/contacts', { method: 'POST', headers: { 'Content-Type': 'application/json', api_access_token: 'TSL8r4ctWYzXJF9fiAS1Z8RV' }, body: JSON.stringify({ inbox_id: account.meli_inbox_id, name: buyer.nickname || 'ML Buyer', identifier: String(buyer.id) }) });\nif (!res.ok) throw new Error('Chatwoot contact create: ' + res.status);\nreturn await res.json();"
+      },
+      "typeVersion": 2,
       "alwaysOutputData": true
     },
     {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "0a676443-90b2-4c10-b5cc-f22027294913",
-              "leftValue": "={{ $json.meta.count }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "notEquals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
+      "id": "e855dfdf-0156-4c50-8137-8e742b5fd5a0",
+      "name": "contact_exists?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
       "position": [
         -2448,
         -848
       ],
-      "id": "e855dfdf-0156-4c50-8137-8e742b5fd5a0",
-      "name": "contact_exists?"
-    },
-    {
       "parameters": {
-        "method": "POST",
-        "url": "=https://w1206-app.site/api/v1/accounts/{{ $node[\"get_account_details\"].json.chatwoot_account_id }}/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "options": {},
+        "conditions": {
+          "options": {
+            "version": 3,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
             {
-              "name": "api_access_token",
-              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+              "id": "0a676443-90b2-4c10-b5cc-f22027294913",
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              },
+              "leftValue": "={{ $json.meta.count }}",
+              "rightValue": 0
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"source_id\": \"{{ $('get_queston_details').item.json.id }}\",\n  \"contact_id\": {{ $json.payload?.contact?.id || $json.payload?.[0]?.id }},\n  \"inbox_id\": {{ $('get_account_details').item.json.meli_inbox_id }},\n  \"team_id\": {{ $('get_account_details').item.json.meli_team_id }},\n  \"status\": \"open\", \n  \"additional_attributes\": {\n    \"type\": \"pre-venta\",\n    \"item_id\": \"{{ $('get_item_details').item.json.id }}\"\n  }\n}",
-        "options": {}
+        }
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "typeVersion": 2.3
+    },
+    {
+      "id": "33954433-dd96-4307-9bc9-0752666e362a",
+      "name": "chatwoot_conversation_create",
+      "type": "n8n-nodes-base.code",
       "position": [
         -2064,
         -864
       ],
-      "id": "33954433-dd96-4307-9bc9-0752666e362a",
-      "name": "chatwoot_conversation_create"
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst isBridge = account.bridge_enabled === true;\nconst trigger = $('meli_notifications').first().json.body;\nif (isBridge) {\n  if (!trigger.conversation_id) return null;\n  return { id: trigger.conversation_id };\n}\nconst question = $('get_queston_details').first().json;\nconst item = $('get_item_details').first().json;\nconst input = $input.first().json || {};\nconst contactId = input.payload?.contact?.id || input.payload?.[0]?.id;\nconst res = await fetch('https://w1206-app.site/api/v1/accounts/' + account.chatwoot_account_id + '/conversations', { method: 'POST', headers: { 'Content-Type': 'application/json', api_access_token: 'TSL8r4ctWYzXJF9fiAS1Z8RV' }, body: JSON.stringify({ source_id: String(question.id), contact_id: contactId, inbox_id: account.meli_inbox_id, team_id: account.meli_team_id, status: 'open', additional_attributes: { type: 'pre-venta', item_id: String(item.id || '') } }) });\nif (!res.ok) throw new Error('Chatwoot conversation create: ' + res.status);\nreturn await res.json();"
+      },
+      "typeVersion": 2
     },
     {
+      "id": "126da098-49c5-41ee-bfa6-39892aafb99d",
+      "name": "chatwoot_private_note_create",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -1840,
+        -864
+      ],
       "parameters": {
-        "method": "POST",
         "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $node[\"chatwoot_conversation_create\"].json.id }}/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "api_access_token",
-              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
-            }
-          ]
-        },
+        "method": "POST",
+        "options": {},
         "sendBody": true,
+        "sendHeaders": true,
         "bodyParameters": {
           "parameters": [
             {
@@ -571,154 +474,6 @@
             }
           ]
         },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        -1840,
-        -864
-      ],
-      "id": "126da098-49c5-41ee-bfa6-39892aafb99d",
-      "name": "chatwoot_private_note_create"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.mercadolibre.com/answers",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "question_id",
-              "value": "={{ $('get_queston_details').item.json.id }}"
-            },
-            {
-              "name": "text",
-              "value": "={{ $('AI Agent').item.json.output }}"
-            }
-          ]
-        },
-        "options": {},
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $json.access_token || $(\"get_account_details\").item.json.access_token }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        176,
-        -848
-      ],
-      "id": "256f350e-36b7-4b63-a5d5-3bd8529deef0",
-      "name": "mercadolibre_answer_question"
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "schema": {
-          "__rl": true,
-          "mode": "list",
-          "value": "public"
-        },
-        "table": {
-          "__rl": true,
-          "value": "meli_questions",
-          "mode": "name"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "status": "=completed",
-            "question_id": "={{ $json.id.toString() }}",
-            "cw_conversation_id": "={{ $('chatwoot_conversation_create').item.json.id }}"
-          },
-          "matchingColumns": [
-            "question_id"
-          ],
-          "schema": [
-            {
-              "id": "question_id",
-              "displayName": "question_id",
-              "required": true,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "account_id",
-              "displayName": "account_id",
-              "required": true,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "cw_conversation_id",
-              "displayName": "cw_conversation_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "status",
-              "displayName": "status",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "created_at",
-              "displayName": "created_at",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "dateTime",
-              "canBeUsedToMatch": true,
-              "removed": true
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        416,
-        -848
-      ],
-      "id": "ae1c5680-3e3b-405b-8176-42a0d4a5ccc0",
-      "name": "update_meli_questions_bd",
-      "credentials": {
-        "postgres": {
-          "id": "3sMbSrK2N5Vz3Xew",
-          "name": "Postgres chatwoot_development"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('chatwoot_conversation_create').item.json.id }}/messages",
-        "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
@@ -726,8 +481,132 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
+        }
+      },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "256f350e-36b7-4b63-a5d5-3bd8529deef0",
+      "name": "mercadolibre_answer_question",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        176,
+        -848
+      ],
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nconst questionId = $('get_queston_details').first().json.id;\nconst text = $('AI Agent').first().json.output;\nif ($env.REPLY_RECEIVE_ONLY === 'true' && account.receive_only === 'true') return { receive_only: true, skipped: true };\nif (isBridge) {\n  if (!$env.BRIDGE_SECRET || !$env.YOBOT_BRIDGE_URL) throw new Error('Bridge: BRIDGE_SECRET/YOBOT_BRIDGE_URL no configurados en n8n');\n  const body = JSON.stringify({ ml_user_id: String(account.ml_user_id), question_id: questionId, answer_text: text });\n  const signature = (await (await fetch('http://rails:3000/bridge/sign', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json', 'X-Bridge-Secret': $env.BRIDGE_SECRET },\n  body: JSON.stringify({ body })\n})).json()).signature;\n  const res = await fetch($env.YOBOT_BRIDGE_URL + '/api/bridge/send-answer', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + $env.BRIDGE_SECRET, 'X-Bridge-Signature': signature }, body: body });\n  if (!res.ok) throw new Error('Bridge send-answer: ' + res.status);\n  return await res.json();\n}\nconst res = await fetch('https://api.mercadolibre.com/answers', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + account.access_token }, body: JSON.stringify({ question_id: questionId, text: text }) });\nif (!res.ok) throw new Error('ML answer: ' + res.status);\nreturn await res.json();"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "ae1c5680-3e3b-405b-8176-42a0d4a5ccc0",
+      "name": "update_meli_questions_bd",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        416,
+        -848
+      ],
+      "parameters": {
+        "table": {
+          "__rl": true,
+          "mode": "name",
+          "value": "meli_questions"
         },
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "columns": {
+          "value": {
+            "status": "=completed",
+            "question_id": "={{ $json.id.toString() }}",
+            "cw_conversation_id": "={{ $('chatwoot_conversation_create').item.json.id }}"
+          },
+          "schema": [
+            {
+              "id": "question_id",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": true,
+              "displayName": "question_id",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "account_id",
+              "type": "number",
+              "display": true,
+              "removed": true,
+              "required": true,
+              "displayName": "account_id",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cw_conversation_id",
+              "type": "number",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "cw_conversation_id",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "status",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "type": "dateTime",
+              "display": true,
+              "removed": true,
+              "required": false,
+              "displayName": "created_at",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "question_id"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {},
+        "operation": "update"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      },
+      "typeVersion": 2.6
+    },
+    {
+      "id": "279648e6-932b-44ba-8924-4107fee0e3cc",
+      "name": "chatwoot_publish_answer_ai",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        640,
+        -848
+      ],
+      "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('chatwoot_conversation_create').item.json.id }}/messages",
+        "method": "POST",
+        "options": {},
         "sendBody": true,
+        "sendHeaders": true,
         "bodyParameters": {
           "parameters": [
             {
@@ -740,26 +619,10 @@
             },
             {
               "name": "private",
-              "value": "false"
+              "value": "={{ $env.REPLY_RECEIVE_ONLY === 'true' && $('get_account_details').item.json.receive_only === 'true' }}"
             }
           ]
         },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        640,
-        -848
-      ],
-      "id": "279648e6-932b-44ba-8924-4107fee0e3cc",
-      "name": "chatwoot_publish_answer_ai"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('chatwoot_conversation_create').item.json.id }}/toggle_status",
-        "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
@@ -767,26 +630,26 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"status\": \"resolved\"\n}",
-        "options": {}
+        }
       },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "47cf6b2e-463c-41d1-b102-61cd24684366",
+      "name": "chatwoot_conversation_close",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
         1312,
         -848
       ],
-      "id": "47cf6b2e-463c-41d1-b102-61cd24684366",
-      "name": "chatwoot_conversation_close"
-    },
-    {
       "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('chatwoot_conversation_create').item.json.id }}/toggle_status",
         "method": "POST",
-        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('chatwoot_conversation_create').item.json.id }}/labels",
+        "options": {},
+        "jsonBody": "={\n  \"status\": \"{{ $env.REPLY_RECEIVE_ONLY === 'true' && $('get_account_details').item.json.receive_only === 'true' ? 'open' : 'resolved' }}\"\n}",
+        "sendBody": true,
         "sendHeaders": true,
+        "specifyBody": "json",
         "headerParameters": {
           "parameters": [
             {
@@ -794,26 +657,26 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\n  \"labels\": [\"procesando_con_ia\"]\n}",
-        "options": {}
+        }
       },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "45fb0a1e-dea6-4c5d-bbe9-12b68d5208c1",
+      "name": "chatwoot_add_processing_label",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
         -1136,
         -848
       ],
-      "id": "45fb0a1e-dea6-4c5d-bbe9-12b68d5208c1",
-      "name": "chatwoot_add_processing_label"
-    },
-    {
       "parameters": {
-        "method": "POST",
         "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('chatwoot_conversation_create').item.json.id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\n  \"labels\": [\"procesando_con_ia\"]\n}",
+        "sendBody": true,
         "sendHeaders": true,
+        "specifyBody": "json",
         "headerParameters": {
           "parameters": [
             {
@@ -821,26 +684,26 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\n  \"labels\": []\n}",
-        "options": {}
+        }
       },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "c9518cd0-926e-411b-8ba1-cbd4863af69e",
+      "name": "chatwoot_remove_processing_label1",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
         864,
         -848
       ],
-      "id": "c9518cd0-926e-411b-8ba1-cbd4863af69e",
-      "name": "chatwoot_remove_processing_label1"
-    },
-    {
       "parameters": {
-        "method": "POST",
         "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('chatwoot_conversation_create').item.json.id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\n  \"labels\": []\n}",
+        "sendBody": true,
         "sendHeaders": true,
+        "specifyBody": "json",
         "headerParameters": {
           "parameters": [
             {
@@ -848,26 +711,26 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\n  \"labels\": [\"respondida_con_ia\"]\n}",
-        "options": {}
+        }
       },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "eba1f440-5aa3-4f9c-b03f-908b739adaff",
+      "name": "chatwoot_add_answer_ia_label",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
         1088,
         -848
       ],
-      "id": "eba1f440-5aa3-4f9c-b03f-908b739adaff",
-      "name": "chatwoot_add_answer_ia_label"
-    },
-    {
       "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('chatwoot_conversation_create').item.json.id }}/labels",
         "method": "POST",
-        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $node[\"chatwoot_conversation_create\"].json.id }}/messages",
+        "options": {},
+        "jsonBody": "{\n  \"labels\": [\"respondida_con_ia\"]\n}",
+        "sendBody": true,
         "sendHeaders": true,
+        "specifyBody": "json",
         "headerParameters": {
           "parameters": [
             {
@@ -875,67 +738,39 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "content",
-              "value": "={{ $('get_queston_details').item.json.text }}"
-            },
-            {
-              "name": "message_type",
-              "value": "incoming"
-            },
-            {
-              "name": "private",
-              "value": "false"
-            }
-          ]
-        },
-        "options": {}
+        }
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "typeVersion": 4.4
+    },
+    {
+      "id": "b72cba88-7c80-486d-89d2-4e2ec1635525",
+      "name": "chatwoot_add_message_to_conversation",
+      "type": "n8n-nodes-base.code",
       "position": [
         -1616,
         -864
       ],
-      "id": "b72cba88-7c80-486d-89d2-4e2ec1635525",
-      "name": "chatwoot_add_message_to_conversation"
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst isBridge = account.bridge_enabled === true;\nconst trigger = $('meli_notifications').first().json.body;\nif (isBridge) {\n  return { id: trigger.message_id || null };\n}\nconst conversationId = $('chatwoot_conversation_create').item.json.id;\nconst question = $('get_queston_details').first().json;\nconst res = await fetch('https://w1206-app.site/api/v1/accounts/' + account.chatwoot_account_id + '/conversations/' + conversationId + '/messages', { method: 'POST', headers: { 'Content-Type': 'application/json', api_access_token: 'TSL8r4ctWYzXJF9fiAS1Z8RV' }, body: JSON.stringify({ content: question.text || '', message_type: 'incoming', private: false }) });\nif (!res.ok) throw new Error('Chatwoot message create: ' + res.status);\nreturn await res.json();"
+      },
+      "typeVersion": 2
     },
     {
-      "parameters": {
-        "method": "POST",
-        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('chatwoot_conversation_create').item.json.id }}/labels",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "api_access_token",
-              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\n  \"labels\": [\"esperando_respuesta_manual\"]\n}",
-        "options": {}
-      },
+      "id": "c5d730dd-fc4f-4b66-8b01-a01f2bdc1fc8",
+      "name": "chatwoot_add_processing_manual_label",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
         -1136,
         -1088
       ],
-      "id": "c5d730dd-fc4f-4b66-8b01-a01f2bdc1fc8",
-      "name": "chatwoot_add_processing_manual_label"
-    },
-    {
       "parameters": {
-        "method": "POST",
         "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('chatwoot_conversation_create').item.json.id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\n  \"labels\": [\"esperando_respuesta_manual\"]\n}",
+        "sendBody": true,
         "sendHeaders": true,
+        "specifyBody": "json",
         "headerParameters": {
           "parameters": [
             {
@@ -943,26 +778,26 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\n  \"labels\": [\"procesando_con_ia\",\"esperando_tiempo_retraso_programado\"]\n}",
-        "options": {}
+        }
       },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "3768d843-da87-475c-acf8-862d1836fd23",
+      "name": "chatwoot_add_time_processing_label",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
         -592,
         -848
       ],
-      "id": "3768d843-da87-475c-acf8-862d1836fd23",
-      "name": "chatwoot_add_time_processing_label"
-    },
-    {
       "parameters": {
-        "method": "POST",
         "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('chatwoot_conversation_create').item.json.id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\n  \"labels\": [\"procesando_con_ia\",\"esperando_tiempo_retraso_programado\"]\n}",
+        "sendBody": true,
         "sendHeaders": true,
+        "specifyBody": "json",
         "headerParameters": {
           "parameters": [
             {
@@ -970,109 +805,490 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\n  \"labels\": [\"procesando_con_ia\"]\n}",
-        "options": {}
+        }
       },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "a500cca6-4c83-437a-984a-3e3c105d2b94",
+      "name": "chatwoot_remove_time_processing_label",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
         -208,
         -848
       ],
-      "id": "a500cca6-4c83-437a-984a-3e3c105d2b94",
-      "name": "chatwoot_remove_time_processing_label"
+      "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('chatwoot_conversation_create').item.json.id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\n  \"labels\": [\"procesando_con_ia\"]\n}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        }
+      },
+      "typeVersion": 4.4
     },
     {
+      "id": "f4d3cfe4-cd73-4b4a-b6e2-30c776d2b80c",
+      "name": "update_meli_questions_bd1",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -592,
+        -1088
+      ],
       "parameters": {
-        "operation": "update",
+        "table": {
+          "__rl": true,
+          "mode": "name",
+          "value": "meli_questions"
+        },
         "schema": {
           "__rl": true,
           "mode": "list",
           "value": "public"
         },
-        "table": {
-          "__rl": true,
-          "value": "meli_questions",
-          "mode": "name"
-        },
         "columns": {
-          "mappingMode": "defineBelow",
           "value": {
             "status": "=processing",
             "question_id": "={{ $('get_queston_details').item.json.id.toString() }}",
             "cw_conversation_id": "={{ $('chatwoot_conversation_create').item.json.id }}"
           },
-          "matchingColumns": [
-            "question_id"
-          ],
           "schema": [
             {
               "id": "question_id",
-              "displayName": "question_id",
-              "required": true,
-              "defaultMatch": false,
-              "display": true,
               "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
+              "display": true,
+              "removed": false,
+              "required": true,
+              "displayName": "question_id",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
             },
             {
               "id": "account_id",
-              "displayName": "account_id",
-              "required": true,
-              "defaultMatch": false,
-              "display": true,
               "type": "number",
-              "canBeUsedToMatch": true,
-              "removed": true
+              "display": true,
+              "removed": true,
+              "required": true,
+              "displayName": "account_id",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
             },
             {
               "id": "cw_conversation_id",
-              "displayName": "cw_conversation_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
               "type": "number",
-              "canBeUsedToMatch": true,
-              "removed": false
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "cw_conversation_id",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
             },
             {
               "id": "status",
-              "displayName": "status",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
               "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "status",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
             },
             {
               "id": "created_at",
-              "displayName": "created_at",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
               "type": "dateTime",
-              "canBeUsedToMatch": true,
-              "removed": true
+              "display": true,
+              "removed": true,
+              "required": false,
+              "displayName": "created_at",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
             }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "question_id"
           ],
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
         },
-        "options": {}
+        "options": {},
+        "operation": "update"
       },
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      },
+      "typeVersion": 2.6
+    },
+    {
+      "id": "a3f06b8a-3bc3-4581-98dc-20a93c76b064",
+      "name": "rag_search",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -2880,
+        -512
+      ],
+      "parameters": {
+        "url": "http://rails:3000/rag/search",
+        "body": "={{ JSON.stringify({ account_id: $('get_account_details').first().json.chatwoot_account_id, query: $('get_queston_details').first().json.text, item_id: String($('get_item_details').first().json.id), category_id: String($('get_item_details').first().json.category_id) }) }}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "contentType": "raw",
+        "sendHeaders": true,
+        "rawContentType": "application/json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-internal-secret",
+              "value": "reply_ai_internal_2026"
+            }
+          ]
+        }
+      },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "ef3e25db-cc57-433f-a9d7-4725791c7aca",
+      "name": "Call 'reply_ai_orders_main'",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "position": [
+        -5472,
+        -224
+      ],
+      "parameters": {
+        "mode": "each",
+        "options": {},
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "267yHu6ne62J8FZjiMlMc",
+          "cachedResultUrl": "/workflow/267yHu6ne62J8FZjiMlMc",
+          "cachedResultName": "reply_ai_orders_main"
+        },
+        "workflowInputs": {
+          "value": {},
+          "schema": [],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        }
+      },
+      "typeVersion": 1.3
+    },
+    {
+      "id": "44192eac-4e40-41fd-9536-9aee73770d4a",
+      "name": "bot_active?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -1376,
+        -544
+      ],
+      "parameters": {
+        "options": {},
+        "conditions": {
+          "options": {
+            "version": 3,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "e66f61f4-9228-4eb2-990f-0cfdc7f89c19",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.active }}",
+              "rightValue": ""
+            }
+          ]
+        }
+      },
+      "typeVersion": 2.3
+    },
+    {
+      "id": "0bb79820-48ca-4fdc-ac2c-ac89bd5d4dba",
+      "name": "check_bot_active",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -1568,
+        -544
+      ],
+      "parameters": {
+        "url": "=http://rails:3000/bot_active?account_id={{ $('get_account_details').item.json.chatwoot_account_id }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-internal-secret",
+              "value": "reply_ai_internal_2026"
+            }
+          ]
+        }
+      },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "d97e7088-6012-42c3-b29f-83dad7f35b58",
+      "name": "Call reply_ai_postsale_main",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "onError": "continueRegularOutput",
+      "position": [
+        -5472,
+        16
+      ],
+      "parameters": {
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        },
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "ryXMiGxGs0CBpknCbzpFB",
+          "cachedResultUrl": "/workflow/ryXMiGxGs0CBpknCbzpFB",
+          "cachedResultName": "reply_ai_postsale_main"
+        },
+        "workflowInputs": {
+          "value": {},
+          "schema": [],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        }
+      },
+      "typeVersion": 1.3,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "909de606-dcfa-4430-b343-942035b6d717",
+      "name": "is_new_question?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -5168,
+        -432
+      ],
+      "parameters": {
+        "options": {},
+        "conditions": {
+          "options": {
+            "version": 3,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "idem-q-001",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.is_new }}",
+              "rightValue": ""
+            }
+          ]
+        }
+      },
+      "typeVersion": 2.3
+    },
+    {
+      "id": "f56f3ea2-f714-41c7-a146-41de63b0cb14",
+      "name": "refresh_token",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -4672,
+        -448
+      ],
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst refreshToken = $input.first().json.refresh_token || account.refresh_token;\n// Perfil MIGRADO: token emitido por la app de Yobot -> refresh directo con credenciales de Yobot.\n// Perfil BRIDGE: refresh via Yobot. Nativo: app de Reply.\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nconst isMigrado = account.bridge_enabled === true && account.status !== 'bridge';\n\n// Skip si el access_token todavia tiene vida (>= 5 min) - el TokenRefreshWorker cubre el refresh de fondo.\nconst expiresAt = account.expires_at ? new Date(account.expires_at).getTime() : null;\nif (expiresAt && expiresAt - Date.now() > 5 * 60 * 1000) {\n  return { ...$input.first().json, refreshed: false, skipped: true };\n}\n\nif (isBridge) {\n  if (!$env.BRIDGE_SECRET || !$env.YOBOT_BRIDGE_URL) throw new Error('Bridge: BRIDGE_SECRET/YOBOT_BRIDGE_URL no configurados en n8n');\n  const body = JSON.stringify({ ml_user_id: String(account.ml_user_id), refresh_token: refreshToken });\n  const signature = (await (await fetch('http://rails:3000/bridge/sign', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json', 'X-Bridge-Secret': $env.BRIDGE_SECRET },\n  body: JSON.stringify({ body })\n})).json()).signature;\n  const res = await fetch($env.YOBOT_BRIDGE_URL + '/api/bridge/refresh-token', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + $env.BRIDGE_SECRET, 'X-Bridge-Signature': signature }, body: body });\n  if (!res.ok) {\n    return { ...$input.first().json, refreshed: false, refresh_error: res.status };\n  }\n  const tok = await res.json();\n  return { ...tok, refreshed: true };\n}\n\nconst clientId = isMigrado\n  ? ($env.YOBOT_ML_APP_ID || '')\n  : ($env.ML_APP_ID || '6328081194174662');\nconst clientSecret = isMigrado\n  ? ($env.YOBOT_ML_SECRET_KEY || '')\n  : ($env.ML_SECRET_KEY || 'UiKyfBHZkcMAklM1ATNMSoj5JcyGb7ST');\nif (!clientId || !clientSecret) throw new Error('ML refresh: credenciales no configuradas en n8n (' + (isMigrado ? 'YOBOT_ML' : 'ML') + ')');\n\nconst res = await fetch('https://api.mercadolibre.com/oauth/token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ grant_type: 'refresh_token', client_id: clientId, client_secret: clientSecret, refresh_token: refreshToken }) });\nif (!res.ok) {\n  return { ...$input.first().json, refreshed: false, refresh_error: res.status };\n}\nreturn { ...(await res.json()), refreshed: true };"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "a88c9f9c-adc7-4ba6-8d42-c8237983abce",
+      "name": "Execute a SQL query",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -4464,
+        -448
+      ],
+      "parameters": {
+        "query": "UPDATE meli_credentials SET access_token='{{$json.access_token}}', refresh_token='{{$json.refresh_token}}', expires_at=NOW()+'{{$json.expires_in || 0}} sec'::INTERVAL, status=CASE WHEN bridge_enabled THEN 'bridge' ELSE 'active' END, updated_at=NOW() WHERE ml_user_id='{{$('meli_notifications').item.json.body.user_id}}' AND COALESCE('{{$json.refreshed}}','') = 'true'",
+        "options": {},
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      },
+      "typeVersion": 2.6
+    },
+    {
+      "parameters": {
+        "options": {},
+        "conditions": {
+          "options": {
+            "version": 3,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "sin-info-001",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              },
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "[SIN_INFORMACION]"
+            }
+          ]
+        }
+      },
+      "id": "72c7540b-bfe8-401d-8ba0-de812c0abe0b",
+      "name": "check_sin_info",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -644,
+        -848
+      ]
+    },
+    {
+      "parameters": {
+        "table": {
+          "__rl": true,
+          "mode": "name",
+          "value": "meli_questions"
+        },
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "columns": {
+          "value": {
+            "status": "=UNANSWERED",
+            "question_id": "={{ $('get_queston_details').first().json.id.toString() }}",
+            "retained_due_lack_of_info": true,
+            "suggested_answer": "={{ $('AI Agent').first().json.output.replace(/^\\[SIN_INFORMACION\\]\\s*/i, '').trim() }}",
+            "cw_conversation_id": "={{ $('chatwoot_conversation_create').item.json.id }}"
+          },
+          "schema": [
+            {
+              "id": "question_id",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": true,
+              "displayName": "question_id",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "account_id",
+              "type": "number",
+              "display": true,
+              "removed": true,
+              "required": true,
+              "displayName": "account_id",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cw_conversation_id",
+              "type": "number",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "cw_conversation_id",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "status",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "type": "dateTime",
+              "display": true,
+              "removed": true,
+              "required": false,
+              "displayName": "created_at",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "retained_due_lack_of_info",
+              "type": "boolean",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "retained_due_lack_of_info",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "suggested_answer",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "suggested_answer",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "question_id"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {},
+        "operation": "update"
+      },
+      "id": "c7aaebb6-6353-4901-b242-fd909a8374eb",
+      "name": "update_meli_questions_retained",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -592,
-        -1088
+        -644,
+        -648
       ],
-      "id": "f4d3cfe4-cd73-4b4a-b6e2-30c776d2b80c",
-      "name": "update_meli_questions_bd1",
       "credentials": {
         "postgres": {
           "id": "3sMbSrK2N5Vz3Xew",
@@ -1082,243 +1298,238 @@
     },
     {
       "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $node[\"chatwoot_conversation_create\"].json.id }}/messages",
         "method": "POST",
-        "url": "http://rails:3000/rag/search",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "x-internal-secret",
-              "value": "reply_ai_internal_2026"
-            }
-          ]
-        },
+        "options": {},
         "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({ account_id: $('get_account_details').first().json.chatwoot_account_id, query: $('get_queston_details').first().json.text, item_id: String($('get_item_details').first().json.id), category_id: String($('get_item_details').first().json.category_id) }) }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        -2880,
-        -512
-      ],
-      "id": "a3f06b8a-3bc3-4581-98dc-20a93c76b064",
-      "name": "rag_search"
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "267yHu6ne62J8FZjiMlMc",
-          "mode": "list",
-          "cachedResultUrl": "/workflow/267yHu6ne62J8FZjiMlMc",
-          "cachedResultName": "reply_ai_orders_main"
-        },
-        "workflowInputs": {
-          "mappingMode": "defineBelow",
-          "value": {},
-          "matchingColumns": [],
-          "schema": [],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": true
-        },
-        "mode": "each",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.3,
-      "position": [
-        -5472,
-        -224
-      ],
-      "id": "ef3e25db-cc57-433f-a9d7-4725791c7aca",
-      "name": "Call 'reply_ai_orders_main'"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "e66f61f4-9228-4eb2-990f-0cfdc7f89c19",
-              "leftValue": "={{ $json.active }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        -1376,
-        -544
-      ],
-      "id": "44192eac-4e40-41fd-9536-9aee73770d4a",
-      "name": "bot_active?"
-    },
-    {
-      "parameters": {
-        "url": "=http://rails:3000/bot_active?account_id={{ $('get_account_details').item.json.chatwoot_account_id }}",
         "sendHeaders": true,
-        "headerParameters": {
+        "bodyParameters": {
           "parameters": [
             {
-              "name": "x-internal-secret",
-              "value": "reply_ai_internal_2026"
+              "name": "content",
+              "value": "=Pregunta retenida por control de confianza (información insuficiente). Sugerencia de la IA:\n{{ $('AI Agent').first().json.output.replace(/^\\[SIN_INFORMACION\\]\\s*/i, '').trim() }}"
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "true"
             }
           ]
         },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        -1568,
-        -544
-      ],
-      "id": "0bb79820-48ca-4fdc-ac2c-ac89bd5d4dba",
-      "name": "check_bot_active"
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "ryXMiGxGs0CBpknCbzpFB",
-          "mode": "list",
-          "cachedResultUrl": "/workflow/ryXMiGxGs0CBpknCbzpFB",
-          "cachedResultName": "reply_ai_postsale_main"
-        },
-        "workflowInputs": {
-          "mappingMode": "defineBelow",
-          "value": {},
-          "matchingColumns": [],
-          "schema": [],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": true
-        },
-        "mode": "each",
-        "options": {
-          "waitForSubWorkflow": true
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
         }
       },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.3,
+      "id": "566eed7d-849c-49cf-8b10-bdb7270d7eb1",
+      "name": "chatwoot_retained_note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
       "position": [
-        -5472,
-        16
-      ],
-      "id": "d97e7088-6012-42c3-b29f-83dad7f35b58",
-      "name": "Call reply_ai_postsale_main",
-      "alwaysOutputData": true,
-      "onError": "continueRegularOutput"
+        -644,
+        -448
+      ]
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('chatwoot_conversation_create').item.json.id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\n  \"labels\": [\"esperando_respuesta_manual\"]\n}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
             {
-              "id": "idem-q-001",
-              "leftValue": "={{ $json.is_new }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+          ]
+        }
       },
-      "id": "909de606-dcfa-4430-b343-942035b6d717",
-      "name": "is_new_question?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
+      "id": "f8cc3dc4-25a2-4175-936f-ba6d13132248",
+      "name": "chatwoot_add_manual_label",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
       "position": [
-        -5120,
-        -432
+        -644,
+        -248
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst created = $('chatwoot_publish_answer_ai').first().json;\nconst sendRes = $('mercadolibre_answer_question').first().json;\nconst account = $('get_account_details').first().json;\n// Receive-only: no se envió a ML — no marcar delivered.\nif (sendRes?.skipped || sendRes?.receive_only || !created?.id) return created;\ntry {\n  await fetch('http://rails:3000/api/bridge/message-status', {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json', 'x-internal-secret': 'reply_ai_internal_2026' },\n    body: JSON.stringify({ account_id: account.chatwoot_account_id, message_id: created.id, status: 'delivered' })\n  });\n} catch (e) {}\nreturn created;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        -848
+      ],
+      "id": "ecd04501-1ff6-4122-8ae0-d7dceab56c8a",
+      "name": "chatwoot_mark_delivered"
     }
   ],
-  "pinData": {
-    "meli_notifications": [
-      {
-        "json": {
-          "headers": {
-            "host": "n8nn.w1206-app.site",
-            "user-agent": "github.com/go-loco/restful",
-            "content-length": "273",
-            "accept": "application/json",
-            "accept-encoding": "gzip, br",
-            "cdn-loop": "cloudflare; loops=1",
-            "cf-connecting-ip": "35.245.20.104",
-            "cf-ipcountry": "US",
-            "cf-ray": "9de3f00cfb76a45b-IAD",
-            "cf-visitor": "{\"scheme\":\"https\"}",
-            "cf-warp-tag-id": "1417cd27-c3ca-4a14-aa26-956735cab16a",
-            "connection": "keep-alive",
-            "content-type": "application/json",
-            "traceparent": "00-451130acf9651491e9ea3b63c52aef68-fa3b7f857572983a-00",
-            "x-b3-sampled": "0",
-            "x-b3-spanid": "fa3b7f857572983a",
-            "x-b3-traceid": "451130acf9651491e9ea3b63c52aef68",
-            "x-forwarded-for": "35.245.20.104",
-            "x-forwarded-proto": "https",
-            "x-rest-pool-name": "pool_unknown",
-            "x-socket-timeout": "1000"
-          },
-          "params": {},
-          "query": {},
-          "body": {
-            "_id": "a5bfe6d8-8f10-465b-98f5-08472778202e",
-            "topic": "messages",
-            "resource": "019d00b7433d746a8787d7504c06cb14",
-            "user_id": 1367850269,
-            "application_id": 6328081194174662,
-            "sent": "2026-03-18T11:36:05.889Z",
-            "attempts": 2,
-            "received": "2026-03-18T11:31:47.653Z",
-            "actions": [
-              "created"
-            ]
-          },
-          "webhookUrl": "http://localhost:5678/webhook/9979f346-6abc-46d1-a3e6-12db669f1b37",
-          "executionMode": "production"
-        },
-        "pairedItem": {
-          "item": 0
-        }
-      }
-    ]
-  },
   "connections": {
-    "meli_notifications": {
+    "Wait": {
       "main": [
         [
           {
-            "node": "notification_type",
+            "node": "chatwoot_remove_time_processing_label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "check_sin_info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "rag_search": {
+      "main": [
+        [
+          {
+            "node": "context:assembler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "bot_active?": {
+      "main": [
+        [
+          {
+            "node": "chatwoot_add_processing_label",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "chatwoot_add_processing_manual_label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "refresh_token": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "contact_exists?": {
+      "main": [
+        [
+          {
+            "node": "chatwoot_conversation_create",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "chatwoot_contact_create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_bot_active": {
+      "main": [
+        [
+          {
+            "node": "bot_active?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_item_details": {
+      "main": [
+        [
+          {
+            "node": "item_is_catalog_listing?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "is_new_question?": {
+      "main": [
+        [
+          {
+            "node": "get_account_details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_idempotency": {
+      "main": [
+        [
+          {
+            "node": "is_new_question?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "context:assembler": {
+      "main": [
+        [
+          {
+            "node": "chatwoot_search_contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_buyer_details": {
+      "main": [
+        [
+          {
+            "node": "get_item_details",
             "type": "main",
             "index": 0
           }
@@ -1350,11 +1561,33 @@
         ]
       ]
     },
-    "get_account_details": {
+    "meli_notifications": {
+      "main": [
+        [
+          {
+            "node": "notification_type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
       "main": [
         [
           {
             "node": "get_queston_details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_account_details": {
+      "main": [
+        [
+          {
+            "node": "refresh_token",
             "type": "main",
             "index": 0
           }
@@ -1372,11 +1605,55 @@
         ]
       ]
     },
-    "get_item_details": {
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_item_description": {
       "main": [
         [
           {
-            "node": "item_is_catalog_listing?",
+            "node": "rag_search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chatwoot_contact_create": {
+      "main": [
+        [
+          {
+            "node": "chatwoot_conversation_create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chatwoot_search_contact": {
+      "main": [
+        [
+          {
+            "node": "contact_exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_catalog_description": {
+      "main": [
+        [
+          {
+            "node": "get_relationship_item_description",
             "type": "main",
             "index": 0
           }
@@ -1401,150 +1678,33 @@
         ]
       ]
     },
-    "get_catalog_description": {
+    "update_meli_questions_bd": {
       "main": [
         [
           {
-            "node": "get_relationship_item_description",
+            "node": "chatwoot_publish_answer_ai",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "get_relationship_item_description": {
+    "chatwoot_publish_answer_ai": {
       "main": [
         [
           {
-            "node": "rag_search",
+            "node": "chatwoot_mark_delivered",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "get_item_description": {
+    "chatwoot_add_answer_ia_label": {
       "main": [
         [
           {
-            "node": "rag_search",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "OpenAI Chat Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Postgres Chat Memory": {
-      "ai_memory": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_memory",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "AI Agent": {
-      "main": [
-        [
-          {
-            "node": "chatwoot_add_time_processing_label",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "context:assembler": {
-      "main": [
-        [
-          {
-            "node": "chatwoot_search_contact",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Wait": {
-      "main": [
-        [
-          {
-            "node": "chatwoot_remove_time_processing_label",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "check_idempotency": {
-      "main": [
-        [
-          {
-            "node": "is_new_question?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "get_buyer_details": {
-      "main": [
-        [
-          {
-            "node": "get_item_details",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "chatwoot_search_contact": {
-      "main": [
-        [
-          {
-            "node": "contact_exists?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "chatwoot_contact_create": {
-      "main": [
-        [
-          {
-            "node": "chatwoot_conversation_create",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "contact_exists?": {
-      "main": [
-        [
-          {
-            "node": "chatwoot_conversation_create",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "chatwoot_contact_create",
+            "node": "chatwoot_conversation_close",
             "type": "main",
             "index": 0
           }
@@ -1584,28 +1744,6 @@
         ]
       ]
     },
-    "update_meli_questions_bd": {
-      "main": [
-        [
-          {
-            "node": "chatwoot_publish_answer_ai",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "chatwoot_publish_answer_ai": {
-      "main": [
-        [
-          {
-            "node": "chatwoot_remove_processing_label1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "chatwoot_add_processing_label": {
       "main": [
         [
@@ -1628,11 +1766,22 @@
         ]
       ]
     },
-    "chatwoot_add_answer_ia_label": {
+    "get_relationship_item_description": {
       "main": [
         [
           {
-            "node": "chatwoot_conversation_close",
+            "node": "rag_search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chatwoot_add_time_processing_label": {
+      "main": [
+        [
+          {
+            "node": "Wait",
             "type": "main",
             "index": 0
           }
@@ -1661,17 +1810,6 @@
         ]
       ]
     },
-    "chatwoot_add_time_processing_label": {
-      "main": [
-        [
-          {
-            "node": "Wait",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "chatwoot_remove_time_processing_label": {
       "main": [
         [
@@ -1683,51 +1821,54 @@
         ]
       ]
     },
-    "rag_search": {
+    "check_sin_info": {
       "main": [
         [
           {
-            "node": "context:assembler",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "check_bot_active": {
-      "main": [
-        [
-          {
-            "node": "bot_active?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "bot_active?": {
-      "main": [
-        [
-          {
-            "node": "chatwoot_add_processing_label",
+            "node": "update_meli_questions_retained",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "chatwoot_add_processing_manual_label",
+            "node": "chatwoot_add_time_processing_label",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "is_new_question?": {
+    "update_meli_questions_retained": {
       "main": [
         [
           {
-            "node": "get_account_details",
+            "node": "chatwoot_retained_note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chatwoot_retained_note": {
+      "main": [
+        [
+          {
+            "node": "chatwoot_add_manual_label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chatwoot_add_manual_label": {
+      "main": []
+    },
+    "chatwoot_mark_delivered": {
+      "main": [
+        [
+          {
+            "node": "chatwoot_remove_processing_label1",
             "type": "main",
             "index": 0
           }
@@ -1735,17 +1876,11 @@
       ]
     }
   },
-  "active": true,
   "settings": {
-    "executionOrder": "v1",
     "binaryMode": "separate",
-    "availableInMCP": false
+    "availableInMCP": false,
+    "executionOrder": "v1"
   },
-  "versionId": "d19aced4-dbc2-4ecc-be60-bbdb5e57077e",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "6987f0f533040cbfea8c75383320642dcbc7861e6e8b8f304d7a1f91a57b76b5"
-  },
-  "id": "pc5gBIyf0xgilQ44E786P",
-  "tags": []
+  "versionId": "ec56735a-a646-4d9a-93a7-d47edc986126",
+  "id": "pc5gBIyf0xgilQ44E786P"
 }

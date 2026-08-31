@@ -1,137 +1,131 @@
 {
   "name": "reply_ai_postsale_main",
+  "active": true,
   "nodes": [
     {
-      "id": "ps-trigger-001",
+      "id": "b6bd3c82-f452-41da-bf30-806e25fa7f6e",
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
-      "typeVersion": 1.1,
       "position": [
-        -768,
-        0
-      ],
-      "parameters": {}
-    },
-    {
-      "id": "ps-pg-002",
-      "name": "get_account_details",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        -592,
-        0
+        -41456,
+        -1440
       ],
       "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT\n  c.access_token,\n  a.custom_attributes->'config'->'prompts' as prompts,\n  a.custom_attributes->'config'->'response_delay' as delay,\n  a.id as chatwoot_account_id,\n  a.custom_attributes->'config'->'post_venta_ia' as pv_ia,\n  (SELECT id FROM inboxes\n   WHERE account_id = a.id\n   AND name ILIKE '%Post-venta (MercadoLibre)%'\n   LIMIT 1) as meli_inbox_id,\n  (SELECT id FROM teams\n   WHERE account_id = a.id\n   AND name ILIKE '%Post-Venta%'\n   LIMIT 1) as meli_team_id\nFROM meli_credentials c\nJOIN accounts a ON a.id = c.account_id\nWHERE c.ml_user_id = '{{ $('Execute Workflow Trigger').item.json.body.user_id }}';",
-        "options": {}
+        "inputSource": "passthrough"
+      },
+      "typeVersion": 1.1
+    },
+    {
+      "id": "7c6a3c13-17f5-4ddf-80f8-6e192bf64127",
+      "name": "get_account_details",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -41152,
+        -1120
+      ],
+      "parameters": {
+        "query": "SELECT\n  c.access_token,\n  c.status,\n  c.bridge_enabled,\n  c.ml_user_id,\n  a.custom_attributes->'config'->'prompts' as prompts,\n  a.custom_attributes->'config'->'response_delay' as delay,\n  a.id as chatwoot_account_id,\n  a.custom_attributes->'config'->'post_venta_ia' as pv_ia,\n  a.custom_attributes->>'receive_only' as receive_only,\n  (SELECT id FROM inboxes\n   WHERE account_id = a.id\n   AND name ILIKE '%Post-venta (MercadoLibre)%'\n   LIMIT 1) as meli_inbox_id,\n  (SELECT id FROM teams\n   WHERE account_id = a.id\n   AND name ILIKE '%Post-Venta%'\n   LIMIT 1) as meli_team_id,\n  (SELECT display_id FROM conversations\n   WHERE account_id = a.id\n   AND additional_attributes->>'pack_id' = '{{ $('Execute Workflow Trigger').item.json.body.pack_id }}'\n   ORDER BY id DESC\n   LIMIT 1) as existing_pv_conversation_id\nFROM meli_credentials c\nJOIN accounts a ON a.id = c.account_id\nWHERE c.ml_user_id = '{{ $('Execute Workflow Trigger').item.json.body.user_id }}';",
+        "options": {},
+        "operation": "executeQuery"
       },
       "credentials": {
         "postgres": {
           "id": "3sMbSrK2N5Vz3Xew",
           "name": "Postgres chatwoot_development"
         }
-      }
+      },
+      "typeVersion": 2.6
     },
     {
-      "id": "ps-http-003",
+      "id": "91de959d-3b7a-41fb-9cff-fcaaf1a2fd15",
       "name": "get_message_details",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "type": "n8n-nodes-base.code",
       "position": [
-        -384,
-        0
+        -40928,
+        -1568
       ],
       "parameters": {
-        "url": "=https://api.mercadolibre.com/messages/{{ $('Execute Workflow Trigger').item.json.body.resource }}?tag=post_sale",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {}
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst trigger = $('Execute Workflow Trigger').first().json.body;\nconst account = $('get_account_details').first().json;\nconst isBridge = account.bridge_enabled === true;\nif (isBridge) {\n  const msg = trigger.message || {};\n  if (!msg.id) throw new Error('Bridge: datos de mensaje incompletos (pendiente forward completo de Yobot)');\n  return { messages: [msg] };\n}\nconst res = await fetch('https://api.mercadolibre.com' + trigger.resource + '?tag=post_sale', { headers: { Authorization: 'Bearer ' + account.access_token } });\nif (!res.ok) throw new Error('ML message fetch: ' + res.status);\nreturn await res.json();"
       },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "J0q3ryllyiG4GRKP",
-          "name": "Header Auth account"
-        }
-      }
+      "typeVersion": 2
     },
     {
-      "id": "ps-code-norm",
+      "id": "62da0c5f-193b-41ee-ab67-972f590a4bbb",
       "name": "normalize_message",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
       "position": [
-        -280,
-        0
+        -40672,
+        -1568
       ],
       "parameters": {
-        "jsCode": "const data = $input.first().json;\nconst msgs = data.messages || [];\nconst msg = [...msgs].reverse().find(m => m.status !== 'new') ?? msgs[msgs.length - 1];\nif (!msg) throw new Error('No messages found in response');\nconst sellerId = String($('Execute Workflow Trigger').first().json.body.user_id);\nconst resources = msg.message_resources ?? [];\nconst packRes = resources.find(r => r.name === 'packs');\nconst orderRes = resources.find(r => r.name === 'orders');\nconst packId = packRes?.id ?? null;\nconst orderId = orderRes?.id ?? packId;\nreturn {\n  id: msg.id,\n  text: (msg.text ?? '').trim(),\n  from: msg.from,\n  to: msg.to,\n  status: msg.status,\n  message_type: String(msg.from?.user_id) === sellerId ? 'seller_to_buyer' : 'buyer_to_seller',\n  pack_id: packId,\n  order_id: orderId,\n  conversation_status: data.conversation_status,\n  message_resources: resources\n};"
-      }
+        "jsCode": "const data = $input.first().json;\nconst msgs = data.messages || [];\nconst msg = [...msgs].reverse().find(m => m.status !== 'new') ?? msgs[msgs.length - 1];\nif (!msg) throw new Error('No messages found in response');\nconst sellerId = String($('Execute Workflow Trigger').first().json.body.user_id);\nconst resources = msg.message_resources ?? [];\nconst packRes = resources.find(r => r.name === 'packs');\nconst orderRes = resources.find(r => r.name === 'orders');\n// Fallback al pack_id del top-level del forward (Yobot lo manda siempre); ML no\n// incluye message_resources en todos los mensajes.\nconst bodyPackId = $('Execute Workflow Trigger').first().json.body.pack_id;\nconst packId = packRes?.id ?? bodyPackId ?? null;\nconst orderId = orderRes?.id ?? packId;\nreturn {\n  id: msg.id,\n  text: (msg.text ?? '').trim(),\n  from: msg.from,\n  to: msg.to,\n  status: msg.status,\n  message_type: String(msg.from?.user_id) === sellerId ? 'seller_to_buyer' : 'buyer_to_seller',\n  pack_id: packId,\n  order_id: orderId,\n  conversation_status: data.conversation_status,\n  attachments: msg.attachments || [],\n  has_attachments: (msg.attachments || []).length > 0,\n  message_resources: resources\n};"
+      },
+      "typeVersion": 2
     },
     {
-      "id": "ps-if-004",
+      "id": "e5e5d21b-282f-44a9-a8e2-e2afe7e6b838",
       "name": "is_incoming_from_buyer?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
       "position": [
-        -176,
-        0
+        -40432,
+        -1568
       ],
       "parameters": {
+        "options": {},
         "conditions": {
           "options": {
-            "typeValidation": "strict",
-            "version": 3
+            "version": 3,
+            "typeValidation": "strict"
           },
           "combinator": "and",
           "conditions": [
             {
               "id": "c1",
-              "leftValue": "={{ $json.message_type }}",
-              "rightValue": "seller_to_buyer",
               "operator": {
                 "type": "string",
                 "operation": "notEquals"
-              }
+              },
+              "leftValue": "={{ $json.message_type }}",
+              "rightValue": "seller_to_buyer"
             }
           ]
-        },
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 2.3
     },
     {
-      "id": "ps-http-005",
+      "id": "e967fac0-d07e-446f-8d6f-4e9d879b3d92",
       "name": "get_buyer_details",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        32,
-        0
+        -40160,
+        -1584
       ],
       "parameters": {
         "url": "=https://api.mercadolibre.com/users/{{ $('normalize_message').item.json.from.user_id }}",
+        "options": {},
         "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {}
+        "genericAuthType": "httpHeaderAuth"
       },
       "credentials": {
         "httpHeaderAuth": {
           "id": "J0q3ryllyiG4GRKP",
           "name": "Header Auth account"
         }
-      }
+      },
+      "typeVersion": 4.4
     },
     {
-      "id": "ps-http-006",
+      "id": "ccbc8ca1-76a5-4bb1-904b-99d132cd90dd",
       "name": "chatwoot_search_contact",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        240,
-        0
+        -39920,
+        -1584
       ],
       "parameters": {
         "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/contacts/search?q={{ $('normalize_message').item.json.from.user_id }}",
+        "options": {},
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -140,55 +134,57 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
-        },
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 4.4
     },
     {
-      "id": "ps-if-007",
+      "id": "ef4a22b8-f855-4c0a-a338-0eca0d4aaa88",
       "name": "contact_exists?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
       "position": [
-        448,
-        0
+        -39696,
+        -1584
       ],
       "parameters": {
+        "options": {},
         "conditions": {
           "options": {
-            "typeValidation": "strict",
-            "version": 3
+            "version": 3,
+            "typeValidation": "strict"
           },
           "combinator": "and",
           "conditions": [
             {
               "id": "c1",
-              "leftValue": "={{ $json.meta.count }}",
-              "rightValue": 0,
               "operator": {
                 "type": "number",
                 "operation": "notEquals"
-              }
+              },
+              "leftValue": "={{ $json.meta.count }}",
+              "rightValue": 0
             }
           ]
-        },
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 2.3
     },
     {
-      "id": "ps-http-008",
+      "id": "90364ce6-9880-4f2b-8d96-fb4821d30dce",
       "name": "chatwoot_contact_create",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        656,
-        -160
+        -39440,
+        -1680
       ],
-      "alwaysOutputData": true,
       "parameters": {
-        "method": "POST",
         "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/contacts",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "={\n  \"inbox_id\": {{ $('get_account_details').item.json.meli_inbox_id }},\n  \"name\": \"{{ $('get_buyer_details').item.json.nickname }}\",\n  \"identifier\": \"{{ $('normalize_message').item.json.from.user_id }}\"\n}",
+        "sendBody": true,
         "sendHeaders": true,
+        "specifyBody": "json",
         "headerParameters": {
           "parameters": [
             {
@@ -196,48 +192,38 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"inbox_id\": {{ $('get_account_details').item.json.meli_inbox_id }},\n  \"name\": \"{{ $('get_buyer_details').item.json.nickname }}\",\n  \"identifier\": \"{{ $('normalize_message').item.json.from.user_id }}\"\n}",
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 4.4,
+      "alwaysOutputData": true
     },
     {
-      "id": "ps-code-get-or-create",
+      "id": "e66eafe0-6d35-4562-9369-64273619debf",
       "name": "get_or_create_conversation",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
       "position": [
-        864,
-        0
+        -39312,
+        -1424
       ],
       "parameters": {
-        "jsCode": "const acct = $('get_account_details').first().json;\nconst msg  = $('normalize_message').first().json;\nconst API  = 'https://w1206-app.site';\nconst TOKEN = 'TSL8r4ctWYzXJF9fiAS1Z8RV';\nconst packId    = String(msg.pack_id || msg.order_id || '');\nconst inboxId   = String(acct.meli_inbox_id);\nconst accountId = acct.chatwoot_account_id;\n\nconst prev = $input.first().json;\nconst contactId = prev.payload?.contact?.id\n                || prev.payload?.[0]?.id\n                || prev.id;\nif (!contactId) throw new Error('No contact_id: ' + JSON.stringify(prev));\n\nasync function apiGet(path) {\n  try {\n    const r = await this.helpers.httpRequest({\n      method: 'GET',\n      url: `${API}${path}`,\n      headers: { api_access_token: TOKEN },\n      returnFullResponse: false,\n    });\n    return r;\n  } catch (e) {\n    return null;\n  }\n}\n\nasync function apiPost(path, body) {\n  return await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${API}${path}`,\n    headers: { api_access_token: TOKEN, 'Content-Type': 'application/json' },\n    body: JSON.stringify(body),\n  });\n}\n\nconst data = await apiGet.call(this, `/api/v1/accounts/${accountId}/contacts/${contactId}/conversations`);\nconst convs = data?.payload || [];\nconst existing = convs.find(c => {\n  const attrs = c.additional_attributes || {};\n  return (\n    String(c.inbox_id) === inboxId &&\n    (String(c.meta?.source_id) === packId ||\n     String(attrs.pack_id) === packId ||\n     String(attrs.order_id) === String(msg.order_id || ''))\n  );\n});\n\nif (existing) {\n  if (existing.status === 'resolved' || existing.status === 'snoozed') {\n    await apiPost.call(this, `/api/v1/accounts/${accountId}/conversations/${existing.id}/toggle_status`, { status: 'open' });\n  }\n  return { id: existing.id, _reused: true };\n}\n\nconst created = await apiPost.call(this, `/api/v1/accounts/${accountId}/conversations`, {\n  source_id:  packId,\n  contact_id: contactId,\n  inbox_id:   acct.meli_inbox_id,\n  team_id:    acct.meli_team_id,\n  status: 'open',\n  additional_attributes: {\n    type: 'post-venta',\n    order_id: String(msg.order_id || ''),\n    pack_id: packId\n  }\n});\nreturn { id: created.id, _reused: false };\n"
-      }
+        "jsCode": "const acct = $('get_account_details').first().json;\nconst msg  = $('normalize_message').first().json;\nconst API  = 'https://w1206-app.site';\nconst TOKEN = 'TSL8r4ctWYzXJF9fiAS1Z8RV';\nconst packId    = String(msg.pack_id || msg.order_id || '');\nconst inboxId   = String(acct.meli_inbox_id);\nconst accountId = acct.chatwoot_account_id;\n\nconst prev = $input.first().json;\nconst contactId = prev.payload?.contact?.id\n                || prev.payload?.[0]?.id\n                || prev.id;\nif (!contactId) throw new Error('No contact_id: ' + JSON.stringify(prev));\n\nasync function apiGet(path) {\n  try {\n    const r = await this.helpers.httpRequest({\n      method: 'GET',\n      url: `${API}${path}`,\n      headers: { api_access_token: TOKEN },\n      returnFullResponse: false,\n    });\n    return r;\n  } catch (e) {\n    return null;\n  }\n}\n\nasync function apiPost(path, body) {\n  return await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${API}${path}`,\n    headers: { api_access_token: TOKEN, 'Content-Type': 'application/json' },\n    body: JSON.stringify(body),\n  });\n}\n\nasync function apiPostSafe(path, body) {\n  try {\n    return await apiPost.call(this, path, body);\n  } catch (e) {\n    return null;\n  }\n}\n\nlet existing = null;\n\n// El search de contacto puede devolver un contacto duplicado (p. ej. el del bridge:\n// identifier ml_buyer_<id>) que NO tiene la conversación post-venta. La conversación\n// real puede existir bajo otro contacto con el mismo source_id (pack_id) del\n// contact_inbox. Se resuelve el contacto dueño por source_id y se reusa su conversación.\nasync function findBySourceId() {\n  if (!packId) return null;\n  const owner = await apiPostSafe.call(this, `/api/v1/accounts/${accountId}/contact_inboxes/filter`, {\n    inbox_id: Number(inboxId),\n    source_id: packId\n  });\n  if (!owner || !owner.id) return null;\n  const ownerData = await apiGet.call(this, `/api/v1/accounts/${accountId}/contacts/${owner.id}/conversations`);\n  const ownerConvs = ownerData?.payload || [];\n  return ownerConvs.find(c => {\n    const attrs = c.additional_attributes || {};\n    return (\n      String(c.inbox_id) === inboxId &&\n      (String(c.meta?.source_id) === packId ||\n       String(attrs.pack_id) === packId ||\n       String(attrs.order_id) === String(msg.order_id || ''))\n    );\n  }) || null;\n}\n\nconst data = await apiGet.call(this, `/api/v1/accounts/${accountId}/contacts/${contactId}/conversations`);\nconst convs = data?.payload || [];\nexisting = convs.find(c => {\n  const attrs = c.additional_attributes || {};\n  return (\n    String(c.inbox_id) === inboxId &&\n    (String(c.meta?.source_id) === packId ||\n     String(attrs.pack_id) === packId ||\n     String(attrs.order_id) === String(msg.order_id || ''))\n  );\n});\nif (!existing) {\n  existing = await findBySourceId();\n}\n\n// La conversación post-venta puede existir bajo otro contacto (p. ej. creada por\n// el setup manual del puente). La rescatamos por pack_id a nivel cuenta para no\n// duplicar ni chocar con el source_id único de contact_inboxes.\nconst reusedFromDb = existing ? null : (acct.existing_pv_conversation_id || null);\nif (reusedFromDb) {\n  const got = await apiGet.call(this, `/api/v1/accounts/${accountId}/conversations/${reusedFromDb}`);\n  if (got && got.id) {\n    if (got.status === 'resolved' || got.status === 'snoozed') {\n      await apiPost.call(this, `/api/v1/accounts/${accountId}/conversations/${got.id}/toggle_status`, { status: 'open' });\n    }\n    return { id: got.id, _reused: true, _from_db: true };\n  }\n}\n\nif (existing) {\n  if (existing.status === 'resolved' || existing.status === 'snoozed') {\n    await apiPost.call(this, `/api/v1/accounts/${accountId}/conversations/${existing.id}/toggle_status`, { status: 'open' });\n  }\n  return { id: existing.id, _reused: true };\n}\n\nconst created = await apiPost.call(this, `/api/v1/accounts/${accountId}/conversations`, {\n  source_id:  packId,\n  contact_id: contactId,\n  inbox_id:   acct.meli_inbox_id,\n  team_id:    acct.meli_team_id,\n  status: 'open',\n  additional_attributes: {\n    type: 'post-venta',\n    order_id: String(msg.order_id || ''),\n    pack_id: packId\n  }\n});\nreturn { id: created.id, _reused: false };\n"
+      },
+      "typeVersion": 2
     },
     {
-      "id": "ps-http-010",
+      "id": "6ad3e865-9094-4c60-b0e8-3f7edca9d0f4",
       "name": "chatwoot_add_incoming_message",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        1072,
-        0
+        -39088,
+        -1424
       ],
       "parameters": {
-        "method": "POST",
         "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('get_or_create_conversation').item.json.id }}/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "api_access_token",
-              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
-            }
-          ]
-        },
+        "method": "POST",
+        "options": {},
         "sendBody": true,
+        "sendHeaders": true,
         "bodyParameters": {
           "parameters": [
             {
@@ -254,22 +240,34 @@
             }
           ]
         },
-        "options": {}
-      }
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        }
+      },
+      "typeVersion": 4.4
     },
     {
-      "id": "ps-gate-011",
+      "id": "73ad7e12-e8d5-4cd8-a41b-e98232aeb6c6",
       "name": "check_ai_gate",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        1280,
-        0
+        -38848,
+        -1424
       ],
       "parameters": {
-        "method": "POST",
         "url": "http://rails:3000/conversation_ai_gate",
+        "body": "={{ JSON.stringify({ account_id: $('get_account_details').first().json.chatwoot_account_id, conversation_id: $('get_or_create_conversation').first().json.id, conversation_type: 'post-venta' }) }}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "contentType": "raw",
         "sendHeaders": true,
+        "rawContentType": "application/json",
         "headerParameters": {
           "parameters": [
             {
@@ -277,59 +275,58 @@
               "value": "reply_ai_internal_2026"
             }
           ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({ account_id: $('get_account_details').first().json.chatwoot_account_id, conversation_id: $('get_or_create_conversation').first().json.id, conversation_type: 'post-venta' }) }}",
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 4.4
     },
     {
-      "id": "ps-if-012",
+      "id": "352b058a-884f-4df4-a41d-59ba6d28a345",
       "name": "should_ai_respond?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
       "position": [
-        1488,
-        0
+        -38640,
+        -1424
       ],
       "parameters": {
+        "options": {},
         "conditions": {
           "options": {
-            "typeValidation": "strict",
-            "version": 3
+            "version": 3,
+            "typeValidation": "strict"
           },
           "combinator": "and",
           "conditions": [
             {
               "id": "c1",
-              "leftValue": "={{ $json.should_respond }}",
-              "rightValue": true,
               "operator": {
                 "type": "boolean",
                 "operation": "equals"
-              }
+              },
+              "leftValue": "={{ $json.should_respond }}",
+              "rightValue": true
             }
           ]
-        },
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 2.3
     },
     {
-      "id": "ps-rag-013",
+      "id": "9c6fc7e8-2109-4241-9977-e274b41d5e4b",
       "name": "rag_search",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        1696,
-        0
+        -38384,
+        -1440
       ],
-      "alwaysOutputData": true,
       "parameters": {
+        "url": "http://rails:3000/rag/pv_search",
+        "body": "={{ JSON.stringify({ account_id: $('get_account_details').first().json.chatwoot_account_id, query: $('normalize_message').first().json.text, item_id: String($('Execute Workflow Trigger').first().json.item_id || $('Execute Workflow Trigger').first().json.order?.items?.[0]?.item?.id || '') }) }}",
         "method": "POST",
-        "url": "http://rails:3000/rag/search",
+        "options": {},
+        "sendBody": true,
+        "contentType": "raw",
         "sendHeaders": true,
+        "rawContentType": "application/json",
         "headerParameters": {
           "parameters": [
             {
@@ -337,40 +334,40 @@
               "value": "reply_ai_internal_2026"
             }
           ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({ account_id: $('get_account_details').first().json.chatwoot_account_id, query: $('normalize_message').first().json.text }) }}",
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 4.4,
+      "alwaysOutputData": true
     },
     {
-      "id": "ps-code-014",
+      "id": "2cd14ff4-8235-486e-970d-aa8961a29914",
       "name": "context_assembler",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
       "position": [
-        1904,
-        0
+        -38192,
+        -1440
       ],
       "parameters": {
-        "jsCode": "function getSafe(n) { try { return $(n).first().json; } catch(e) { return {}; } }\n\nasync function safeFetch(url, headers) {\n  try {\n    const r = await fetch(url, { method: 'GET', headers });\n    if (!r.ok) return null;\n    return await r.json();\n  } catch(e) { return null; }\n}\n\nconst account     = getSafe('get_account_details');\nconst msgDetails  = getSafe('normalize_message');\nconst ragResult   = getSafe('rag_search');\nconst convDetails = getSafe('get_or_create_conversation');\nconst token       = account.access_token;\n\nconst orderId = msgDetails.order_id;\nlet order    = null;\nlet shipment = null;\n\nif (orderId && token) {\n  order = await safeFetch(\n    `https://api.mercadolibre.com/orders/${orderId}`,\n    { Authorization: `Bearer ${token}` }\n  );\n  if (order?.shipping?.id) {\n    shipment = await safeFetch(\n      `https://api.mercadolibre.com/shipments/${order.shipping.id}`,\n      { Authorization: `Bearer ${token}` }\n    );\n  }\n}\n\n// Fetch últimos 8 mensajes para contexto de conversación\nconst histData = await safeFetch(\n  `https://w1206-app.site/api/v1/accounts/${account.chatwoot_account_id}/conversations/${convDetails.id}/messages`,\n  { api_access_token: 'TSL8r4ctWYzXJF9fiAS1Z8RV' }\n);\nconst histMsgs = (histData?.payload || []).filter(m => !m.private && m.content);\nconst history = histMsgs.slice(-8).map(m =>\n  `${m.message_type === 0 ? 'Cliente' : 'Vendedor'}: ${m.content}`\n).join('\\n');\n\nconst orderCtx = order\n  ? `ID: ${order.id} | Estado: ${order.status} | Total: ${order.currency_id} ${order.total_amount} | Productos: ${(order.order_items||[]).map(i=>i.item?.title).join(', ')}`\n  : '(Sin datos de pedido)';\n\nconst shipCtx = shipment\n  ? `ID: ${shipment.id} | Estado: ${shipment.status} | Tracking: ${shipment.tracking_number||'N/A'} | Fecha estimada: ${shipment.estimated_handling_limit?.date || shipment.estimated_delivery_time?.date || 'N/A'}`\n  : '(Sin datos de envío)';\n\nreturn {\n  message:               msgDetails.text || '',\n  conversation_id:       convDetails.id,\n  account_id:            account.chatwoot_account_id,\n  ml_user_id:            $('Execute Workflow Trigger').first().json.body.user_id,\n  buyer_user_id:         String(msgDetails.from?.user_id || ''),\n  pack_id:               msgDetails.pack_id,\n  order_context:         orderCtx,\n  shipment_context:      shipCtx,\n  rag_context:           ragResult.context || '',\n  conversation_history:  history,\n  prompts:               account.prompts || {},\n  pv_ia:                 (() => { try { const r = account.pv_ia; return (typeof r === 'string') ? JSON.parse(r) : (r || {}); } catch(e) { return {}; } })()\n};\n"
-      }
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nfunction getSafe(n) { try { return $(n).first().json; } catch(e) { return {}; } }\n\nasync function safeFetch(url, headers) {\n  try {\n    const r = await fetch(url, { method: 'GET', headers });\n    if (!r.ok) return null;\n    return await r.json();\n  } catch(e) { return null; }\n}\n\nconst account     = getSafe('get_account_details');\nconst msgDetails  = getSafe('normalize_message');\nconst ragResult   = getSafe('rag_search');\nconst convDetails = getSafe('get_or_create_conversation');\nconst token       = account.access_token;\n\nconst orderId = msgDetails.order_id;\nlet order    = null;\nlet shipment = null;\n\nif (account.bridge_enabled === true) {\n  const triggerBody = $('Execute Workflow Trigger').first().json.body;\n  order = triggerBody.order || null;\n  shipment = triggerBody.shipment || null;\n} else if (orderId && token) {\n  order = await safeFetch(\n    `https://api.mercadolibre.com/orders/${orderId}`,\n    { Authorization: `Bearer ${token}` }\n  );\n  if (order?.shipping?.id) {\n    shipment = await safeFetch(\n      `https://api.mercadolibre.com/shipments/${order.shipping.id}`,\n      { Authorization: `Bearer ${token}` }\n    );\n  }\n}\n\n// Fetch últimos 8 mensajes para contexto de conversación\nconst histData = await safeFetch(\n  `https://w1206-app.site/api/v1/accounts/${account.chatwoot_account_id}/conversations/${convDetails.id}/messages`,\n  { api_access_token: 'TSL8r4ctWYzXJF9fiAS1Z8RV' }\n);\nconst histMsgs = (histData?.payload || []).filter(m => !m.private && m.content);\nconst history = histMsgs.slice(-8).map(m =>\n  `${m.message_type === 0 ? 'Cliente' : 'Vendedor'}: ${m.content}`\n).join('\\n');\n\nconst orderCtx = order\n  ? `ID: ${order.id} | Estado: ${order.status} | Total: ${order.currency_id} ${order.total_amount} | Productos: ${(order.order_items||[]).map(i=>i.item?.title).join(', ')}`\n  : '(Sin datos de pedido)';\n\nconst shipCtx = shipment\n  ? `ID: ${shipment.id} | Estado: ${shipment.status} | Tracking: ${shipment.tracking_number||'N/A'} | Fecha estimada: ${shipment.estimated_handling_limit?.date || shipment.estimated_delivery_time?.date || 'N/A'}`\n  : '(Sin datos de envío)';\n\nreturn {\n  message:               msgDetails.text || '',\n  conversation_id:       convDetails.id,\n  account_id:            account.chatwoot_account_id,\n  ml_user_id:            $('Execute Workflow Trigger').first().json.body.user_id,\n  buyer_user_id:         String(msgDetails.from?.user_id || ''),\n  pack_id:               msgDetails.pack_id,\n  order_context:         orderCtx,\n  shipment_context:      shipCtx,\n  rag_context:           ragResult.context || '',\n  conversation_history:  history,\n  prompts:               account.prompts || {},\n  pv_ia:                 (() => { try { const r = account.pv_ia; return (typeof r === 'string') ? JSON.parse(r) : (r || {}); } catch(e) { return {}; } })(),\n  attachment_context:    getSafe('process_attachments').attachment_context || ''\n};\n"
+      },
+      "typeVersion": 2
     },
     {
-      "id": "ps-lbl-015",
+      "id": "8375c39f-fada-4a9b-8678-15a97102386d",
       "name": "set_bot_label",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        2112,
-        0
+        -38016,
+        -1440
       ],
       "parameters": {
-        "method": "POST",
         "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\"labels\": [\"bot-procesando\"]}",
+        "sendBody": true,
         "sendHeaders": true,
+        "specifyBody": "json",
         "headerParameters": {
           "parameters": [
             {
@@ -378,266 +375,241 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\"labels\": [\"bot-procesando\"]}",
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 4.4
     },
     {
-      "id": "ps-cls-016",
+      "id": "71d9f1c4-f4c5-47e3-b2c6-1d4fac470246",
       "name": "classify_intent",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        2320,
-        0
+        -37840,
+        -1440
       ],
       "parameters": {
-        "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0,\n  max_tokens: 10,\n  messages: [\n    {\n      role: 'system',\n      content: 'Clasificá el mensaje de un cliente en una conversación de e-commerce post-venta. Respondé ÚNICAMENTE con una sola palabra sin puntuación: saludo, logistica, soporte, reclamo, o cierre.\\n- saludo: saludo, presentación, mensaje conversacional sin consulta específica (ej: hola, buenas noches, cómo estás, gracias sin cerrar)\\n- logistica: tracking, cuándo llega, demoras, dirección, estado del envío\\n- soporte: cómo usar el producto, compatibilidad, instrucciones, especificaciones técnicas\\n- reclamo: producto dañado, falta pieza, no funciona, devolución, reembolso, queja formal\\n- cierre: conformidad explícita con la solución recibida, despedida clara después de resolver (ej: muchas gracias quedé conforme, listo todo solucionado)'\n    },\n    {\n      role: 'user',\n      content: `HISTORIAL:\\n${$('context_assembler').item.json.conversation_history || '(sin historial)'}\\n\\nMENSAJE ACTUAL: ${$('context_assembler').item.json.message}`\n    }\n  ]\n}) }}",
+        "method": "POST",
+        "options": {},
         "sendBody": true,
         "contentType": "raw",
+        "authentication": "predefinedCredentialType",
         "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0,\n  max_tokens: 10,\n  messages: [\n    {\n      role: 'system',\n      content: 'Clasificá el mensaje de un cliente en una conversación de e-commerce post-venta. Respondé ÚNICAMENTE con una sola palabra sin puntuación: saludo, logistica, soporte, reclamo, o cierre.\\n- saludo: saludo, presentación, mensaje conversacional sin consulta específica (ej: hola, buenas noches, cómo estás, gracias sin cerrar)\\n- logistica: tracking, cuándo llega, demoras, dirección, estado del envío\\n- soporte: cómo usar el producto, compatibilidad, instrucciones, especificaciones técnicas\\n- reclamo: producto dañado, falta pieza, no funciona, devolución, reembolso, queja formal\\n- cierre: conformidad explícita con la solución recibida, despedida clara después de resolver (ej: muchas gracias quedé conforme, listo todo solucionado)'\n    },\n    {\n      role: 'user',\n      content: `HISTORIAL:\\n${$('context_assembler').item.json.conversation_history || '(sin historial)'}\\n\\nMENSAJE ACTUAL: ${$('context_assembler').item.json.message}`\n    }\n  ]\n}) }}",
-        "options": {}
+        "nodeCredentialType": "openAiApi"
       },
       "credentials": {
         "openAiApi": {
           "id": "vHC1imcsHYCcvLxh",
           "name": "OpenAi account"
         }
-      }
+      },
+      "typeVersion": 4.4
     },
     {
-      "id": "ps-sw-017",
+      "id": "eef3e535-eb84-4523-af3c-d2ab576d7c03",
       "name": "intent_router",
       "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.4,
       "position": [
-        2528,
-        0
+        -37696,
+        -1424
       ],
       "parameters": {
         "rules": {
           "values": [
             {
+              "outputKey": "saludo",
               "conditions": {
                 "options": {
+                  "version": 3,
                   "caseSensitive": false,
-                  "typeValidation": "loose",
-                  "version": 3
+                  "typeValidation": "loose"
                 },
                 "combinator": "and",
                 "conditions": [
                   {
                     "id": "r0",
-                    "leftValue": "={{ $json.choices[0].message.content.toLowerCase().trim() }}",
-                    "rightValue": "saludo",
                     "operator": {
                       "type": "string",
                       "operation": "equals"
-                    }
+                    },
+                    "leftValue": "={{ $('normalize_intent').first().json.intent }}",
+                    "rightValue": "saludo"
                   }
                 ]
               },
-              "renameOutput": true,
-              "outputKey": "saludo"
+              "renameOutput": true
             },
             {
+              "outputKey": "logistica",
               "conditions": {
                 "options": {
+                  "version": 3,
                   "caseSensitive": false,
-                  "typeValidation": "loose",
-                  "version": 3
+                  "typeValidation": "loose"
                 },
                 "combinator": "and",
                 "conditions": [
                   {
                     "id": "r1",
-                    "leftValue": "={{ $json.choices[0].message.content.toLowerCase().trim() }}",
-                    "rightValue": "logistica",
                     "operator": {
                       "type": "string",
                       "operation": "equals"
-                    }
+                    },
+                    "leftValue": "={{ $('normalize_intent').first().json.intent }}",
+                    "rightValue": "logistica"
                   }
                 ]
               },
-              "renameOutput": true,
-              "outputKey": "logistica"
+              "renameOutput": true
             },
             {
+              "outputKey": "soporte",
               "conditions": {
                 "options": {
+                  "version": 3,
                   "caseSensitive": false,
-                  "typeValidation": "loose",
-                  "version": 3
+                  "typeValidation": "loose"
                 },
                 "combinator": "and",
                 "conditions": [
                   {
                     "id": "r2",
-                    "leftValue": "={{ $json.choices[0].message.content.toLowerCase().trim() }}",
-                    "rightValue": "soporte",
                     "operator": {
                       "type": "string",
                       "operation": "equals"
-                    }
+                    },
+                    "leftValue": "={{ $('normalize_intent').first().json.intent }}",
+                    "rightValue": "soporte"
                   }
                 ]
               },
-              "renameOutput": true,
-              "outputKey": "soporte"
+              "renameOutput": true
             },
             {
+              "outputKey": "reclamo",
               "conditions": {
                 "options": {
+                  "version": 3,
                   "caseSensitive": false,
-                  "typeValidation": "loose",
-                  "version": 3
+                  "typeValidation": "loose"
                 },
                 "combinator": "and",
                 "conditions": [
                   {
                     "id": "r3",
-                    "leftValue": "={{ $json.choices[0].message.content.toLowerCase().trim() }}",
-                    "rightValue": "reclamo",
                     "operator": {
                       "type": "string",
                       "operation": "equals"
-                    }
+                    },
+                    "leftValue": "={{ $('normalize_intent').first().json.intent }}",
+                    "rightValue": "reclamo"
                   }
                 ]
               },
-              "renameOutput": true,
-              "outputKey": "reclamo"
+              "renameOutput": true
             },
             {
+              "outputKey": "cierre",
               "conditions": {
                 "options": {
+                  "version": 3,
                   "caseSensitive": false,
-                  "typeValidation": "loose",
-                  "version": 3
+                  "typeValidation": "loose"
                 },
                 "combinator": "and",
                 "conditions": [
                   {
                     "id": "r4",
-                    "leftValue": "={{ $json.choices[0].message.content.toLowerCase().trim() }}",
-                    "rightValue": "cierre",
                     "operator": {
                       "type": "string",
                       "operation": "equals"
-                    }
+                    },
+                    "leftValue": "={{ $('normalize_intent').first().json.intent }}",
+                    "rightValue": "cierre"
                   }
                 ]
               },
-              "renameOutput": true,
-              "outputKey": "cierre"
+              "renameOutput": true
             }
           ]
         },
-        "options": {}
-      }
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "default"
+        }
+      },
+      "typeVersion": 3.4
     },
     {
-      "id": "ps-genlog-018",
+      "id": "ba776298-7ebd-4f6e-8712-912e3d45b372",
       "name": "generate_logistics_response",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        2736,
-        -480
+        -37216,
+        -1920
       ],
       "parameters": {
-        "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.7,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un agente de post-venta experto y empático. Respondé SIEMPRE en el idioma del cliente. Dá información logística precisa basada en el contexto disponible.\\n\\nCONTEXTO DEL PEDIDO:\\n' + $('context_assembler').item.json.order_context + '\\n\\nCONTEXTO DEL ENVÍO:\\n' + $('context_assembler').item.json.shipment_context + '\\n\\nSi no encontrás la info exacta, decí: \"Voy a consultar el estado y te aviso a la brevedad.\" Nunca inventes fechas ni números de tracking.\\n\\nINSTRUCCIONES DEL VENDEDOR: ' + ($('context_assembler').item.json.prompts?.otros || '') + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nINSTRUCCIONES ADICIONALES LOGÍSTICA: ' + ($('context_assembler').item.json.pv_ia?.prompts?.logistica || '')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
+        "method": "POST",
+        "options": {},
         "sendBody": true,
         "contentType": "raw",
+        "authentication": "predefinedCredentialType",
         "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.7,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un agente de post-venta experto y empático. Respondé SIEMPRE en el idioma del cliente. Dá información logística precisa basada en el contexto disponible.\\n\\nCONTEXTO DEL PEDIDO:\\n' + $('context_assembler').item.json.order_context + '\\n\\nCONTEXTO DEL ENVÍO:\\n' + $('context_assembler').item.json.shipment_context + '\\n\\nSi no encontrás la info exacta, decí: \"Voy a consultar el estado y te aviso a la brevedad.\" Nunca inventes fechas ni números de tracking.\\n\\nINSTRUCCIONES DEL VENDEDOR: ' + ($('context_assembler').item.json.prompts?.otros || '') + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nINSTRUCCIONES ADICIONALES LOGÍSTICA: ' + ($('context_assembler').item.json.pv_ia?.prompts?.logistica || '')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
-        "options": {}
+        "nodeCredentialType": "openAiApi"
       },
       "credentials": {
         "openAiApi": {
           "id": "vHC1imcsHYCcvLxh",
           "name": "OpenAi account"
         }
-      }
-    },
-    {
-      "id": "ps-meli-log-019",
-      "name": "send_logistics_reply_ml",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        2944,
-        -480
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "=https://api.mercadolibre.com/messages/packs/{{ $('context_assembler').item.json.pack_id }}/sellers/{{ $('context_assembler').item.json.ml_user_id }}?tag=post_sale",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({ from: { user_id: $('context_assembler').item.json.ml_user_id }, to: { user_id: $('context_assembler').item.json.buyer_user_id }, text: $('generate_logistics_response').item.json.choices[0].message.content }) }}",
-        "options": {}
       },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "J0q3ryllyiG4GRKP",
-          "name": "Header Auth account"
-        }
-      }
+      "typeVersion": 4.4
     },
     {
-      "id": "ps-cw-log-020",
-      "name": "mirror_logistics_to_chatwoot",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "id": "58ef3ff7-4568-490c-bd83-ffd3aa973fd5",
+      "name": "send_logistics_reply_ml",
+      "type": "n8n-nodes-base.code",
       "position": [
-        3152,
-        -480
+        -36992,
+        -1920
       ],
       "parameters": {
-        "method": "POST",
-        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "api_access_token",
-              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
-            }
-          ]
-        },
-        "sendBody": true,
-        "options": {},
-        "specifyBody": "json",
-        "jsonBody": "={\"content\":\"={{ $('generate_logistics_response').item.json.choices[0].message.content }}\",\"message_type\":\"outgoing\",\"private\":false,\"content_attributes\":{\"source\":\"n8n_ai\"}}"
-      }
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst ctx = $('context_assembler').first().json;\nconst text = $('generate_logistics_response').first().json.choices?.[0]?.message?.content || '';\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nif ($env.REPLY_RECEIVE_ONLY === 'true' && account.receive_only === 'true') return { receive_only: true, text: text, skipped: true };\nif (isBridge) {\n  if (!$env.BRIDGE_SECRET || !$env.YOBOT_BRIDGE_URL) throw new Error('Bridge: BRIDGE_SECRET/YOBOT_BRIDGE_URL no configurados en n8n');\n  const body = JSON.stringify({ ml_user_id: String(account.ml_user_id), pack_id: ctx.pack_id, text: text });\n  const signature = (await (await fetch('http://rails:3000/bridge/sign', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json', 'X-Bridge-Secret': $env.BRIDGE_SECRET },\n  body: JSON.stringify({ body })\n})).json()).signature;\n  const res = await fetch($env.YOBOT_BRIDGE_URL + '/api/bridge/send-message', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + $env.BRIDGE_SECRET, 'X-Bridge-Signature': signature }, body: body });\n  if (!res.ok) throw new Error('Bridge send-message: ' + res.status);\n  return await res.json();\n}\nconst res = await fetch('https://api.mercadolibre.com/messages/packs/' + ctx.pack_id + '/sellers/' + ctx.ml_user_id + '?tag=post_sale', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + account.access_token }, body: JSON.stringify({ from: { user_id: ctx.ml_user_id }, to: { user_id: ctx.buyer_user_id }, text: text }) });\nif (!res.ok) throw new Error('ML send: ' + res.status);\nreturn await res.json();"
+      },
+      "typeVersion": 2
     },
     {
-      "id": "ps-lbl-log-021",
+      "id": "97fc1512-6f91-4811-a4bd-0d5db6d8a85d",
+      "name": "mirror_logistics_to_chatwoot",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -36768,
+        -1920
+      ],
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst ctx = $('context_assembler').first().json;\nconst account = $('get_account_details').first().json;\nconst text = $('generate_logistics_response').first().json.choices?.[0]?.message?.content || '';\nconst sendRes = $('send_logistics_reply_ml').first().json;\nconst isReceiveOnly = $env.REPLY_RECEIVE_ONLY === 'true' && account.receive_only === 'true';\nconst mlMessageId = String(sendRes.message_id || sendRes.id || '');\nconst API = 'https://w1206-app.site';\nconst TOKEN = 'TSL8r4ctWYzXJF9fiAS1Z8RV';\n\nconst createdRes = await fetch(`${API}/api/v1/accounts/${ctx.account_id}/conversations/${ctx.conversation_id}/messages`, {\n  method: 'POST',\n  headers: { api_access_token: TOKEN, 'Content-Type': 'application/json' },\n  body: JSON.stringify({\n    content: text,\n    message_type: 'outgoing',\n    private: isReceiveOnly,\n    content_attributes: { source: 'n8n_ai', ml_message_id: mlMessageId }\n  })\n});\nif (!createdRes.ok) throw new Error('Chatwoot mirror create: ' + createdRes.status);\nconst created = await createdRes.json();\n\nif (!isReceiveOnly && mlMessageId && created.id) {\n  try {\n    await fetch('http://rails:3000/api/bridge/message-status', {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json', 'x-internal-secret': 'reply_ai_internal_2026' },\n      body: JSON.stringify({ account_id: ctx.account_id, message_id: created.id, status: 'delivered', ml_message_id: mlMessageId })\n    });\n  } catch (e) {}\n}\n\nreturn created;"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "fdcbb12a-bfb4-4f1b-915e-d9ba461c1ab4",
       "name": "label_logistics_done",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        3360,
-        -480
+        -36560,
+        -1920
       ],
       "parameters": {
-        "method": "POST",
         "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\"labels\": [\"respondida_con_ia\"]}",
+        "sendBody": true,
         "sendHeaders": true,
+        "specifyBody": "json",
         "headerParameters": {
           "parameters": [
             {
@@ -645,107 +617,79 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\"labels\": [\"respondida_con_ia\"]}",
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 4.4
     },
     {
-      "id": "ps-gensup-022",
+      "id": "38974229-5c28-4713-b8c3-f0271694e7b9",
       "name": "generate_support_response",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        2736,
-        -160
+        -37264,
+        -1600
       ],
       "parameters": {
-        "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.7,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un especialista técnico de post-venta empático. Respondé SIEMPRE en el idioma del cliente.\\n\\nBASE DE CONOCIMIENTO:\\n' + ($('context_assembler').item.json.rag_context || 'No hay documentación técnica disponible.') + '\\n\\nCONTEXTO DEL PEDIDO: ' + $('context_assembler').item.json.order_context + '\\n\\nINSTRUCCIONES DEL VENDEDOR: ' + ($('context_assembler').item.json.prompts?.otros || '') + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nINSTRUCCIONES ADICIONALES SOPORTE: ' + ($('context_assembler').item.json.pv_ia?.prompts?.soporte || '') + '\\n\\nSi no encontrás la solución, respondé exactamente: \"Para darte una solución precisa, he transferido este chat a uno de mis compañeros especialistas. Te responderán a la brevedad.\"'\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
+        "method": "POST",
+        "options": {},
         "sendBody": true,
         "contentType": "raw",
+        "authentication": "predefinedCredentialType",
         "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.7,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un especialista técnico de post-venta empático. Respondé SIEMPRE en el idioma del cliente.\\n\\nBASE DE CONOCIMIENTO:\\n' + ($('context_assembler').item.json.rag_context || 'No hay documentación técnica disponible.') + '\\n\\nCONTEXTO DEL PEDIDO: ' + $('context_assembler').item.json.order_context + '\\n\\nINSTRUCCIONES DEL VENDEDOR: ' + ($('context_assembler').item.json.prompts?.otros || '') + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nINSTRUCCIONES ADICIONALES SOPORTE: ' + ($('context_assembler').item.json.pv_ia?.prompts?.soporte || '') + '\\n\\nSi no encontrás la solución, respondé exactamente: \"Para darte una solución precisa, he transferido este chat a uno de mis compañeros especialistas. Te responderán a la brevedad.\"'\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
-        "options": {}
+        "nodeCredentialType": "openAiApi"
       },
       "credentials": {
         "openAiApi": {
           "id": "vHC1imcsHYCcvLxh",
           "name": "OpenAi account"
         }
-      }
-    },
-    {
-      "id": "ps-meli-sup-023",
-      "name": "send_support_reply_ml",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        2944,
-        -160
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "=https://api.mercadolibre.com/messages/packs/{{ $('context_assembler').item.json.pack_id }}/sellers/{{ $('context_assembler').item.json.ml_user_id }}?tag=post_sale",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({ from: { user_id: $('context_assembler').item.json.ml_user_id }, to: { user_id: $('context_assembler').item.json.buyer_user_id }, text: $('generate_support_response').item.json.choices[0].message.content }) }}",
-        "options": {}
       },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "J0q3ryllyiG4GRKP",
-          "name": "Header Auth account"
-        }
-      }
+      "typeVersion": 4.4
     },
     {
-      "id": "ps-cw-sup-024",
-      "name": "mirror_support_to_chatwoot",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "id": "6447af7a-d358-431a-9373-49d5ff8b59f5",
+      "name": "send_support_reply_ml",
+      "type": "n8n-nodes-base.code",
       "position": [
-        3152,
-        -160
+        -37072,
+        -1600
       ],
       "parameters": {
-        "method": "POST",
-        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "api_access_token",
-              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
-            }
-          ]
-        },
-        "sendBody": true,
-        "options": {},
-        "specifyBody": "json",
-        "jsonBody": "={\"content\":\"={{ $('generate_support_response').item.json.choices[0].message.content }}\",\"message_type\":\"outgoing\",\"private\":false,\"content_attributes\":{\"source\":\"n8n_ai\"}}"
-      }
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst ctx = $('context_assembler').first().json;\nconst text = $('generate_support_response').first().json.choices?.[0]?.message?.content || '';\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nif ($env.REPLY_RECEIVE_ONLY === 'true' && account.receive_only === 'true') return { receive_only: true, text: text, skipped: true };\nif (isBridge) {\n  if (!$env.BRIDGE_SECRET || !$env.YOBOT_BRIDGE_URL) throw new Error('Bridge: BRIDGE_SECRET/YOBOT_BRIDGE_URL no configurados en n8n');\n  const body = JSON.stringify({ ml_user_id: String(account.ml_user_id), pack_id: ctx.pack_id, text: text });\n  const signature = (await (await fetch('http://rails:3000/bridge/sign', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json', 'X-Bridge-Secret': $env.BRIDGE_SECRET },\n  body: JSON.stringify({ body })\n})).json()).signature;\n  const res = await fetch($env.YOBOT_BRIDGE_URL + '/api/bridge/send-message', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + $env.BRIDGE_SECRET, 'X-Bridge-Signature': signature }, body: body });\n  if (!res.ok) throw new Error('Bridge send-message: ' + res.status);\n  return await res.json();\n}\nconst res = await fetch('https://api.mercadolibre.com/messages/packs/' + ctx.pack_id + '/sellers/' + ctx.ml_user_id + '?tag=post_sale', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + account.access_token }, body: JSON.stringify({ from: { user_id: ctx.ml_user_id }, to: { user_id: ctx.buyer_user_id }, text: text }) });\nif (!res.ok) throw new Error('ML send: ' + res.status);\nreturn await res.json();"
+      },
+      "typeVersion": 2
     },
     {
-      "id": "ps-lbl-sup-025",
+      "id": "787843a4-1486-4302-b5af-87e3f44278f8",
+      "name": "mirror_support_to_chatwoot",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -36864,
+        -1600
+      ],
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst ctx = $('context_assembler').first().json;\nconst account = $('get_account_details').first().json;\nconst text = $('generate_support_response').first().json.choices?.[0]?.message?.content || '';\nconst sendRes = $('send_support_reply_ml').first().json;\nconst isReceiveOnly = $env.REPLY_RECEIVE_ONLY === 'true' && account.receive_only === 'true';\nconst mlMessageId = String(sendRes.message_id || sendRes.id || '');\nconst API = 'https://w1206-app.site';\nconst TOKEN = 'TSL8r4ctWYzXJF9fiAS1Z8RV';\n\nconst createdRes = await fetch(`${API}/api/v1/accounts/${ctx.account_id}/conversations/${ctx.conversation_id}/messages`, {\n  method: 'POST',\n  headers: { api_access_token: TOKEN, 'Content-Type': 'application/json' },\n  body: JSON.stringify({\n    content: text,\n    message_type: 'outgoing',\n    private: isReceiveOnly,\n    content_attributes: { source: 'n8n_ai', ml_message_id: mlMessageId }\n  })\n});\nif (!createdRes.ok) throw new Error('Chatwoot mirror create: ' + createdRes.status);\nconst created = await createdRes.json();\n\nif (!isReceiveOnly && mlMessageId && created.id) {\n  try {\n    await fetch('http://rails:3000/api/bridge/message-status', {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json', 'x-internal-secret': 'reply_ai_internal_2026' },\n      body: JSON.stringify({ account_id: ctx.account_id, message_id: created.id, status: 'delivered', ml_message_id: mlMessageId })\n    });\n  } catch (e) {}\n}\n\nreturn created;"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "913f964d-5bb6-4d52-918e-050015950fa3",
       "name": "label_support_done",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        3360,
-        -160
+        -36384,
+        -1552
       ],
       "parameters": {
-        "method": "POST",
         "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\"labels\": [\"respondida_con_ia\"]}",
+        "sendBody": true,
         "sendHeaders": true,
+        "specifyBody": "json",
         "headerParameters": {
           "parameters": [
             {
@@ -753,35 +697,24 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\"labels\": [\"respondida_con_ia\"]}",
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 4.4
     },
     {
-      "id": "ps-handnote-026",
+      "id": "f5dcaa00-0758-4f7c-9f28-995f122f5ed0",
       "name": "post_handover_note",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        2736,
-        160
+        -37392,
+        -1264
       ],
       "parameters": {
-        "method": "POST",
         "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "api_access_token",
-              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
-            }
-          ]
-        },
+        "method": "POST",
+        "options": {},
         "sendBody": true,
+        "sendHeaders": true,
         "bodyParameters": {
           "parameters": [
             {
@@ -798,22 +731,6 @@
             }
           ]
         },
-        "options": {}
-      }
-    },
-    {
-      "id": "ps-hlbl-027",
-      "name": "set_human_label",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        2944,
-        160
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/labels",
-        "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
@@ -821,107 +738,106 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\"labels\": [\"atencion-humana\", \"atencion-prioritaria\"]}",
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 4.4
     },
     {
-      "id": "ps-gencls-028",
-      "name": "generate_close_response",
+      "id": "cbec7da7-685f-4ed9-8227-71ac2451ad89",
+      "name": "set_human_label",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        2736,
-        480
+        -37184,
+        -1264
       ],
       "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/labels",
         "method": "POST",
+        "options": {},
+        "jsonBody": "{\"labels\": [\"atencion-humana\", \"atencion-prioritaria\"]}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        }
+      },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "a163dc56-c63c-4ab1-a358-6552704af0e3",
+      "name": "generate_close_response",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -37152,
+        -992
+      ],
+      "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.8,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un agente de post-venta cordial. El cliente está cerrando la conversación con un mensaje positivo. Respondé brevemente (máximo 2 oraciones): agradecés su elección y te despedís alentando futuras compras. Respondé SIEMPRE en el mismo idioma del cliente.' + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nINSTRUCCIONES CIERRE: ' + ($('context_assembler').item.json.pv_ia?.prompts?.cierre || '')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
+        "method": "POST",
+        "options": {},
         "sendBody": true,
         "contentType": "raw",
+        "authentication": "predefinedCredentialType",
         "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.8,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un agente de post-venta cordial. El cliente está cerrando la conversación con un mensaje positivo. Respondé brevemente (máximo 2 oraciones): agradecés su elección y te despedís alentando futuras compras. Respondé SIEMPRE en el mismo idioma del cliente.' + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nINSTRUCCIONES CIERRE: ' + ($('context_assembler').item.json.pv_ia?.prompts?.cierre || '')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
-        "options": {}
+        "nodeCredentialType": "openAiApi"
       },
       "credentials": {
         "openAiApi": {
           "id": "vHC1imcsHYCcvLxh",
           "name": "OpenAi account"
         }
-      }
-    },
-    {
-      "id": "ps-meli-cls-029",
-      "name": "send_close_reply_ml",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        2944,
-        480
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "=https://api.mercadolibre.com/messages/packs/{{ $('context_assembler').item.json.pack_id }}/sellers/{{ $('context_assembler').item.json.ml_user_id }}?tag=post_sale",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({ from: { user_id: $('context_assembler').item.json.ml_user_id }, to: { user_id: $('context_assembler').item.json.buyer_user_id }, text: $('generate_close_response').item.json.choices[0].message.content }) }}",
-        "options": {}
       },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "J0q3ryllyiG4GRKP",
-          "name": "Header Auth account"
-        }
-      }
+      "typeVersion": 4.4
     },
     {
-      "id": "ps-cw-cls-030",
-      "name": "mirror_close_to_chatwoot",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "id": "2956ac05-ae9b-499b-b529-20c6bddc8b92",
+      "name": "send_close_reply_ml",
+      "type": "n8n-nodes-base.code",
       "position": [
-        3152,
-        480
+        -36912,
+        -992
       ],
       "parameters": {
-        "method": "POST",
-        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "api_access_token",
-              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
-            }
-          ]
-        },
-        "sendBody": true,
-        "options": {},
-        "specifyBody": "json",
-        "jsonBody": "={\"content\":\"={{ $('generate_close_response').item.json.choices[0].message.content }}\",\"message_type\":\"outgoing\",\"private\":false,\"content_attributes\":{\"source\":\"n8n_ai\"}}"
-      }
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst ctx = $('context_assembler').first().json;\nconst text = $('generate_close_response').first().json.choices?.[0]?.message?.content || '';\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nif ($env.REPLY_RECEIVE_ONLY === 'true' && account.receive_only === 'true') return { receive_only: true, text: text, skipped: true };\nif (isBridge) {\n  if (!$env.BRIDGE_SECRET || !$env.YOBOT_BRIDGE_URL) throw new Error('Bridge: BRIDGE_SECRET/YOBOT_BRIDGE_URL no configurados en n8n');\n  const body = JSON.stringify({ ml_user_id: String(account.ml_user_id), pack_id: ctx.pack_id, text: text });\n  const signature = (await (await fetch('http://rails:3000/bridge/sign', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json', 'X-Bridge-Secret': $env.BRIDGE_SECRET },\n  body: JSON.stringify({ body })\n})).json()).signature;\n  const res = await fetch($env.YOBOT_BRIDGE_URL + '/api/bridge/send-message', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + $env.BRIDGE_SECRET, 'X-Bridge-Signature': signature }, body: body });\n  if (!res.ok) throw new Error('Bridge send-message: ' + res.status);\n  return await res.json();\n}\nconst res = await fetch('https://api.mercadolibre.com/messages/packs/' + ctx.pack_id + '/sellers/' + ctx.ml_user_id + '?tag=post_sale', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + account.access_token }, body: JSON.stringify({ from: { user_id: ctx.ml_user_id }, to: { user_id: ctx.buyer_user_id }, text: text }) });\nif (!res.ok) throw new Error('ML send: ' + res.status);\nreturn await res.json();"
+      },
+      "typeVersion": 2
     },
     {
-      "id": "ps-resolve-031",
+      "id": "4dea217a-b1ec-436f-8c46-fdede69f7b3d",
+      "name": "mirror_close_to_chatwoot",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -36576,
+        -992
+      ],
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst ctx = $('context_assembler').first().json;\nconst account = $('get_account_details').first().json;\nconst text = $('generate_close_response').first().json.choices?.[0]?.message?.content || '';\nconst sendRes = $('send_close_reply_ml').first().json;\nconst isReceiveOnly = $env.REPLY_RECEIVE_ONLY === 'true' && account.receive_only === 'true';\nconst mlMessageId = String(sendRes.message_id || sendRes.id || '');\nconst API = 'https://w1206-app.site';\nconst TOKEN = 'TSL8r4ctWYzXJF9fiAS1Z8RV';\n\nconst createdRes = await fetch(`${API}/api/v1/accounts/${ctx.account_id}/conversations/${ctx.conversation_id}/messages`, {\n  method: 'POST',\n  headers: { api_access_token: TOKEN, 'Content-Type': 'application/json' },\n  body: JSON.stringify({\n    content: text,\n    message_type: 'outgoing',\n    private: isReceiveOnly,\n    content_attributes: { source: 'n8n_ai', ml_message_id: mlMessageId }\n  })\n});\nif (!createdRes.ok) throw new Error('Chatwoot mirror create: ' + createdRes.status);\nconst created = await createdRes.json();\n\nif (!isReceiveOnly && mlMessageId && created.id) {\n  try {\n    await fetch('http://rails:3000/api/bridge/message-status', {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json', 'x-internal-secret': 'reply_ai_internal_2026' },\n      body: JSON.stringify({ account_id: ctx.account_id, message_id: created.id, status: 'delivered', ml_message_id: mlMessageId })\n    });\n  } catch (e) {}\n}\n\nreturn created;"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "f8fa8f25-9042-4636-a088-8221d35e65ef",
       "name": "resolve_conversation",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        3360,
-        480
+        -36208,
+        -704
       ],
       "parameters": {
-        "method": "POST",
         "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/toggle_status",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\"status\": \"resolved\"}",
+        "sendBody": true,
         "sendHeaders": true,
+        "specifyBody": "json",
         "headerParameters": {
           "parameters": [
             {
@@ -929,150 +845,150 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\"status\": \"resolved\"}",
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 4.4
     },
     {
-      "id": "ps-if-log-en-032",
+      "id": "8874f039-fbcd-4e4a-9066-d1360ac75e1e",
       "name": "logistica_enabled?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
       "position": [
-        2632,
-        -480
+        -37488,
+        -1904
       ],
       "parameters": {
+        "options": {},
         "conditions": {
           "options": {
-            "typeValidation": "loose",
-            "version": 3
+            "version": 3,
+            "typeValidation": "loose"
           },
           "combinator": "and",
           "conditions": [
             {
               "id": "e1",
-              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.logistica?.enabled }}",
-              "rightValue": false,
               "operator": {
                 "type": "boolean",
                 "operation": "notEquals"
-              }
+              },
+              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.logistica?.enabled }}",
+              "rightValue": false
             }
           ]
-        },
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 2.3
     },
     {
-      "id": "ps-if-sup-en-033",
+      "id": "6fbbc95a-6ded-4a58-8086-fc2c82943045",
       "name": "soporte_enabled?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
       "position": [
-        2632,
-        -160
+        -37488,
+        -1584
       ],
       "parameters": {
+        "options": {},
         "conditions": {
           "options": {
-            "typeValidation": "loose",
-            "version": 3
+            "version": 3,
+            "typeValidation": "loose"
           },
           "combinator": "and",
           "conditions": [
             {
               "id": "e2",
-              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.soporte?.enabled }}",
-              "rightValue": false,
               "operator": {
                 "type": "boolean",
                 "operation": "notEquals"
-              }
+              },
+              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.soporte?.enabled }}",
+              "rightValue": false
             }
           ]
-        },
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 2.3
     },
     {
-      "id": "ps-if-cls-en-034",
+      "id": "5c399d75-0db5-477d-8886-9284a5920690",
       "name": "cierre_enabled?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
       "position": [
-        2632,
-        480
+        -37472,
+        -976
       ],
       "parameters": {
+        "options": {},
         "conditions": {
           "options": {
-            "typeValidation": "loose",
-            "version": 3
+            "version": 3,
+            "typeValidation": "loose"
           },
           "combinator": "and",
           "conditions": [
             {
               "id": "e3",
-              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.cierre?.enabled }}",
-              "rightValue": false,
               "operator": {
                 "type": "boolean",
                 "operation": "notEquals"
-              }
+              },
+              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.cierre?.enabled }}",
+              "rightValue": false
             }
           ]
-        },
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 2.3
     },
     {
-      "id": "ps-if-fbk-038",
+      "id": "4fa93b04-1280-4561-a0eb-298e5577b610",
       "name": "if_fallback_to_human?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
       "position": [
-        3360,
-        -320
+        -36640,
+        -1648
       ],
       "parameters": {
+        "options": {},
         "conditions": {
           "options": {
-            "typeValidation": "loose",
-            "version": 3
+            "version": 3,
+            "typeValidation": "loose"
           },
           "combinator": "and",
           "conditions": [
             {
               "id": "f1",
-              "leftValue": "={{ $('generate_support_response').first().json.choices[0].message.content }}",
-              "rightValue": "Para darte una solución precisa",
               "operator": {
                 "type": "string",
                 "operation": "contains"
-              }
+              },
+              "leftValue": "={{ $('generate_support_response').first().json.choices[0].message.content }}",
+              "rightValue": "Para darte una solución precisa"
             }
           ]
-        },
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 2.3
     },
     {
-      "id": "ps-hlbl-sup-039",
+      "id": "d1d47739-b710-4b46-b15a-ab6f9b80d881",
       "name": "set_human_label_support",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        3568,
-        -320
+        -36384,
+        -1744
       ],
       "parameters": {
-        "method": "POST",
         "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\"labels\": [\"atencion-humana\"]}",
+        "sendBody": true,
         "sendHeaders": true,
+        "specifyBody": "json",
         "headerParameters": {
           "parameters": [
             {
@@ -1080,273 +996,1324 @@
               "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\"labels\": [\"atencion-humana\"]}",
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 4.4
     },
     {
-      "id": "ps-if-notify-036",
+      "id": "f43946a1-5f7f-4206-b8b1-4523baccb8a6",
       "name": "notify_customer?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
       "position": [
-        3152,
-        320
+        -36912,
+        -1264
       ],
       "parameters": {
+        "options": {},
         "conditions": {
           "options": {
-            "typeValidation": "loose",
-            "version": 3
+            "version": 3,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
           },
           "combinator": "and",
           "conditions": [
             {
               "id": "n1",
-              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.reclamo?.notify_customer }}",
-              "rightValue": true,
               "operator": {
                 "type": "boolean",
                 "operation": "equals"
-              }
+              },
+              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.reclamo?.notify_customer }}",
+              "rightValue": true
             }
           ]
-        },
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 2.3
     },
     {
-      "id": "ps-meli-esc-037",
+      "id": "5338511f-1558-4f65-a237-61528c04e119",
       "name": "send_escalation_to_buyer_ml",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "type": "n8n-nodes-base.code",
       "position": [
-        3360,
-        320
+        -36592,
+        -1280
       ],
       "parameters": {
-        "method": "POST",
-        "url": "=https://api.mercadolibre.com/messages/packs/{{ $('context_assembler').item.json.pack_id }}/sellers/{{ $('context_assembler').item.json.ml_user_id }}?tag=post_sale",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({ from: { user_id: $('context_assembler').item.json.ml_user_id }, to: { user_id: $('context_assembler').item.json.buyer_user_id }, text: $('context_assembler').item.json.pv_ia?.prompts?.escalacion || 'Lamentamos el inconveniente. Un especialista de nuestro equipo se va a comunicar con vos a la brevedad.' }) }}",
-        "options": {}
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst ctx = $('context_assembler').first().json;\nconst text = ctx.pv_ia?.prompts?.escalacion || 'Lamentamos el inconveniente. Un especialista de nuestro equipo se va a comunicar con vos a la brevedad.';\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nif ($env.REPLY_RECEIVE_ONLY === 'true' && account.receive_only === 'true') return { receive_only: true, text: text, skipped: true };\nif (isBridge) {\n  if (!$env.BRIDGE_SECRET || !$env.YOBOT_BRIDGE_URL) throw new Error('Bridge: BRIDGE_SECRET/YOBOT_BRIDGE_URL no configurados en n8n');\n  const body = JSON.stringify({ ml_user_id: String(account.ml_user_id), pack_id: ctx.pack_id, text: text });\n  const signature = (await (await fetch('http://rails:3000/bridge/sign', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json', 'X-Bridge-Secret': $env.BRIDGE_SECRET },\n  body: JSON.stringify({ body })\n})).json()).signature;\n  const res = await fetch($env.YOBOT_BRIDGE_URL + '/api/bridge/send-message', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + $env.BRIDGE_SECRET, 'X-Bridge-Signature': signature }, body: body });\n  if (!res.ok) throw new Error('Bridge send-message: ' + res.status);\n  return await res.json();\n}\nconst res = await fetch('https://api.mercadolibre.com/messages/packs/' + ctx.pack_id + '/sellers/' + ctx.ml_user_id + '?tag=post_sale', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + account.access_token }, body: JSON.stringify({ from: { user_id: ctx.ml_user_id }, to: { user_id: ctx.buyer_user_id }, text: text }) });\nif (!res.ok) throw new Error('ML send: ' + res.status);\nreturn await res.json();"
       },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "J0q3ryllyiG4GRKP",
-          "name": "Header Auth account"
-        }
-      }
+      "typeVersion": 2
     },
     {
-      "id": "ps-if-autores-035",
+      "id": "8ce8f3f5-afa5-49a3-b478-37c13f990009",
       "name": "auto_resolve?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
       "position": [
-        3568,
-        480
+        -36240,
+        -992
       ],
       "parameters": {
+        "options": {},
         "conditions": {
           "options": {
-            "typeValidation": "loose",
-            "version": 3
+            "version": 3,
+            "typeValidation": "loose"
           },
           "combinator": "and",
           "conditions": [
             {
               "id": "a1",
-              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.cierre?.auto_resolve }}",
-              "rightValue": false,
               "operator": {
                 "type": "boolean",
                 "operation": "notEquals"
-              }
+              },
+              "leftValue": "={{ ($env.REPLY_RECEIVE_ONLY === 'true' && $('get_account_details').first().json.receive_only === 'true') ? false : ($('context_assembler').first().json.pv_ia?.cierre?.auto_resolve) }}",
+              "rightValue": false
             }
           ]
-        },
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 2.3
     },
     {
-      "id": "ps-if-sal-en-040",
+      "id": "a8ab67e0-b811-44fb-a132-997514362809",
       "name": "saludo_enabled?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
       "position": [
-        2632,
-        800
+        -37488,
+        -624
       ],
       "parameters": {
+        "options": {},
         "conditions": {
           "options": {
-            "typeValidation": "loose",
-            "version": 3
+            "version": 3,
+            "typeValidation": "loose"
           },
           "combinator": "and",
           "conditions": [
             {
               "id": "s0",
-              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.saludo?.enabled }}",
-              "rightValue": false,
               "operator": {
                 "type": "boolean",
                 "operation": "notEquals"
-              }
+              },
+              "leftValue": "={{ $('context_assembler').first().json.pv_ia?.saludo?.enabled }}",
+              "rightValue": false
             }
           ]
-        },
-        "options": {}
-      }
+        }
+      },
+      "typeVersion": 2.3
     },
     {
-      "id": "ps-gensal-041",
+      "id": "659c9b32-b0c3-4b83-a6c7-a78c2dfca781",
       "name": "generate_saludo_response",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
       "position": [
-        2736,
-        800
+        -37152,
+        -640
       ],
       "parameters": {
-        "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.8,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un agente de post-venta amigable. El cliente te envió un saludo o mensaje de apertura. Respondé con un saludo cálido, breve y natural. Preguntale en qué podés ayudarle con su compra. Respondé SIEMPRE en el mismo idioma del cliente. Máximo 2 oraciones.\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nHISTORIAL:\\n' + ($('context_assembler').item.json.conversation_history || '(ninguno)')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
+        "method": "POST",
+        "options": {},
         "sendBody": true,
         "contentType": "raw",
+        "authentication": "predefinedCredentialType",
         "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.8,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un agente de post-venta amigable. El cliente te envió un saludo o mensaje de apertura. Respondé con un saludo cálido, breve y natural. Preguntale en qué podés ayudarle con su compra. Respondé SIEMPRE en el mismo idioma del cliente. Máximo 2 oraciones.\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nHISTORIAL:\\n' + ($('context_assembler').item.json.conversation_history || '(ninguno)')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
-        "options": {}
+        "nodeCredentialType": "openAiApi"
       },
       "credentials": {
         "openAiApi": {
           "id": "vHC1imcsHYCcvLxh",
           "name": "OpenAi account"
         }
-      }
-    },
-    {
-      "id": "ps-meli-sal-042",
-      "name": "send_saludo_reply_ml",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        2944,
-        800
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "=https://api.mercadolibre.com/messages/packs/{{ $('context_assembler').item.json.pack_id }}/sellers/{{ $('context_assembler').item.json.ml_user_id }}?tag=post_sale",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({ from: { user_id: $('context_assembler').item.json.ml_user_id }, to: { user_id: $('context_assembler').item.json.buyer_user_id }, text: $('generate_saludo_response').item.json.choices[0].message.content }) }}",
-        "options": {}
       },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "J0q3ryllyiG4GRKP",
-          "name": "Header Auth account"
-        }
-      }
+      "typeVersion": 4.4
     },
     {
-      "id": "ps-cw-sal-043",
-      "name": "mirror_saludo_to_chatwoot",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "id": "aeb827f5-2a35-4e5d-91c7-6e3edfe347ed",
+      "name": "send_saludo_reply_ml",
+      "type": "n8n-nodes-base.code",
       "position": [
-        3152,
-        800
+        -36880,
+        -640
       ],
       "parameters": {
-        "method": "POST",
-        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst ctx = $('context_assembler').first().json;\nconst text = $('generate_saludo_response').first().json.choices?.[0]?.message?.content || '';\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nif ($env.REPLY_RECEIVE_ONLY === 'true' && account.receive_only === 'true') return { receive_only: true, text: text, skipped: true };\nif (isBridge) {\n  if (!$env.BRIDGE_SECRET || !$env.YOBOT_BRIDGE_URL) throw new Error('Bridge: BRIDGE_SECRET/YOBOT_BRIDGE_URL no configurados en n8n');\n  const body = JSON.stringify({ ml_user_id: String(account.ml_user_id), pack_id: ctx.pack_id, text: text });\n  const signature = (await (await fetch('http://rails:3000/bridge/sign', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json', 'X-Bridge-Secret': $env.BRIDGE_SECRET },\n  body: JSON.stringify({ body })\n})).json()).signature;\n  const res = await fetch($env.YOBOT_BRIDGE_URL + '/api/bridge/send-message', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + $env.BRIDGE_SECRET, 'X-Bridge-Signature': signature }, body: body });\n  if (!res.ok) throw new Error('Bridge send-message: ' + res.status);\n  return await res.json();\n}\nconst res = await fetch('https://api.mercadolibre.com/messages/packs/' + ctx.pack_id + '/sellers/' + ctx.ml_user_id + '?tag=post_sale', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + account.access_token }, body: JSON.stringify({ from: { user_id: ctx.ml_user_id }, to: { user_id: ctx.buyer_user_id }, text: text }) });\nif (!res.ok) throw new Error('ML send: ' + res.status);\nreturn await res.json();"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "aeb827f5-2a35-4e5d-91c7-6e3edfe347ed",
+      "name": "mirror_saludo_to_chatwoot",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -36560,
+        -640
+      ],
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst ctx = $('context_assembler').first().json;\nconst account = $('get_account_details').first().json;\nconst text = $('generate_saludo_response').first().json.choices?.[0]?.message?.content || '';\nconst sendRes = $('send_saludo_reply_ml').first().json;\nconst isReceiveOnly = $env.REPLY_RECEIVE_ONLY === 'true' && account.receive_only === 'true';\nconst mlMessageId = String(sendRes.message_id || sendRes.id || '');\nconst API = 'https://w1206-app.site';\nconst TOKEN = 'TSL8r4ctWYzXJF9fiAS1Z8RV';\n\nconst createdRes = await fetch(`${API}/api/v1/accounts/${ctx.account_id}/conversations/${ctx.conversation_id}/messages`, {\n  method: 'POST',\n  headers: { api_access_token: TOKEN, 'Content-Type': 'application/json' },\n  body: JSON.stringify({\n    content: text,\n    message_type: 'outgoing',\n    private: isReceiveOnly,\n    content_attributes: { source: 'n8n_ai', ml_message_id: mlMessageId }\n  })\n});\nif (!createdRes.ok) throw new Error('Chatwoot mirror create: ' + createdRes.status);\nconst created = await createdRes.json();\n\nif (!isReceiveOnly && mlMessageId && created.id) {\n  try {\n    await fetch('http://rails:3000/api/bridge/message-status', {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json', 'x-internal-secret': 'reply_ai_internal_2026' },\n      body: JSON.stringify({ account_id: ctx.account_id, message_id: created.id, status: 'delivered', ml_message_id: mlMessageId })\n    });\n  } catch (e) {}\n}\n\nreturn created;"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "es-bridge-message-filter-01",
+      "name": "es_bridge_message?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -41360,
+        -1440
+      ],
+      "parameters": {
+        "options": {},
+        "conditions": {
+          "options": {
+            "version": 3,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
             {
-              "name": "api_access_token",
-              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+              "id": "n1",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $input.first().json.body.event }}",
+              "rightValue": "bridge_message"
             }
           ]
-        },
-        "sendBody": true,
-        "options": {},
-        "specifyBody": "json",
-        "jsonBody": "={\"content\":\"={{ $('generate_saludo_response').item.json.choices[0].message.content }}\",\"message_type\":\"outgoing\",\"private\":false,\"content_attributes\":{\"source\":\"n8n_ai\"}}"
-      }
+        }
+      },
+      "typeVersion": 2.3
     },
     {
-      "id": "ps-pg-idempotency",
+      "id": "5169609a-3198-4062-b329-920f4c3a33cb",
       "name": "check_idempotency",
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
       "position": [
-        -560,
-        0
+        -41216,
+        -1440
       ],
       "parameters": {
-        "operation": "executeQuery",
         "query": "INSERT INTO meli_questions (question_id, account_id, status)\nSELECT\n  'ms_' || '{{ $input.first().json.body._id }}',\n  (SELECT account_id FROM meli_credentials WHERE ml_user_id = '{{ $input.first().json.body.user_id }}'),\n  'processing'\nWHERE NOT EXISTS (\n  SELECT 1 FROM meli_questions WHERE question_id = 'ms_' || '{{ $input.first().json.body._id }}'\n)\nRETURNING question_id;",
-        "options": {}
+        "options": {},
+        "operation": "executeQuery"
       },
       "credentials": {
         "postgres": {
           "id": "3sMbSrK2N5Vz3Xew",
           "name": "Postgres chatwoot_development"
         }
-      }
+      },
+      "typeVersion": 2.6
     },
     {
-      "id": "ps-if-idempotency",
+      "id": "8489b2be-60d8-4ed9-b131-700a247e9794",
       "name": "is_new_message?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
       "position": [
-        -352,
-        0
+        -40944,
+        -1312
       ],
       "parameters": {
+        "options": {},
         "conditions": {
           "options": {
-            "caseSensitive": true,
+            "version": 3,
             "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
+            "caseSensitive": true,
+            "typeValidation": "strict"
           },
           "combinator": "and",
           "conditions": [
             {
               "id": "idem-ps-001",
-              "leftValue": "={{ $json.question_id }}",
-              "rightValue": "",
               "operator": {
                 "type": "string",
                 "operation": "notEmpty",
                 "singleValue": true
-              }
+              },
+              "leftValue": "={{ $json.question_id }}",
+              "rightValue": ""
+            }
+          ]
+        }
+      },
+      "typeVersion": 2.3
+    },
+    {
+      "id": "7ac4f103-23e9-46a5-b6a9-c07a882d4c71",
+      "name": "get_order_state",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -40560,
+        -1680
+      ],
+      "parameters": {
+        "query": "SELECT id AS order_db_id, estado_conversacion, handoff_reason, last_sentiment,\n       consecutive_enojado, repeat_count, ultimos_mensajes_comprador, blocked_substatus, last_message_at\nFROM meli_orders\nWHERE account_id = (SELECT account_id FROM meli_credentials WHERE ml_user_id = '{{ $('Execute Workflow Trigger').item.json.body.user_id }}')\n  AND pack_id = '{{ $json.pack_id }}'\nLIMIT 1;",
+        "options": {},
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      },
+      "typeVersion": 2.6
+    },
+    {
+      "id": "814e5d1d-5474-4881-90fa-c0c5dd3d5dcc",
+      "name": "check_lifecycle",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -40320,
+        -1680
+      ],
+      "parameters": {
+        "jsCode": "const state = $input.first().json || {};\nconst msg = $('normalize_message').first().json;\nconst text = (msg.text || '').trim();\nconst estado = state.estado_conversacion || 'activa';\nconst CORTESIA = /^(gracias|ok|listo|genial|perfecto|dale|joya|bueno|sale|de nada)(\\W|$)/i;\nconst esCortesia = text.length > 0 && text.length <= 50 && CORTESIA.test(text);\nconst blocked = msg.conversation_status?.status === 'blocked';\n\nlet action = 'continuar';\nif (blocked) {\n  action = 'bloquear';\n} else if (estado === 'bloqueada' || estado === 'needs_human') {\n  action = 'ignorar';\n} else if (estado === 'cerrada') {\n  action = esCortesia ? 'ignorar' : 'reabrir';\n} else if (estado === 'activa' && esCortesia) {\n  action = 'cerrar_cortesia';\n}\n\nreturn {\n  action,\n  estado,\n  esCortesia,\n  blocked,\n  order_db_id: state.order_db_id,\n  blocked_substatus: msg.conversation_status?.substatus || null,\n  consecutive_enojado: state.consecutive_enojado || 0,\n  repeat_count: state.repeat_count || 0,\n  ultimos: state.ultimos_mensajes_comprador || []\n};"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "cc8a5e1a-b2e2-4730-8508-898335cada72",
+      "name": "lifecycle_router",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        -40080,
+        -1680
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "continuar",
+              "conditions": {
+                "options": {
+                  "version": 3,
+                  "caseSensitive": false,
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "l0",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "continuar"
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "reabrir",
+              "conditions": {
+                "options": {
+                  "version": 3,
+                  "caseSensitive": false,
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "l1",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "reabrir"
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "cerrar_cortesia",
+              "conditions": {
+                "options": {
+                  "version": 3,
+                  "caseSensitive": false,
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "l2",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "cerrar_cortesia"
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "bloquear",
+              "conditions": {
+                "options": {
+                  "version": 3,
+                  "caseSensitive": false,
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "l3",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "bloquear"
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "ignorar",
+              "conditions": {
+                "options": {
+                  "version": 3,
+                  "caseSensitive": false,
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "l4",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "ignorar"
+                  }
+                ]
+              },
+              "renameOutput": true
             }
           ]
         },
         "options": {}
+      },
+      "typeVersion": 3.4
+    },
+    {
+      "id": "d433683a-2616-45c6-963b-c2acc2ce3176",
+      "name": "reopen_conversation_chatwoot",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -39840,
+        -2000
+      ],
+      "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('get_or_create_conversation').item.json.id }}/reopen",
+        "method": "POST",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        }
+      },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "49f6528e-26ba-4cff-a0cc-c7230731f5d6",
+      "name": "reopen_order_db",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -39600,
+        -2000
+      ],
+      "parameters": {
+        "query": "UPDATE meli_orders\nSET estado_conversacion = 'activa', handoff_reason = NULL, blocked_substatus = NULL, last_message_at = NOW()\nWHERE id = '{{ $json.order_db_id }}';",
+        "options": {},
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      },
+      "typeVersion": 2.6
+    },
+    {
+      "id": "cb8702fd-94be-4096-b854-913d4e15d2a0",
+      "name": "close_cortesia_db",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -39840,
+        -1360
+      ],
+      "parameters": {
+        "query": "UPDATE meli_orders\nSET estado_conversacion = 'cerrada', last_message_at = NOW()\nWHERE id = '{{ $json.order_db_id }}';",
+        "options": {},
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      },
+      "typeVersion": 2.6
+    },
+    {
+      "id": "4da084d8-d693-46bc-93c2-f80e0d7051bf",
+      "name": "close_cortesia_note",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -39600,
+        -1360
+      ],
+      "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('get_or_create_conversation').item.json.id }}/messages",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "sendHeaders": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "Conversación cerrada automáticamente por mensaje de cortesía del comprador."
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "true"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        }
+      },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "35ba48dd-6dea-447b-a01c-e1d93e7e914f",
+      "name": "block_order_db",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -39840,
+        -1000
+      ],
+      "parameters": {
+        "query": "UPDATE meli_orders\nSET estado_conversacion = 'bloqueada', blocked_substatus = '{{ $json.blocked_substatus }}', last_message_at = NOW()\nWHERE id = '{{ $json.order_db_id }}';",
+        "options": {},
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      },
+      "typeVersion": 2.6
+    },
+    {
+      "id": "29bc6f76-d5c6-41c8-9995-6a661a0bcca1",
+      "name": "block_note",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -39600,
+        -1000
+      ],
+      "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('get_or_create_conversation').item.json.id }}/messages",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "sendHeaders": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "Mensajería bloqueada por MercadoLibre ({{ $json.blocked_substatus }}). La IA no responde."
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "true"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        }
+      },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "2cfae10a-4a5a-4519-9e18-b185c238aba0",
+      "name": "detect_sentiment",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -38320,
+        -1264
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0,\n  max_tokens: 40,\n  response_format: { type: 'json_object' },\n  messages: [\n    {\n      role: 'system',\n      content: 'Analizá el sentimiento del mensaje de un comprador en una conversación post-venta de e-commerce. Respondé ÚNICAMENTE con JSON válido sin markdown: {\"sentiment\": \"POSITIVO\" | \"NEUTRAL\" | \"INSATISFECHO\" | \"ENOJADO\", \"requiere_humano\": true|false, \"motivo\": \"razón corta en español\"}. Mark requiere_humano=true SOLO si: pide explícitamente hablar con un humano, menciona abogado/denuncia/defensa del consumidor, o el problema es grave (estafa, reclamo formal).'\n    },\n    {\n      role: 'user',\n      content: `HISTORIAL:\\n${$('context_assembler').item.json.conversation_history || '(sin historial)'}\\n\\nMENSAJE ACTUAL: ${$('context_assembler').item.json.message}`\n    }\n  ]\n}) }}\n",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "contentType": "raw",
+        "authentication": "predefinedCredentialType",
+        "rawContentType": "application/json",
+        "nodeCredentialType": "openAiApi"
+      },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "d2e83d93-73ba-48d0-a9bd-721507cef43d",
+      "name": "parse_sentiment",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -38080,
+        -1264
+      ],
+      "parameters": {
+        "jsCode": "const content = ($input.first().json.choices?.[0]?.message?.content || '{}').trim();\nlet parsed = {};\ntry { parsed = JSON.parse(content.replace(/```json|```/g, '').trim()); } catch (e) { parsed = { sentiment: 'NEUTRAL', requiere_humano: false, motivo: '' }; }\nreturn {\n  sentiment: ['POSITIVO','NEUTRAL','INSATISFECHO','ENOJADO'].includes(parsed.sentiment) ? parsed.sentiment : 'NEUTRAL',\n  requiere_humano: parsed.requiere_humano === true,\n  motivo: parsed.motivo || ''\n};"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "45a4ae16-616e-437c-a1ff-b3eeb0e5f2b0",
+      "name": "update_sentiment_db",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -37840,
+        -1264
+      ],
+      "parameters": {
+        "query": "UPDATE meli_orders\nSET last_sentiment = '{{ $json.sentiment }}',\n    consecutive_enojado = CASE WHEN '{{ $json.sentiment }}' = 'ENOJADO' THEN consecutive_enojado + 1 ELSE 0 END,\n    last_message_at = NOW()\nWHERE id = '{{ $('check_lifecycle').item.json.order_db_id }}';",
+        "options": {},
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      },
+      "typeVersion": 2.6
+    },
+    {
+      "id": "2f717b01-b88c-4c6f-a75f-d84e3e213dcd",
+      "name": "detect_loop",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -37600,
+        -1264
+      ],
+      "parameters": {
+        "jsCode": "const msg = $('normalize_message').first().json.text || '';\nconst state = $('check_lifecycle').first().json;\nconst ultimos = state.ultimos || [];\nconst repetidos = ultimos.filter(m => m === msg).length;\nconst repeat_count = repetidos >= 2 ? ((state.repeat_count || 0) + 1) : 0;\nconst sent = $('parse_sentiment').first().json;\nreturn { sentiment: sent.sentiment, requiere_humano: sent.requiere_humano, motivo: sent.motivo, repeat_count, ultimos_nuevos: [...ultimos, msg].slice(-3) };"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "362ebb43-d026-422e-8a6f-3c518c303903",
+      "name": "update_loop_db",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -37360,
+        -1264
+      ],
+      "parameters": {
+        "query": "UPDATE meli_orders\nSET repeat_count = '{{ $json.repeat_count }}',\n    ultimos_mensajes_comprador = '{{ $json.ultimos_nuevos }}'::jsonb,\n    last_message_at = NOW()\nWHERE id = '{{ $('check_lifecycle').item.json.order_db_id }}';",
+        "options": {},
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      },
+      "typeVersion": 2.6
+    },
+    {
+      "id": "33faac79-39da-44cf-958c-38127dbd1251",
+      "name": "eval_handoff",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -37120,
+        -1264
+      ],
+      "parameters": {
+        "jsCode": "const sent = $('parse_sentiment').first().json;\nconst state = $('check_lifecycle').first().json;\nconst loop = $('detect_loop').first().json;\nconst consecutiveEnojado = sent.sentiment === 'ENOJADO' ? (state.consecutive_enojado || 0) + 1 : 0;\nconst repeatCount = loop.repeat_count || 0;\nconst text = $('normalize_message').first().json.text || '';\nconst LEGAL = /abogad|denuncia|defensa (del )?consumidor|incompetente/i;\nconst motivos = [];\nif (sent.requiere_humano) motivos.push('cliente_solicita_humano');\nif (consecutiveEnojado >= 2) motivos.push('enojado_2_turnos');\nif (repeatCount >= 3) motivos.push('loop_3_mensajes');\nif (LEGAL.test(text)) motivos.push('mencion_legal');\nreturn { sentiment: sent.sentiment, requiere_humano: sent.requiere_humano, motivo: sent.motivo, repeat_count: repeatCount, consecutive_enojado_local: consecutiveEnojado, handoff: motivos.length > 0, handoff_reason: motivos.join(',') };"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "e64d6fb8-adb8-404a-b6fb-101babfb54fe",
+      "name": "handoff_router",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        -36880,
+        -1264
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "handoff",
+              "conditions": {
+                "options": {
+                  "version": 3,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "h0",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.handoff }}",
+                    "rightValue": true
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "continuar",
+              "conditions": {
+                "options": {
+                  "version": 3,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "h1",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.handoff }}",
+                    "rightValue": false
+                  }
+                ]
+              },
+              "renameOutput": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "typeVersion": 3.4
+    },
+    {
+      "id": "4984256d-5d1e-4b04-960d-ceb3d10d12e6",
+      "name": "apply_handoff_db",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -36640,
+        -1600
+      ],
+      "parameters": {
+        "query": "UPDATE meli_orders\nSET estado_conversacion = 'needs_human', handoff_reason = '{{ $json.handoff_reason }}', last_message_at = NOW()\nWHERE id = '{{ $('check_lifecycle').item.json.order_db_id }}';",
+        "options": {},
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      },
+      "typeVersion": 2.6
+    },
+    {
+      "id": "2d3fb93e-5410-44e5-9316-b415974987f0",
+      "name": "process_attachments",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -40720,
+        -1900
+      ],
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst msg = $('normalize_message').first().json;\nconst account = $('get_account_details').first().json;\nconst TIKA_URL = $env.TIKA_URL || 'http://tika:9998';\nconst OPENAI_KEY = $env.OPENAI_API_KEY || '';\nconst descs = [];\n\nasync function processBuffer(att, buf) {\n  const mime = att.mime_type || att.type || '';\n  try {\n    if (mime.startsWith('image/')) {\n      const r = await fetch('https://api.openai.com/v1/chat/completions', {\n        method: 'POST',\n        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },\n        body: JSON.stringify({\n          model: $env.OPENAI_VISION_MODEL || 'gpt-4o-mini',\n          messages: [{ role: 'user', content: [\n            { type: 'text', text: 'Describí brevemente esta imagen enviada por un comprador en contexto post-venta (daño, falta de pieza, etc.).' },\n            { type: 'image_url', image_url: { url: `data:${mime};base64,${buf.toString('base64')}` } }\n          ] }],\n          max_tokens: 200\n        })\n      });\n      if (r.ok) { const j = await r.json(); descs.push(`Imagen: ${j.choices?.[0]?.message?.content || 'imagen recibida'}`); }\n    } else if (mime === 'application/pdf' || mime.includes('pdf')) {\n      const r = await fetch(`${TIKA_URL}/tika`, { method: 'PUT', body: buf, headers: { 'Content-Type': 'application/pdf' } });\n      if (r.ok) { const t = await r.text(); descs.push(`PDF: ${t.slice(0, 1500)}`); }\n    } else if (mime.startsWith('audio/')) {\n      const form = new FormData();\n      form.append('file', new Blob([buf], { type: mime }), `audio.${mime.split('/')[1] || 'mp3'}`);\n      form.append('model', $env.OPENAI_WHISPER_MODEL || 'whisper-1');\n      const r = await fetch('https://api.openai.com/v1/audio/transcriptions', {\n        method: 'POST',\n        headers: { Authorization: `Bearer ${OPENAI_KEY}` },\n        body: form\n      });\n      if (r.ok) { const j = await r.json(); descs.push(`Audio (transcripción): ${j.text || ''}`); }\n    } else {\n      descs.push(`Adjunto recibido (${mime || 'desconocido'})`);\n    }\n  } catch (e) {\n    descs.push('Adjunto recibido (no procesado)');\n  }\n}\n\n// Bridge: los adjuntos vienen en el forward (URLs de message_attachments, sin token ML)\nif (account.status === 'bridge' && account.bridge_enabled === true) {\n  const fwd = $('Execute Workflow Trigger').first().json.body || {};\n  const urls = Array.isArray(fwd.attachments) ? fwd.attachments : [];\n  for (const att of urls) {\n    try {\n      const url = typeof att === 'string' ? att : (att.url || att.id);\n      if (!url) continue;\n      const res = await fetch(url);\n      if (!res.ok) continue;\n      const buf = Buffer.from(await res.arrayBuffer());\n      await processBuffer(att, buf);\n    } catch (e) { /* sigue con el siguiente adjunto */ }\n  }\n  return { ...$input.first().json, attachment_context: descs.length ? descs.join('\\n') : '' };\n}\n\nconst token = account.access_token;\nconst attachments = msg.attachments || [];\nfor (const att of attachments) {\n  try {\n    const res = await fetch(`https://api.mercadolibre.com/messages/attachments/${att.id}?tag=post_sale`, { headers: { Authorization: `Bearer ${token}` } });\n    if (!res.ok) continue;\n    const buf = Buffer.from(await res.arrayBuffer());\n    await processBuffer(att, buf);\n  } catch (e) { /* sigue con el siguiente adjunto */ }\n}\nreturn { ...$input.first().json, attachment_context: descs.length ? descs.join('\\n') : '' };\n"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "710f563c-a38a-47e6-b7b7-4d7e56fa5b51",
+      "name": "resolve_cortesia_conversation",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -39360,
+        -1360
+      ],
+      "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('get_or_create_conversation').item.json.id }}/toggle_status",
+        "method": "PATCH",
+        "options": {},
+        "jsonBody": "{\"status\": \"resolved\"}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        }
+      },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "c0b55046-109d-4051-a6da-2aa6b093d589",
+      "name": "set_blocked_label",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -39360,
+        -1000
+      ],
+      "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('get_or_create_conversation').item.json.id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\"labels\": [\"mensajeria-bloqueada\"]}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        }
+      },
+      "typeVersion": 4.4
+    },
+    {
+      "id": "80c12f24-1cd8-4e9c-9a8b-89dd8c7662dd",
+      "name": "persist_cw_conversation",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -38640,
+        -1248
+      ],
+      "parameters": {
+        "query": "UPDATE meli_orders\nSET cw_conversation_id = '{{ $('get_or_create_conversation').item.json.id }}', updated_at = NOW()\nWHERE account_id = {{ $('get_account_details').item.json.chatwoot_account_id }}\n  AND (\n    pack_id = '{{ $('normalize_message').item.json.pack_id }}'\n    OR ml_order_id = '{{ $('normalize_message').item.json.order_id }}'\n    OR pack_id = '{{ $('Execute Workflow Trigger').item.json.body.conversation?.additional_attributes?.pack_id }}'\n  );",
+        "options": {},
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      },
+      "typeVersion": 2.6
+    },
+    {
+      "parameters": {
+        "url": "=http://rails:3000/bot_active?account_id={{ $('get_account_details').item.json.chatwoot_account_id }}&scope=postventa",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-internal-secret",
+              "value": "reply_ai_internal_2026"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -39440,
+        -1440
+      ],
+      "id": "bbbb1001-0000-4000-8000-000000000001",
+      "name": "check_bot_active_pv"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 3,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "bpa1",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.active }}",
+              "rightValue": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -39220,
+        -1440
+      ],
+      "id": "bbbb1001-0000-4000-8000-000000000002",
+      "name": "bot_active_pv?"
+    },
+    {
+      "parameters": {
+        "amount": "={{ $('context_assembler').item.json.pv_ia?.delay?.enabled ? $('context_assembler').item.json.pv_ia.delay.seconds : 0 }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -38760,
+        -1440
+      ],
+      "id": "bbbb1001-0000-4000-8000-000000000003",
+      "name": "Wait delay pv",
+      "webhookId": "bbbb1001-0000-4000-8000-000000000004"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json?.choices?.[0]?.message?.content ?? '';\nconst intent = String(raw)\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '')\n  .toLowerCase()\n  .trim()\n  .replace(/[^a-z]/g, '');\nreturn { intent };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -37696,
+        -1264
+      ],
+      "id": "ra-normalize-intent-01",
+      "name": "normalize_intent"
+    },
+    {
+      "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/messages",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "sendHeaders": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "=⚠️ Respuesta automática no disponible\n\nEl mensaje del cliente no pudo ser procesado automáticamente:\n\"{{ $('context_assembler').item.json.message }}\"\n\n📦 Contexto del pedido:\n{{ $('context_assembler').item.json.order_context }}\n\n🚚 Estado del envío:\n{{ $('context_assembler').item.json.shipment_context }}\n\nPor favor intervenís a la brevedad."
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "true"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -37488,
+        -1264
+      ],
+      "id": "ra-postsale-unavailable-note-01",
+      "name": "post_ai_unavailable_note"
+    },
+    {
+      "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\"labels\": [\"respondida_con_ia\"]}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -36288,
+        -640
+      ],
+      "id": "ra-label-saludo-done-01",
+      "name": "label_saludo_done"
+    },
+    {
+      "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\"labels\": [\"respondida_con_ia\"]}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -36384,
+        -992
+      ],
+      "id": "ra-label-cierre-done-01",
+      "name": "label_cierre_done"
+    },
+    {
+      "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('get_or_create_conversation').item.json.id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\"labels\": [\"esperando_respuesta_manual\"]}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -38960,
+        -1312
+      ],
+      "id": "ra-set-manual-label-01",
+      "name": "set_manual_label"
+    },
+    {
+      "id": "ra-sync-message-reads-01",
+      "name": "sync_message_reads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -39264,
+        -1440
+      ],
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\n// Marca los mensajes del comprador como leídos en ML (el comprador ve \"Visto\") y sincroniza\n// los ticks read (✓✓ azul) de los mensajes del vendedor. Best-effort: no bloquea el flujo.\ntry {\n  const acct = $('get_account_details').first().json;\n  const conv = $('get_or_create_conversation').first().json;\n  const res = await fetch('http://rails:3000/api/bridge/sync-conversation-reads', {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json', 'x-internal-secret': 'reply_ai_internal_2026' },\n    body: JSON.stringify({ account_id: acct.chatwoot_account_id, conversation_id: conv.id })\n  });\n  return await res.json();\n} catch (e) {\n  return { ok: false, error: String(e.message || e) };\n}"
       }
     }
   ],
   "connections": {
+    "block_note": {
+      "main": [
+        [
+          {
+            "node": "set_blocked_label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "detect_loop": {
+      "main": [
+        [
+          {
+            "node": "update_loop_db",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "eval_handoff": {
+      "main": [
+        [
+          {
+            "node": "handoff_router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "block_order_db": {
+      "main": [
+        [
+          {
+            "node": "block_note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update_loop_db": {
+      "main": [
+        [
+          {
+            "node": "eval_handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_lifecycle": {
+      "main": [
+        [
+          {
+            "node": "lifecycle_router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_order_state": {
+      "main": [
+        [
+          {
+            "node": "check_lifecycle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parse_sentiment": {
+      "main": [
+        [
+          {
+            "node": "update_sentiment_db",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reopen_order_db": {
+      "main": [
+        [
+          {
+            "node": "is_incoming_from_buyer?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "apply_handoff_db": {
+      "main": [
+        [
+          {
+            "node": "post_handover_note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "detect_sentiment": {
+      "main": [
+        [
+          {
+            "node": "parse_sentiment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "lifecycle_router": {
+      "main": [
+        [
+          {
+            "node": "is_incoming_from_buyer?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "reopen_conversation_chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "close_cortesia_db",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "block_order_db",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "close_cortesia_db": {
+      "main": [
+        [
+          {
+            "node": "close_cortesia_note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "close_cortesia_note": {
+      "main": [
+        [
+          {
+            "node": "resolve_cortesia_conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "process_attachments": {
+      "main": [
+        [
+          {
+            "node": "get_order_state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update_sentiment_db": {
+      "main": [
+        [
+          {
+            "node": "detect_loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "persist_cw_conversation": {
+      "main": [
+        [
+          {
+            "node": "chatwoot_add_incoming_message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reopen_conversation_chatwoot": {
+      "main": [
+        [
+          {
+            "node": "reopen_order_db",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Execute Workflow Trigger": {
       "main": [
+        [
+          {
+            "node": "es_bridge_message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "es_bridge_message?": {
+      "main": [
+        [
+          {
+            "node": "check_idempotency",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "check_idempotency",
@@ -1467,7 +2434,18 @@
       "main": [
         [
           {
-            "node": "check_ai_gate",
+            "node": "sync_message_reads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sync_message_reads": {
+      "main": [
+        [
+          {
+            "node": "check_bot_active_pv",
             "type": "main",
             "index": 0
           }
@@ -1512,7 +2490,7 @@
       "main": [
         [
           {
-            "node": "set_bot_label",
+            "node": "classify_intent",
             "type": "main",
             "index": 0
           }
@@ -1523,7 +2501,7 @@
       "main": [
         [
           {
-            "node": "classify_intent",
+            "node": "intent_router",
             "type": "main",
             "index": 0
           }
@@ -1534,7 +2512,7 @@
       "main": [
         [
           {
-            "node": "intent_router",
+            "node": "Wait delay pv",
             "type": "main",
             "index": 0
           }
@@ -1577,6 +2555,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "post_ai_unavailable_note",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -1589,7 +2574,13 @@
             "index": 0
           }
         ],
-        []
+        [
+          {
+            "node": "post_ai_unavailable_note",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "soporte_enabled?": {
@@ -1601,7 +2592,13 @@
             "index": 0
           }
         ],
-        []
+        [
+          {
+            "node": "post_ai_unavailable_note",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "cierre_enabled?": {
@@ -1613,7 +2610,13 @@
             "index": 0
           }
         ],
-        []
+        [
+          {
+            "node": "post_ai_unavailable_note",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "generate_logistics_response": {
@@ -1711,6 +2714,17 @@
         ]
       ]
     },
+    "post_ai_unavailable_note": {
+      "main": [
+        [
+          {
+            "node": "set_human_label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "set_human_label": {
       "main": [
         [
@@ -1760,11 +2774,27 @@
       "main": [
         [
           {
+            "node": "label_cierre_done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "label_cierre_done": {
+      "main": [
+        [
+          {
             "node": "auto_resolve?",
             "type": "main",
             "index": 0
           }
         ]
+      ]
+    },
+    "label_saludo_done": {
+      "main": [
+        []
       ]
     },
     "auto_resolve?": {
@@ -1788,7 +2818,13 @@
             "index": 0
           }
         ],
-        []
+        [
+          {
+            "node": "post_ai_unavailable_note",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "generate_saludo_response": {
@@ -1807,6 +2843,17 @@
         [
           {
             "node": "mirror_saludo_to_chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mirror_saludo_to_chatwoot": {
+      "main": [
+        [
+          {
+            "node": "label_saludo_done",
             "type": "main",
             "index": 0
           }
@@ -1835,18 +2882,69 @@
         ],
         []
       ]
+    },
+    "check_bot_active_pv": {
+      "main": [
+        [
+          {
+            "node": "bot_active_pv?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "bot_active_pv?": {
+      "main": [
+        [
+          {
+            "node": "check_ai_gate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "set_manual_label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_manual_label": {
+      "main": [
+        []
+      ]
+    },
+    "Wait delay pv": {
+      "main": [
+        [
+          {
+            "node": "normalize_intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "normalize_intent": {
+      "main": [
+        [
+          {
+            "node": "set_bot_label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
   "settings": {
-    "executionOrder": "v1",
     "binaryMode": "separate",
-    "availableInMCP": false
+    "availableInMCP": false,
+    "executionOrder": "v1"
   },
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "6987f0f533040cbfea8c75383320642dcbc7861e6e8b8f304d7a1f91a57b76b5"
-  },
-  "id": "reply_ai_postsale_main_v2",
-  "tags": []
+  "versionId": "22900b58-7fb7-4bac-bea0-328cd3d0dfcc",
+  "id": "ryXMiGxGs0CBpknCbzpFB"
 }

@@ -1,0 +1,197 @@
+{
+  "name": "reply_ai_claims_outbound",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "path": "claims-outbound",
+        "options": {},
+        "httpMethod": "POST",
+        "responseMode": "lastNode",
+        "responseData": "allEntries"
+      },
+      "id": "38c6b175-0122-481f-a3fd-5d8e02f95e52",
+      "name": "chatwoot_webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        -300
+      ],
+      "webhookId": "claims-outbound"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json.body || $input.first().json;\n\nconst isOutgoing = data.message_type === 1 || data.message_type === 'outgoing';\nif (!isOutgoing) {\n  return { forward: false, reason: 'not_outgoing', type: data.message_type };\n}\nif (data.private === true) {\n  return { forward: false, reason: 'private' };\n}\n// Ignorar espejos: respuestas IA de n8n y mensajes del claim reflejados por Rails\nif (data.content_attributes?.source === 'n8n_ai' || data.content_attributes?.source === 'ml_claim') {\n  return { forward: false, reason: 'mirror' };\n}\nconst conv = data.conversation;\nif (!conv) {\n  return { forward: false, reason: 'no_conversation' };\n}\nconst attrs = conv.additional_attributes || {};\nif (attrs.type !== 'reclamo') {\n  return { forward: false, reason: 'not_claim', attrs_type: attrs.type };\n}\nconst claimId = attrs.claim_id || conv.meta?.source_id;\nif (!claimId) {\n  return { forward: false, reason: 'no_claim_id' };\n}\nreturn {\n  forward: true,\n  text: data.content || '',\n  claim_id: String(claimId),\n  account_id: data.account?.id,\n  conversation_id: conv.id,\n  conversation_status: conv.status\n};"
+      },
+      "id": "7777a2f7-ce2d-405e-8c8f-1abdf31826e1",
+      "name": "filter_claim_outbound",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "conditions": {
+          "conditions": [
+            {
+              "operator": {
+                "operation": "equals",
+                "type": "boolean"
+              },
+              "rightValue": true,
+              "id": "cf1",
+              "leftValue": "={{ $json.forward }}"
+            }
+          ],
+          "options": {
+            "version": 3,
+            "typeValidation": "strict"
+          },
+          "combinator": "and"
+        }
+      },
+      "id": "9c0f486a-806e-4ad7-9b3f-4f9ab4e2b504",
+      "name": "should_forward?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "query": "SELECT cl.claim_id, c.ml_user_id, c.access_token, c.status, c.bridge_enabled,\n       (SELECT a.custom_attributes->>'receive_only' FROM accounts a WHERE a.id = c.account_id) AS receive_only\nFROM meli_claims cl\nJOIN meli_credentials c ON c.account_id = cl.account_id\nWHERE cl.account_id = {{ $json.account_id }} AND cl.claim_id = '{{ $json.claim_id }}'\nLIMIT 1;",
+        "operation": "executeQuery",
+        "options": {}
+      },
+      "id": "3ca704e5-7ac1-452f-80df-0fc72ee272a8",
+      "name": "get_claim_details",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        200,
+        -300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_claim_details').first().json;\nconst filter = $('filter_claim_outbound').first().json;\nconst text = filter.text || '';\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nif ($env.REPLY_RECEIVE_ONLY === 'true' && account.receive_only === 'true') return { receive_only: true, text: text, skipped: true };\n\nif (isBridge) {\n  if (!$env.BRIDGE_SECRET || !$env.YOBOT_BRIDGE_URL) throw new Error('Bridge: BRIDGE_SECRET/YOBOT_BRIDGE_URL no configurados en n8n');\n  const body = JSON.stringify({ ml_user_id: String(account.ml_user_id), claim_id: String(account.claim_id), action: 'send_message', params: { text: text } });\n  const signature = (await (await fetch('http://rails:3000/bridge/sign', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json', 'X-Bridge-Secret': $env.BRIDGE_SECRET },\n  body: JSON.stringify({ body })\n})).json()).signature;\n  const res = await fetch($env.YOBOT_BRIDGE_URL + '/api/bridge/execute-claim-action', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + $env.BRIDGE_SECRET, 'X-Bridge-Signature': signature }, body: body });\n  if (!res.ok) throw new Error('Bridge execute-claim-action: ' + res.status);\n  return await res.json();\n}\n\nconst res = await fetch('https://api.mercadolibre.com/post-purchase/v1/claims/' + String(account.claim_id) + '/actions/send-message', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + account.access_token }, body: JSON.stringify({ text: text }) });\nif (!res.ok) throw new Error('ML claim send: ' + res.status);\nreturn await res.json();"
+      },
+      "id": "8ab97cc6-e9ea-4504-ba7d-b1f0a7e6e46c",
+      "name": "send_claim_message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV",
+              "name": "api_access_token"
+            }
+          ]
+        },
+        "method": "PATCH",
+        "specifyBody": "json",
+        "jsonBody": "{\"status\": \"open\"}",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('filter_claim_outbound').item.json.account_id }}/conversations/{{ $('filter_claim_outbound').item.json.conversation_id }}/toggle_status",
+        "sendHeaders": true,
+        "options": {},
+        "sendBody": true
+      },
+      "id": "3a394081-00fb-4a9f-aa9f-cb52969a552d",
+      "name": "chatwoot_reopen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        600,
+        -300
+      ]
+    }
+  ],
+  "connections": {
+    "chatwoot_webhook": {
+      "main": [
+        [
+          {
+            "node": "filter_claim_outbound",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter_claim_outbound": {
+      "main": [
+        [
+          {
+            "node": "should_forward?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "should_forward?": {
+      "main": [
+        [
+          {
+            "node": "get_claim_details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "get_claim_details": {
+      "main": [
+        [
+          {
+            "node": "send_claim_message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_claim_message": {
+      "main": [
+        [
+          {
+            "node": "chatwoot_reopen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "pinData": {},
+  "versionId": "42040c35-899d-4a4b-88d4-10176c63039f",
+  "id": "MClyYoLA6DHgznhr",
+  "meta": {},
+  "tags": []
+}
