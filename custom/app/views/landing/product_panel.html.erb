@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="csrf-token" content="<%= form_authenticity_token %>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Producto ML</title>
+    <style>
+        body {
+            font-family: 'Inter', ui-sans-serif, system-ui;
+            font-size: 13px;
+            background: #f8f9fa;
+            color: #1f2937;
+            margin: 0;
+        }
+        html.dark body { background: #151718; color: #ecedee; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
+        html.dark ::-webkit-scrollbar-thumb { background: #2d3139; }
+        .card { background: #fff; border: 1px solid #f1f2f4; border-radius: 12px; padding: 12px 14px; }
+        html.dark .card { background: #1c1e22; border-color: #2d3139; }
+        .chip { display: inline-flex; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; }
+        .lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #9ca3af; }
+        .kv { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; padding: 3px 0; }
+        .kv .k { color: #9ca3af; flex: none; }
+        .kv .v { font-weight: 600; text-align: right; }
+        .metric { border-radius: 10px; background: #f8f9fa; padding: 8px 10px; text-align: center; }
+        html.dark .metric { background: #21242c; }
+    </style>
+</head>
+<body class="p-3">
+    <div id="panel-body" class="space-y-3">
+        <p class="text-gray-400 text-xs">Cargando producto...</p>
+    </div>
+
+    <script>
+        const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+        let conversationId = '<%= params[:conversation_id].to_s %>';
+        let itemId = '<%= params[:item_id].to_s %>';
+
+        function esc(s) { return (s || '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+        function api(url, opts = {}) {
+            const headers = Object.assign({ 'X-CSRF-Token': CSRF }, opts.headers || {});
+            return fetch(url, Object.assign({ headers }, opts)).then(r => r.json().catch(() => ({})));
+        }
+        function chip(text, color) { return '<span class="chip ' + color + '">' + esc(text) + '</span>'; }
+        function conditionLabel(c) {
+            return { new: 'Nuevo', used: 'Usado', reconditioned: 'Reacondicionado' }[c] || c || '—';
+        }
+        function money(p, c) { return (p == null || p === '') ? '—' : esc((c || 'ARS') + ' ' + Number(p).toLocaleString('es-AR')); }
+        function kv(k, v) { return '<div class="kv"><span class="k">' + esc(k) + '</span><span class="v">' + v + '</span></div>'; }
+        function section(title, body) {
+            return '<div class="card"><p class="lbl mb-2">' + esc(title) + '</p>' + body + '</div>';
+        }
+        function fmtQty(n) { return n == null ? '—' : esc(n); }
+
+        function buildQuery() {
+            const p = new URLSearchParams();
+            if (itemId) p.set('item_id', itemId);
+            else if (conversationId && conversationId !== '{{conversation.id}}') p.set('conversation_id', conversationId);
+            return p.toString();
+        }
+
+        function load() {
+            const q = buildQuery();
+            if (!q) {
+                document.getElementById('panel-body').innerHTML =
+                    '<p class="text-gray-400 text-xs">Esperando contexto de la conversación…</p>';
+                return;
+            }
+            api('/dashboard/product-panel/data?' + q)
+                .then(r => {
+                    if (!r || r.error || !r.id) {
+                        document.getElementById('panel-body').innerHTML = '<p class="text-gray-400 text-xs">' + esc((r && r.error) || 'Producto no encontrado.') + '</p>';
+                        return;
+                    }
+                    render(r);
+                });
+        }
+
+        function render(p) {
+            const pics = p.pictures || [];
+            const pic = (pics.length && (pics[0].secure_url || pics[0].url)) || p.thumbnail || '';
+            const priceBlock = p.price != null
+                ? '<p class="text-xl font-extrabold">' + money(p.price, p.currency_id) + '</p>'
+                : '<p class="text-gray-400 text-xs">Precio no disponible</p>';
+
+            // Chips del header: condición, envío, item id
+            const headerChips = [
+                chip(conditionLabel(p.condition), 'bg-gray-100 text-gray-600'),
+                p.shipping ? (p.shipping.free_shipping ? chip('Envío gratis', 'bg-green-100 text-green-700') : chip('Envío pagado', 'bg-blue-50 text-blue-600')) : ''
+            ].filter(Boolean).join(' ');
+
+            // Especificaciones principales (hasta 8) en grid de 2 columnas
+            const attrs = (p.attributes || []).filter(a => a && a.id && !['TITLE', 'SELLER_SKU', 'ITEM_CONDITION'].includes(a.id)).slice(0, 8);
+            const mainAttrs = attrs.map(a => {
+                const v = a.value_name || (a.value_struct && a.value_struct.number);
+                return v ? '<div class="rounded-lg bg-gray-50 dark:bg-[#21242c] px-2.5 py-1.5"><p class="text-[10px] text-gray-400 font-bold uppercase">' + esc(a.name) + '</p><p class="text-xs font-semibold mt-0.5">' + esc(v) + '</p></div>' : '';
+            }).join('') || '<p class="text-gray-400 text-xs col-span-2">Sin especificaciones.</p>';
+
+            const description = p.description
+                ? '<p class="text-xs leading-relaxed text-gray-600 dark:text-gray-300">' + esc(p.description) + '</p>'
+                : '';
+
+            document.getElementById('panel-body').innerHTML = `
+                <!-- Ficha del producto: imagen lateral + info -->
+                <div class="card flex gap-3">
+                    ${pic ? '<img src="' + esc(pic) + '" class="w-24 h-24 flex-none rounded-lg object-contain bg-gray-50 dark:bg-[#21242c] border border-gray-100 dark:border-[#2d3139]" onerror="this.style.display=\'none\'">' : ''}
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-start justify-between gap-2">
+                            <p class="text-sm font-semibold leading-snug">${esc(p.title || '—')}</p>
+                            ${p.id ? '<span class="text-[10px] text-gray-400 font-mono flex-none">' + esc(p.id) + '</span>' : ''}
+                        </div>
+                        <div class="flex flex-wrap gap-1 mt-1.5">${headerChips}</div>
+                        <div class="mt-2">${priceBlock}</div>
+                    </div>
+                </div>
+
+                <!-- Métricas en columnas -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="metric">
+                        <p class="text-lg font-extrabold">${fmtQty(p.available_quantity)}</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase mt-0.5">Disponibles</p>
+                    </div>
+                    <div class="metric">
+                        <p class="text-lg font-extrabold">${fmtQty(p.sold_quantity)}</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase mt-0.5">Vendidos</p>
+                    </div>
+                </div>
+
+                ${(p.category_id || p.warranty) ? section('Información', `
+                    <div class="grid grid-cols-2 gap-2">
+                        ${p.category_id ? '<div class="rounded-lg bg-gray-50 dark:bg-[#21242c] px-2.5 py-1.5"><p class="text-[10px] text-gray-400 font-bold uppercase">Categoría</p><p class="text-xs font-semibold mt-0.5">' + esc(p.category_id) + '</p></div>' : ''}
+                        ${p.warranty ? '<div class="rounded-lg bg-gray-50 dark:bg-[#21242c] px-2.5 py-1.5"><p class="text-[10px] text-gray-400 font-bold uppercase">Garantía</p><p class="text-xs font-semibold mt-0.5">' + esc(p.warranty) + '</p></div>' : ''}
+                    </div>
+                `) : ''}
+
+                ${section('Especificaciones', '<div class="grid grid-cols-2 gap-2">' + mainAttrs + '</div>')}
+
+                ${description ? section('Descripción', description) : ''}
+
+                ${p.permalink ? '<div class="card flex items-center justify-between gap-2"><p class="text-[11px] text-gray-400">¿Querés verlo en MercadoLibre?</p><a href="' + esc(p.permalink) + '" target="_blank" rel="noopener" class="text-xs font-semibold text-blue-600 dark:text-blue-400 flex-none">Ver publicación →</a></div>' : ''}
+            `;
+        }
+
+        // Contexto de Chatwoot (Dashboard App): el iframe recibe postMessage con appContext.
+        window.addEventListener('message', function (event) {
+            try {
+                const payload = JSON.parse(event.data);
+                if (payload && payload.event === 'appContext' && payload.data && payload.data.conversation) {
+                    const convId = payload.data.conversation.id;
+                    if (convId && convId !== conversationId) {
+                        conversationId = convId;
+                        load();
+                    }
+                }
+            } catch (e) { /* mensaje no-JSON: ignorar */ }
+        });
+
+        load();
+        setInterval(() => { if (buildQuery()) load(); }, 20000);
+    </script>
+</body>
+</html>

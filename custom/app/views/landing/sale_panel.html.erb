@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="csrf-token" content="<%= form_authenticity_token %>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Venta ML</title>
+    <style>
+        body {
+            font-family: 'Inter', ui-sans-serif, system-ui;
+            font-size: 13px;
+            background: #f8f9fa;
+            color: #1f2937;
+            margin: 0;
+        }
+        html.dark body { background: #151718; color: #ecedee; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
+        html.dark ::-webkit-scrollbar-thumb { background: #2d3139; }
+        .card { background: #fff; border: 1px solid #f1f2f4; border-radius: 12px; padding: 12px 14px; }
+        html.dark .card { background: #1c1e22; border-color: #2d3139; }
+        .chip { display: inline-flex; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; }
+        .lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #9ca3af; }
+        .kv { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; padding: 3px 0; }
+        .kv .k { color: #9ca3af; flex: none; }
+        .kv .v { font-weight: 600; text-align: right; }
+    </style>
+</head>
+<body class="p-3">
+    <div id="panel-body" class="space-y-3">
+        <p class="text-gray-400 text-xs">Cargando venta...</p>
+    </div>
+
+    <script>
+        const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+        let conversationId = '<%= params[:conversation_id].to_s %>';
+
+        function esc(s) { return (s || '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+        function api(url, opts = {}) {
+            const headers = Object.assign({ 'X-CSRF-Token': CSRF }, opts.headers || {});
+            return fetch(url, Object.assign({ headers }, opts)).then(r => r.json().catch(() => ({})));
+        }
+        function chip(text, color) { return '<span class="chip ' + color + '">' + esc(text) + '</span>'; }
+        function statusChip(status) {
+            const map = { paid: 'bg-green-100 text-green-700', cancelled: 'bg-red-100 text-red-600', payment_required: 'bg-amber-100 text-amber-700', payment_in_process: 'bg-blue-50 text-blue-600', shipped: 'bg-blue-50 text-blue-600', delivered: 'bg-green-100 text-green-700', confirmed: 'bg-blue-50 text-blue-600' };
+            const label = { paid: 'Pagada', cancelled: 'Cancelada', payment_required: 'Pago requerido', payment_in_process: 'Pago en proceso', shipped: 'Enviada', delivered: 'Entregada', confirmed: 'Confirmada' };
+            return chip(label[status] || status || '—', map[status] || 'bg-gray-100 text-gray-500');
+        }
+        function estadoChip(estado) {
+            const map = { activa: 'bg-green-100 text-green-700', cerrada: 'bg-gray-100 text-gray-500', needs_human: 'bg-amber-100 text-amber-700', bloqueada: 'bg-red-100 text-red-600' };
+            const label = { activa: 'Conversación activa', cerrada: 'Conversación cerrada', needs_human: 'Requiere atención humana', bloqueada: 'Mensajería bloqueada' };
+            return chip(label[estado] || estado || '—', map[estado] || 'bg-gray-100 text-gray-500');
+        }
+        function shipChip(status) {
+            const map = { ready_to_ship: 'bg-blue-50 text-blue-600', shipped: 'bg-blue-50 text-blue-600', delivered: 'bg-green-100 text-green-700', not_delivered: 'bg-red-100 text-red-600', cancelled: 'bg-red-100 text-red-600', pending: 'bg-amber-100 text-amber-700' };
+            const label = { ready_to_ship: 'Listo para enviar', shipped: 'Enviado', delivered: 'Entregado', not_delivered: 'No entregado', cancelled: 'Cancelado', pending: 'Pendiente' };
+            return chip(label[status] || status || '—', map[status] || 'bg-gray-100 text-gray-500');
+        }
+        function payChip(status) {
+            const map = { approved: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-600', pending: 'bg-amber-100 text-amber-700', in_process: 'bg-blue-50 text-blue-600' };
+            const label = { approved: 'Aprobado', rejected: 'Rechazado', pending: 'Pendiente', in_process: 'En proceso' };
+            return chip(label[status] || status || '—', map[status] || 'bg-gray-100 text-gray-500');
+        }
+        function fmtDate(d) {
+            if (!d) return '—';
+            const dt = new Date(d);
+            if (isNaN(dt)) return esc(d);
+            return dt.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + dt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        }
+        function money(v, cur) { return (v == null || v === '') ? '—' : esc((cur || 'ARS') + ' ' + Number(v).toLocaleString('es-AR')); }
+        function methodLabel(m) {
+            const map = { visa: 'Visa', master: 'Mastercard', amex: 'Amex', naranja: 'Naranja', cabal: 'Cabal', debelo: 'Débito', rapipago: 'Rapipago', pagofacil: 'Pago Fácil', itau: 'Itaú', brou: 'BROU', santander: 'Santander', scotia: 'Scotiabank', bank_account: 'Transferencia bancaria' };
+            return map[(m || '').toLowerCase()] || m || '—';
+        }
+
+        function kv(k, v) { return '<div class="kv"><span class="k">' + esc(k) + '</span><span class="v">' + v + '</span></div>'; }
+        function section(title, body) {
+            return '<div class="card"><p class="lbl mb-2">' + esc(title) + '</p>' + body + '</div>';
+        }
+
+        function load() {
+            if (!conversationId || conversationId === '{{conversation.id}}') {
+                document.getElementById('panel-body').innerHTML =
+                    '<p class="text-gray-400 text-xs">Esperando contexto de la conversación…</p>';
+                return;
+            }
+            api('/dashboard/sales/panel-data?conversation_id=' + encodeURIComponent(conversationId))
+                .then(r => {
+                    if (!r || r.error || !r.ml_order_id) {
+                        document.getElementById('panel-body').innerHTML = '<p class="text-gray-400 text-xs">Venta no encontrada para esta conversación.</p>';
+                        return;
+                    }
+                    render(r);
+                });
+        }
+
+        function render(s) {
+            const b = s.buyer || {};
+            const p = s.payment || {};
+            const sh = s.shipment || {};
+            const it = s.item_detail || {};
+            const buyerName = [b.first_name, b.last_name].filter(Boolean).join(' ') || '—';
+            const messages = (s.messages || []).map(m => {
+                const mine = m.message_type === 1;
+                return '<div class="rounded-lg px-2.5 py-1.5 text-xs ' + (mine ? 'bg-[#fff4ef] ml-6' : 'bg-gray-100 dark:bg-[#21242c] mr-6') + '">' +
+                    (m.private ? '<span class="text-[9px] font-bold uppercase text-gray-400 mr-1">Privada</span>' : '') +
+                    esc(m.content || '') +
+                    '</div>';
+            }).join('') || '<p class="text-gray-400 text-xs">Sin mensajes en la conversación.</p>';
+            const itemChips = [
+                it.id ? chip(it.id, 'bg-blue-50 text-blue-600') : '',
+                it.quantity ? chip(it.quantity + ' unidad(es)', 'bg-gray-100 text-gray-600') : ''
+            ].join('');
+
+            document.getElementById('panel-body').innerHTML = `
+                <div class="card">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="font-bold text-sm">Venta #${esc(s.ml_order_id || '—')}</p>
+                            <p class="text-[11px] text-gray-400 mt-0.5">${esc(s.pack_id ? 'Pack ' + s.pack_id : '')}</p>
+                        </div>
+                        <div class="flex flex-wrap gap-1 justify-end">${statusChip(s.order_status)} ${estadoChip(s.estado_conversacion)}</div>
+                    </div>
+                </div>
+
+                ${section('Producto', `
+                    <div class="flex items-start justify-between gap-2">
+                        <p class="text-sm font-semibold leading-snug">${esc(it.title || s.item_title || '—')}</p>
+                        ${it.id ? '<span class="text-[10px] text-gray-400 font-mono flex-none">' + esc(it.id) + '</span>' : ''}
+                    </div>
+                    <div class="flex flex-wrap gap-1 mt-1.5">${itemChips}</div>
+                    <div class="mt-2 border-t border-gray-100 dark:border-[#2d3139] pt-2">
+                        ${kv('Precio unitario', money(it.unit_price || s.total_amount, s.currency_id))}
+                        ${it.sale_fee != null ? kv('Comisión ML', money(it.sale_fee, s.currency_id)) : ''}
+                        ${kv('Total de la venta', money(s.total_amount, s.currency_id))}
+                    </div>
+                `)}
+
+                ${section('Comprador', `
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold">${esc(buyerName)}</p>
+                            <p class="text-[11px] text-gray-400 mt-0.5">${esc(b.nickname || '')}</p>
+                        </div>
+                        ${b.id ? '<span class="text-[10px] text-gray-400 font-mono flex-none">ID ' + esc(b.id) + '</span>' : ''}
+                    </div>
+                    ${sh.receiver_name && sh.receiver_name !== buyerName ? '<div class="mt-2 border-t border-gray-100 dark:border-[#2d3139] pt-2">' + kv('Nombre de entrega', esc(sh.receiver_name)) + '</div>' : ''}
+                `)}
+
+                ${(p.method || p.status || p.amount) && (sh.tracking_number || sh.status || sh.receiver_name) ? `
+                <div class="grid grid-cols-2 gap-2">
+                    ${section('Pago', `
+                        <div class="flex flex-wrap gap-1 mb-2">${payChip(p.status)}</div>
+                        ${kv('Método', methodLabel(p.method) + (p.type ? ' (' + esc(p.type) + ')' : ''))}
+                        ${p.installments ? kv('Cuotas', esc(p.installments)) : ''}
+                        ${p.amount != null ? kv('Monto', money(p.amount, p.currency_id)) : ''}
+                        ${p.refunded != null && Number(p.refunded) > 0 ? kv('Reembolsado', money(p.refunded, p.currency_id)) : ''}
+                        ${p.status_detail ? kv('Detalle', esc(p.status_detail)) : ''}
+                        ${p.date_approved ? kv('Aprobado', fmtDate(p.date_approved)) : ''}
+                    `)}
+                    ${section('Envío', `
+                        <div class="flex flex-wrap gap-1 mb-2">${shipChip(sh.status)}${sh.substatus ? chip(sh.substatus, 'bg-gray-100 text-gray-500') : ''}</div>
+                        ${sh.tracking_number ? kv('Tracking', esc(sh.tracking_number)) : ''}
+                        ${sh.tracking_method ? kv('Transporte', esc(sh.tracking_method)) : ''}
+                        ${sh.estimated_delivery ? kv('Entrega est.', fmtDate(sh.estimated_delivery)) : ''}
+                        ${sh.date_shipped ? kv('Enviado el', fmtDate(sh.date_shipped)) : ''}
+                        ${sh.date_delivered ? kv('Entregado el', fmtDate(sh.date_delivered)) : ''}
+                    `)}
+                </div>
+                ` : (p.method || p.status || p.amount) ? section('Pago', `
+                    <div class="flex flex-wrap gap-1 mb-2">${payChip(p.status)}</div>
+                    ${kv('Método', methodLabel(p.method) + (p.type ? ' (' + esc(p.type) + ')' : ''))}
+                    ${p.installments ? kv('Cuotas', esc(p.installments)) : ''}
+                    ${p.amount != null ? kv('Monto', money(p.amount, p.currency_id)) : ''}
+                    ${p.refunded != null && Number(p.refunded) > 0 ? kv('Reembolsado', money(p.refunded, p.currency_id)) : ''}
+                    ${p.status_detail ? kv('Detalle', esc(p.status_detail)) : ''}
+                    ${p.date_approved ? kv('Aprobado', fmtDate(p.date_approved)) : ''}
+                `) : ''}
+
+                ${(sh.address_line || sh.street_name) ? section('Dirección de entrega', `
+                    <p class="text-sm font-semibold">${esc(sh.receiver_name || '')}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">${esc([sh.street_name || sh.address_line, sh.city, sh.state].filter(Boolean).join(', '))}</p>
+                    <div class="mt-2 border-t border-gray-100 dark:border-[#2d3139] pt-2">
+                        ${sh.zip_code ? kv('Código postal', esc(sh.zip_code)) : ''}
+                        ${sh.country ? kv('País', esc(sh.country)) : ''}
+                    </div>
+                `) : ''}
+
+                ${section('Conversación post-venta', `
+                    <div class="space-y-1.5 max-h-56 overflow-y-auto">${messages}</div>
+                `)}
+            `;
+        }
+
+        // Contexto de Chatwoot (Dashboard App): el iframe recibe postMessage con appContext.
+        window.addEventListener('message', function (event) {
+            try {
+                const payload = JSON.parse(event.data);
+                if (payload && payload.event === 'appContext' && payload.data && payload.data.conversation) {
+                    const convId = payload.data.conversation.id;
+                    if (convId && convId !== conversationId) {
+                        conversationId = convId;
+                        load();
+                    }
+                }
+            } catch (e) { /* mensaje no-JSON: ignorar */ }
+        });
+
+        load();
+        setInterval(() => { if (conversationId) load(); }, 20000);
+    </script>
+</body>
+</html>

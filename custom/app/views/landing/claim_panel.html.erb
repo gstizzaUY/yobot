@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="csrf-token" content="<%= form_authenticity_token %>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Reclamo ML</title>
+    <style>
+        body {
+            font-family: 'Inter', ui-sans-serif, system-ui;
+            font-size: 13px;
+            background: #f8f9fa;
+            color: #1f2937;
+            margin: 0;
+        }
+        html.dark body { background: #151718; color: #ecedee; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
+        html.dark ::-webkit-scrollbar-thumb { background: #2d3139; }
+        .card { background: #fff; border: 1px solid #f1f2f4; border-radius: 12px; padding: 12px 14px; }
+        html.dark .card { background: #1c1e22; border-color: #2d3139; }
+        .btn { border-radius: 8px; padding: 6px 10px; font-weight: 700; font-size: 11px; cursor: pointer; }
+        .chip { display: inline-flex; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; }
+        .lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #9ca3af; }
+        .kv { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; padding: 3px 0; }
+        .kv .k { color: #9ca3af; flex: none; }
+        .kv .v { font-weight: 600; text-align: right; }
+    </style>
+</head>
+<body class="p-3">
+    <div id="panel-body" class="space-y-3">
+        <p class="text-gray-400 text-xs">Cargando reclamo...</p>
+    </div>
+
+    <script>
+        const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+        // El iframe recibe conversation.id por postMessage (appContext); la URL del
+        // Dashboard App llega sin sustituir ({{conversation.id}} literal).
+        let conversationId = '<%= params[:conversation_id].to_s %>';
+        let currentClaim = null;
+
+        function esc(s) { return (s || '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+        function api(url, opts = {}) {
+            const headers = Object.assign({ 'X-CSRF-Token': CSRF }, opts.headers || {});
+            return fetch(url, Object.assign({ headers }, opts)).then(r => r.json().catch(() => ({})));
+        }
+        function chip(text, color) { return '<span class="chip ' + color + '">' + esc(text) + '</span>'; }
+        function kv(k, v) { return '<div class="kv"><span class="k">' + esc(k) + '</span><span class="v">' + v + '</span></div>'; }
+        function section(title, body) {
+            return '<div class="card"><p class="lbl mb-2">' + esc(title) + '</p>' + body + '</div>';
+        }
+        function fmtDate(d) {
+            if (!d) return '—';
+            const dt = new Date(d);
+            if (isNaN(dt)) return esc(d);
+            return dt.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + dt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        }
+        function agentChip(status) {
+            const map = { idle: 'bg-gray-100 text-gray-500', running: 'bg-blue-50 text-blue-600', pending: 'bg-amber-100 text-amber-700', done: 'bg-green-100 text-green-700', escalate: 'bg-purple-100 text-purple-700', error: 'bg-red-100 text-red-600', cancelled: 'bg-gray-200 text-gray-600' };
+            const label = { idle: 'Inactivo', running: 'Procesando', pending: 'Requiere acción', done: 'Resuelto', escalate: 'Derivado', error: 'Error', cancelled: 'Cancelado' };
+            return chip(label[status] || status, map[status] || 'bg-gray-100 text-gray-500');
+        }
+        function typeLabel(t) {
+            const map = { claim: 'Reclamo', return: 'Devolución', change: 'Cambio' };
+            return map[(t || '').toLowerCase()] || t || '—';
+        }
+        function stageLabel(st) {
+            const map = { dispute: 'Mediación' };
+            return map[(st || '').toLowerCase()] || st || '—';
+        }
+
+        function load() {
+            if (!conversationId || conversationId === '{{conversation.id}}') {
+                document.getElementById('panel-body').innerHTML =
+                    '<p class="text-gray-400 text-xs">Esperando contexto de la conversación…</p>';
+                return;
+            }
+            api('/dashboard/claims/panel-data?conversation_id=' + encodeURIComponent(conversationId)).then(c => {
+                if (!c || !c.id || c.error) {
+                    document.getElementById('panel-body').innerHTML = '<p class="text-gray-400 text-xs">' + esc((c && c.error) || 'Reclamo no encontrado para esta conversación.') + '</p>';
+                    return;
+                }
+                currentClaim = c;
+                document.getElementById('panel-body').innerHTML = render(c);
+                loadAgent(c.id);
+                loadChat(c.id);
+                loadEvidences(c.id);
+                renderTimeline(c);
+            });
+        }
+
+        function render(c) {
+            const actions = [
+                ['refund', 'Reembolso total', 'bg-red-50 text-red-600 hover:bg-red-100'],
+                ['partial-refund', 'Reembolso parcial', 'bg-amber-50 text-amber-700 hover:bg-amber-100'],
+                ['allow-return', 'Aceptar devolución', 'bg-green-50 text-green-700 hover:bg-green-100'],
+                ['open-dispute', 'Abrir mediación', 'bg-purple-50 text-purple-700 hover:bg-purple-100']
+            ].map(a => `<button onclick="act('${a[0]}', this)" class="btn ${a[2]}">${a[1]}</button>`).join(' ');
+            return `
+                <div class="card">
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <p class="font-bold text-sm">Reclamo #${esc(c.claim_id)}</p>
+                            <p class="text-[11px] text-gray-400 mt-0.5">${c.order ? 'Orden ' + esc(c.order.ml_order_id) : 'Sin orden vinculada'}</p>
+                        </div>
+                        <div class="flex flex-wrap gap-1 justify-end">${chip(typeLabel(c.claim_type), 'bg-blue-50 text-blue-600')} ${chip(stageLabel(c.stage), c.stage === 'dispute' ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-500')} ${chip(c.status, c.status === 'opened' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500')}</div>
+                    </div>
+                </div>
+
+                ${section('Detalle', `
+                    ${c.reason_id ? kv('Motivo', esc(c.reason_id)) : ''}
+                    ${c.resource_id ? kv('Recurso ML', esc(c.resource_id)) : ''}
+                    ${c.pending_action ? kv('Acción pendiente', esc(c.pending_action)) : ''}
+                    ${c.created_at ? kv('Creado', fmtDate(c.created_at)) : ''}
+                    ${c.updated_at ? kv('Última actualización', fmtDate(c.updated_at)) : ''}
+                    ${kv('Afecta reputación', c.affects_reputation ? '<span class="text-red-500 font-bold">Sí</span>' : '<span class="text-green-600 font-bold">No</span>')}
+                `)}
+
+                ${section('Agente IA', '<span id="agent-chip">' + agentChip(c.agent_status) + '</span>')}
+
+                ${section('Acciones', `
+                    <div id="action-box" class="flex flex-wrap gap-1.5">${actions}</div>
+                    <p id="action-result" class="mt-2 text-[11px]"></p>
+                `)}
+
+                ${section('Mensajes del reclamo', `
+                    <div id="chat-box" class="space-y-1.5 max-h-56 overflow-y-auto mb-2"><p class="text-gray-400 text-xs">Cargando...</p></div>
+                    <div class="flex gap-1.5">
+                        <input id="chat-input" type="text" placeholder="Responder al reclamo..."
+                            class="flex-1 p-2 bg-gray-50 dark:bg-[#21242c] border border-gray-200 dark:border-[#2d3139] rounded-lg text-xs focus:outline-none">
+                        <button onclick="sendChat()" class="btn bg-[#fd5101] text-white">Enviar</button>
+                    </div>
+                `)}
+
+                ${section('Evidencias', '<div id="evidences-box" class="space-y-1"><p class="text-gray-400 text-xs">Cargando...</p></div>')}
+
+                ${section('Timeline', '<div id="timeline-box" class="space-y-1.5 max-h-44 overflow-y-auto"></div>')}
+            `;
+        }
+
+        function renderTimeline(c) {
+            const box = document.getElementById('timeline-box');
+            if (!box) return;
+            const entries = (c.timeline || []).slice().reverse();
+            box.innerHTML = entries.length
+                ? entries.map(t => `
+                    <div class="flex gap-2 text-xs">
+                        <div class="w-2 h-2 mt-1 rounded-full flex-none ${t.tipo === 'webhook' ? 'bg-[#fd5101]' : 'bg-gray-400'}"></div>
+                        <div>
+                            <p>${esc(t.evento)}</p>
+                            <p class="text-[10px] text-gray-400">${esc(t.at ? new Date(t.at).toLocaleString('es-AR') : '')}</p>
+                        </div>
+                    </div>`).join('')
+                : '<p class="text-gray-400 text-xs">Sin eventos registrados.</p>';
+        }
+
+        function loadAgent(id) {
+            api('/dashboard/claims/' + id + '/agent-pending').then(r => {
+                const chipEl = document.getElementById('agent-chip');
+                if (chipEl) chipEl.innerHTML = agentChip(r.agent_status) + (r.pending ? ` <button onclick="agentExec(${id})" class="btn bg-green-600 text-white ml-1">Ejecutar</button> <button onclick="agentCancel(${id})" class="btn bg-gray-300 text-gray-700">Cancelar</button>` : ` <button onclick="agentRerun(${id})" class="btn bg-blue-50 text-blue-600">Re-ejecutar</button>`);
+            });
+        }
+        function agentExec(id) { api('/dashboard/claims/' + id + '/agent-execute', { method: 'POST' }).then(() => loadAgent(id)); }
+        function agentCancel(id) { api('/dashboard/claims/' + id + '/agent-cancel', { method: 'POST' }).then(() => loadAgent(id)); }
+        function agentRerun(id) { api('/dashboard/claims/' + id + '/agent-rerun', { method: 'POST' }).then(() => loadAgent(id)); }
+
+        function act(action, btn) {
+            btn.disabled = true;
+            btn.textContent = '...';
+            api('/dashboard/claims/' + currentClaim.id + '/' + action, { method: 'POST' }).then(r => {
+                btn.disabled = false;
+                document.getElementById('action-result').innerHTML = r.ok || !r.error
+                    ? '<span class="text-green-600 font-semibold">Acción ejecutada.</span>'
+                    : '<span class="text-red-500 font-semibold">' + esc(r.error) + '</span>';
+            });
+        }
+
+        function loadChat(id) {
+            api('/dashboard/claims/' + id + '/messages').then(msgs => {
+                const list = Array.isArray(msgs) ? msgs : (msgs.messages || []);
+                document.getElementById('chat-box').innerHTML = list.length
+                    ? list.map(m => `<div class="rounded-lg px-2.5 py-1.5 text-xs ${m.from_seller ? 'bg-[#fff4ef] ml-6' : 'bg-gray-100 dark:bg-[#21242c] mr-6'}">${esc(m.text || m.message || '')}</div>`).join('')
+                    : '<p class="text-gray-400 text-xs">Sin mensajes.</p>';
+            });
+        }
+
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+            api('/dashboard/claims/' + currentClaim.id + '/message', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) })
+                .then(r => { if (!r.error) { input.value = ''; loadChat(currentClaim.id); } else { alert(r.error); } });
+        }
+
+        function loadEvidences(id) {
+            api('/dashboard/claims/' + id + '/evidences').then(evs => {
+                const list = Array.isArray(evs) ? evs : (evs.evidences || []);
+                document.getElementById('evidences-box').innerHTML = list.length
+                    ? list.map(e => `<div class="rounded-lg bg-gray-50 dark:bg-[#21242c] px-2.5 py-1.5 text-xs">${esc(e.evidence_type || e.type)} — ${chip(e.status || '', 'bg-gray-100 text-gray-500')}</div>`).join('')
+                    : '<p class="text-gray-400 text-xs">Sin evidencias.</p>';
+            });
+        }
+
+        // Contexto de Chatwoot (Dashboard App): el iframe recibe postMessage con appContext.
+        window.addEventListener('message', function (event) {
+            try {
+                const payload = JSON.parse(event.data);
+                if (payload && payload.event === 'appContext' && payload.data && payload.data.conversation) {
+                    const convId = payload.data.conversation.id;
+                    if (convId && convId !== conversationId) {
+                        conversationId = convId;
+                        load();
+                    }
+                }
+            } catch (e) { /* mensaje no-JSON: ignorar */ }
+        });
+
+        load();
+        setInterval(() => { if (currentClaim) { loadAgent(currentClaim.id); loadChat(currentClaim.id); } }, 20000);
+    </script>
+</body>
+</html>
