@@ -509,11 +509,6 @@
     "availableInMCP": false,
     "executionOrder": "v1"
   },
-  "pinData": {},
-  "versionId": "704f2da6-92b0-49c8-9172-9e612e9cad51",
-  "id": "267yHu6ne62J8FZjiMlMc",
-  "meta": {
-    "templateCredsSetupCompleted": true
-  },
-  "tags": []
+  "versionId": "4bc0219c-75b5-474b-aeaf-3e97296ccec2",
+  "id": "267yHu6ne62J8FZjiMlMc"
 }

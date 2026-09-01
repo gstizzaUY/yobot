@@ -1,7 +1,7 @@
 ﻿# Chatwoot + Reply-AI — Documentación Técnica Unificada
 
 > **Versión**: Chatwoot 4.17.1 + Reply-AI / Meli  
-> **Última actualización**: 2026-08-31  
+> **Última actualización**: 2026-09-01  
 > **Propósito**: Referencia completa para agentes IA y desarrolladores.
 
 ---
@@ -41,6 +41,7 @@
 20. [Operaciones n8n (importación, versiones, smoke tests)](#20-operaciones-n8n-importación-versiones-smoke-tests)
 21. [Paneles Dashboard Apps (Venta ML, Reclamo ML, Producto ML)](#21-paneles-dashboard-apps-venta-ml-reclamo-ml-producto-ml)
 22. [Enterprise sin licencia — blindaje custom](#22-enterprise-sin-licencia-blindaje-custom-2026-08-31)
+23. [Despliegue de n8n a producción](#23-despliegue-de-n8n-a-producción-2026-09-01)
 
 ---
 
@@ -576,7 +577,8 @@ Rack::Utils::HTTP_STATUS_CODES[902] = 'Account Suspended'
 
 ## 11. n8n Workflows
 
-8 workflows JSON en `n8n/` (los JSON del repo son **exports fieles de la instancia** — se regeneran desde la DB de n8n con `SELECT json_build_object(...) FROM workflow_entity`; ver §20):
+9 workflows JSON en `n8n/` (los JSON del repo son **exports fieles de la instancia dev** —
+re-generados el 2026-09-01 desde la DB de n8n de dev; ver §20 y §23):
 
 | Archivo | Función |
 |---------|---------|
@@ -887,6 +889,8 @@ Estos archivos NO existen en el upstream de Chatwoot, por lo que no generan conf
 6. **`.dockerignore` excluye symlinks de IDE** (`.windsurf`, `CLAUDE.md`): el build context desde Windows no los transfiere (`invalid file request`).
 7. **`docker restart` sobre un contenedor de swarm task crea huérfanos** (el task viejo sigue corriendo + swarm crea reemplazo → tráfico partido). Para redeployar un servicio: `docker service update --force <servicio>` o el botón Deploy de Easypanel.
 8. Tras el deploy: verificar `/api` (`queue_services` + `data_services` en `ok`), el checklist §22.4 y el smoke post-venta.
+9. **HEALTHCHECK en la imagen** (self-healing): el runtime define `HEALTHCHECK` sobre `/api` (interval 30s, start-period 240s). En swarm, un task con el proceso wedged (threads bloqueados sin CPU, como ocurrió post-4.17.1) se reemplaza automáticamente en ~1-2 min. Nunca usar `docker restart` sobre contenedores de task: genera huérfanos y trae el wedged de vuelta — siempre `docker service update --force <servicio>`.
+10. **`data_services: "failing"` cosmético**: con las conexiones lazy de Rails 7.2, `Base.connection.active?` del healthcheck puede devolver false si el hilo aún no hizo un query real. Las queries funcionan — es un artefacto del endpoint de upstream, corregir en upstream (no tocar).
 
 ---
 
@@ -2360,6 +2364,86 @@ Tras cada merge de upstream, verificar que el blindaje sigue enganchado:
 
 ---
 
+## 23. Despliegue de n8n a producción (2026-09-01)
+
+> **Contexto**: hasta esta fecha, la capa IA (n8n) **no existía en producción** — todo el piloto
+> vivió en dev. La instancia de producción (`yobot_cw_n8n-main`, n8n 2.6.4, modo queue con
+> `yobot_cw_n8n-worker`) corría desde hacía 6 meses **en blanco** (DB `n8n` con esquema pero 0
+> workflows), sin dominio funcional para webhooks y con la cuenta de Chatwoot producción virgen
+> (1 admin, 0 inboxes/credenciales/webhooks). El n8n viejo (`yobot_n8n_master`, 1.117.3,
+> n8n.w1206-app.site) es el stack legacy del Yobot original (workflows de Drive/RAG) — no usar.
+
+### 23.1 Dominio público
+
+Easypanel ya exponía el editor: `https://yobot-cw-n8n-main.bsj9p0.easypanel.host/` (con
+`WEBHOOK_URL` ya seteada en el env del servicio). Los webhooks activos quedan en
+`https://yobot-cw-n8n-main.bsj9p0.easypanel.host/webhook/<path>`.
+
+### 23.2 Import de los 9 workflows (SQL, patrón §20 adaptado)
+
+Fuente: la **instancia n8n de dev** (la única donde existía el motor real — el export del repo
+estaba desactualizado: `postsale_main` sin las conexiones de Fase 1). Los JSON del repo se
+**regeneraron** desde dev el 2026-09-01 (vuelven a ser "exports fieles").
+
+Procedimiento (dump → transformaciones → SQL):
+
+1. Dump de dev (fila completa): `workflow_entity`, `workflow_history` (última versión por
+   workflow), `webhook_entity`, `shared_workflow`, `credentials_entity`.
+2. **Re-bindings de URLs** en los JSON (texto plano sobre el serializado):
+   - `http://rails:3000` → `http://yobot_cw_yobot-app:3000` (red interna `easypanel-yobot_cw`)
+   - `https://w1206-app.site` → `https://yobot-cw-yobot-app.bsj9p0.easypanel.host`
+   - `http://tika:9998` → `http://yobot_cw_tika:9998`
+   - nombre de credencial `Postgres chatwoot_development` → `Postgres chatwoot_production`
+3. **Credenciales** (3, con IDs de dev preservados): descifrar con la key de dev
+   (`openssl enc -d -aes-256-cbc -md md5 -a -A -pass pass:<key>` — n8n usa crypto-js/OpenSSL
+   Salted), corregir `database` → `chatwoot_production` en la credencial postgres, re-cifrar con
+   la **key de prod** (`N8N_ENCRYPTION_KEY` del servicio). La credencial `Header Auth account`
+   es un header **dinámico** (`Bearer {{ $('get_account_details')... }}`) — sin problema de
+   rotación de tokens. La 4ta credencial de dev (`Chatwoot Application account`) es legacy sin
+   uso — no se importa.
+4. **Orden de INSERT (FKs circulares)**: `workflow_entity` con `activeVersionId = NULL` →
+   `workflow_history` → `UPDATE workflow_entity SET "activeVersionId" = ...` → `shared_workflow`
+   (projectId de prod, role `workflow:owner`) → `webhook_entity`. Las credenciales primero.
+5. Import en un solo `BEGIN/COMMIT` con `-v ON_ERROR_STOP=1`.
+
+### 23.3 Entorno aplicado
+
+| Servicio | Variables |
+|---|---|
+| `yobot_cw_n8n-main` + `yobot_cw_n8n-worker` (iguales) | `OPENAI_API_KEY`, `BRIDGE_SECRET`, `YOBOT_BRIDGE_URL`, `REPLY_RECEIVE_ONLY=false`, `ML_APP_ID`, `ML_SECRET_KEY`, `YOBOT_ML_APP_ID`, `YOBOT_ML_SECRET_KEY`, `TIKA_URL=http://yobot_cw_tika:9998`, `OPENAI_VISION_MODEL=gpt-4o-mini`, `OPENAI_WHISPER_MODEL=whisper-1` |
+| `yobot_cw_yobot-app` | `INTERNAL_API_SECRET=reply_ai_internal_2026` (hardcodeado en los headers `x-internal-secret` de los workflows) + las 7 URLs `N8N_*_WEBHOOK_URL` públicas (§12) |
+| nuevo servicio `yobot_cw_tika` | `apache/tika:latest-full`, redes `easypanel` + `easypanel-yobot_cw`, sin dominio (solo interno) |
+
+⚠️ **Persistencia**: el import de env se hizo con `docker service update --env-add` (efectivo ya,
+pero **fuera del spec de Easypanel**). Al editar/redeployar esos servicios desde el panel,
+re-aplicar las mismas variables en la UI o se pierden.
+
+### 23.4 Webhooks activos (validados 200)
+
+| Path | Workflow |
+|---|---|
+| `/webhook/9979f346-6abc-46d1-a3e6-12db669f1b37` | questions_main (notificaciones ML + bridge_question) |
+| `/webhook/4a26f4e3-6b9d-483b-b071-d0a5dc5ac441` | questions_manual |
+| `/webhook/chatwoot-postsale` | postsale_webhook → postsale_main |
+| `/webhook/postsale-outbound` | postsale_outbound |
+| `/webhook/claims-outbound` | claims_outbound |
+| `/webhook/4ac3153f-b331-42fd-bb44-9f3e8372c180` | embedding_generator (pre-venta) |
+| `/webhook/pv-embeddings` | pv_embedding_generator (post-venta) |
+
+### 23.5 Pendientes operativos post-despliegue
+
+1. **Persistir las env en Easypanel** (§23.3) — al editar cada servicio desde el panel.
+2. **App de MercadoLibre**: configurar la URL de notificaciones de ML apuntando al webhook de
+   `questions_main` (§23.4).
+3. **Onboarding del primer seller**: `/signup` en producción → OAuth ML (scope Post Purchase para
+   reclamos) → sync de productos → import RAG (masivo o migración Yobot §18.10).
+4. `REPLY_RECEIVE_ONLY=false` — producción responde de verdad a ML; activar el flag solo para
+   pruebas controladas (§19).
+5. TIKA: sin el servicio `yobot_cw_tika`, `process_attachments` falla solo para PDFs (Vision y
+   Whisper no dependen de Tika).
+
+---
+
 ## Apéndice: Archivos Fuera del Scope Custom
 
 Estos archivos fueron modificados respecto al upstream original de Chatwoot y deben preservarse en merges:
@@ -2367,7 +2451,7 @@ Estos archivos fueron modificados respecto al upstream original de Chatwoot y de
 | Archivo | Cambio |
 |---------|--------|
 | `.dockerignore` | + exclusiones de IDE/symlinks (`.windsurf`, `CLAUDE.md`, `.idea`, `.vscode`) |
-| `docker/Dockerfile` | `NODE_OPTIONS --max-old-space-size=6144` (build de assets 4.17) |
+| `docker/Dockerfile` | `NODE_OPTIONS --max-old-space-size=6144` (build de assets 4.17) + `HEALTHCHECK` sobre `/api` (self-healing en swarm) |
 | `.gitignore` | + `docker-compose.override.yaml`, `Procfile.worktree` |
 | `Gemfile` | +2 gems custom |
 | `Gemfile.lock` | Dependencias (regenerar con `bundle install`) |

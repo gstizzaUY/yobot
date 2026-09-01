@@ -1,5 +1,6 @@
 {
   "name": "reply_ai_postsale_webhook",
+  "active": true,
   "nodes": [
     {
       "parameters": {
@@ -9,7 +10,10 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "id": "aaaaaa01-0000-4000-8000-000000000001",
       "name": "Webhook",
       "webhookId": "aaaaaa01-0000-4000-8000-000000000002"
@@ -38,30 +42,34 @@
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
-      "position": [208, 0],
+      "position": [
+        208,
+        0
+      ],
       "id": "aaaaaa01-0000-4000-8000-000000000003",
       "name": "Call postsale_main",
       "alwaysOutputData": true,
       "onError": "continueRegularOutput"
     }
   ],
-  "pinData": {},
   "connections": {
     "Webhook": {
-      "main": [[{ "node": "Call postsale_main", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Call postsale_main",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
     "availableInMCP": false
   },
   "versionId": "aaaaaa01-0000-4000-8000-000000000004",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "6987f0f533040cbfea8c75383320642dcbc7861e6e8b8f304d7a1f91a57b76b5"
-  },
-  "id": "aaaaaa01-0000-4000-8000-000000000005",
-  "tags": []
+  "id": "aaaaaa01-0000-4000-8000-000000000005"
 }

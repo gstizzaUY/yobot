@@ -1,5 +1,6 @@
 {
   "name": "reply_ai_embedding_generator",
+  "active": true,
   "nodes": [
     {
       "parameters": {
@@ -113,7 +114,6 @@
       }
     }
   ],
-  "pinData": {},
   "connections": {
     "Webhook": {
       "main": [
@@ -160,17 +160,11 @@
       ]
     }
   },
-  "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
     "availableInMCP": false
   },
   "versionId": "ed1470ae-2856-44f3-9dec-6d14394b83e2",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "6987f0f533040cbfea8c75383320642dcbc7861e6e8b8f304d7a1f91a57b76b5"
-  },
-  "id": "pSXLNRAG3-_-PI9HDt94v",
-  "tags": []
+  "id": "pSXLNRAG3-_-PI9HDt94v"
 }
