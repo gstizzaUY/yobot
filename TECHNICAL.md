@@ -2405,6 +2405,32 @@ Procedimiento (dump → transformaciones → SQL):
    `workflow_history` → `UPDATE workflow_entity SET "activeVersionId" = ...` → `shared_workflow`
    (projectId de prod, role `workflow:owner`) → `webhook_entity`. Las credenciales primero.
 5. Import en un solo `BEGIN/COMMIT` con `-v ON_ERROR_STOP=1`.
+6. **Reemplazo del token de API hardcodeado**: los workflows traen el token de un usuario de
+   **dev** hardcodeado en Code nodes/httpRequest headers (`api_access_token: 'TSL8r4ct...'` ×92
+   en `postsale_main` y `questions_main`). Post-import: `UPDATE ... replace(nodes::text, ...)` con
+   el token del admin de producción (leído de `access_tokens`), tanto en `workflow_entity` como
+   `workflow_history`. Igual con `http://localhost:5678` → `http://yobot_cw_n8n-main:5678` (×3:
+   los workers no sirven webhooks; el main sí). Restart de main+worker al terminar.
+
+### 23.2.1 Auditoría de entorno (obligatoria post-import)
+
+Escanear los workflows importados antes de dar por bueno el deploy:
+
+- URLs únicas: no debe quedar `localhost`/`127.0.0.1`/`rails:`/`w1206-app.site`/`chatwoot_development` (los residuos en `pinData` son inofensivos — snapshots de test).
+- Tokens: `TSL8r4ct` (o el token de dev), `eyJ` (JWT), `Bearer` estático, `sk-` → 0 ocurrencias.
+- `$env` requeridas presentes en main **y** worker (los workers ejecutan).
+- Validar el token de prod contra la API (`/api/v1/profile` → 200).
+
+Hallazgos reales de la auditoría 2026-09-01: token de dev ×92 y `localhost:5678` ×3 — ambos
+corregidos vía `replace()` SQL sobre `nodes`/`connections` (entity + history) y restart.
+
+### 23.2.2 Tech debt conocida
+
+- **Token hardcodeado**: si el admin de producción regenera su token de API, los workflows que
+  lo usan dan 401. Refactor pendiente: leerlo dinámicamente desde `access_tokens` (o del
+  usuario agente que crea el signup) en los Code nodes.
+- **`YOBOT_BRIDGE_URL`** apunta al Yobot de dev (valor heredado). Cuando un seller MIGRADO opere
+  en producción, debe apuntar al Yobot de producción.
 
 ### 23.3 Entorno aplicado
 
