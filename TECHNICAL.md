@@ -2436,7 +2436,7 @@ corregidos vía `replace()` SQL sobre `nodes`/`connections` (entity + history) y
 
 | Servicio | Variables |
 |---|---|
-| `yobot_cw_n8n-main` + `yobot_cw_n8n-worker` (iguales) | `OPENAI_API_KEY`, `BRIDGE_SECRET`, `YOBOT_BRIDGE_URL`, `REPLY_RECEIVE_ONLY=false`, `ML_APP_ID`, `ML_SECRET_KEY`, `YOBOT_ML_APP_ID`, `YOBOT_ML_SECRET_KEY`, `TIKA_URL=http://yobot_cw_tika:9998`, `OPENAI_VISION_MODEL=gpt-4o-mini`, `OPENAI_WHISPER_MODEL=whisper-1` |
+| `yobot_cw_n8n-main` + `yobot_cw_n8n-worker` (iguales) | `OPENAI_API_KEY`, `BRIDGE_SECRET`, `YOBOT_BRIDGE_URL`, `REPLY_RECEIVE_ONLY=false`, `ML_APP_ID`, `ML_SECRET_KEY`, `YOBOT_ML_APP_ID`, `YOBOT_ML_SECRET_KEY`, `TIKA_URL=http://yobot_cw_tika:9998`, `OPENAI_VISION_MODEL=gpt-4o-mini`, `OPENAI_WHISPER_MODEL=whisper-1`, `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` (sin ella los Code nodes no leen `$env` — default de n8n bloquea) |
 | `yobot_cw_yobot-app` | `INTERNAL_API_SECRET=reply_ai_internal_2026` (hardcodeado en los headers `x-internal-secret` de los workflows) + las 7 URLs `N8N_*_WEBHOOK_URL` públicas (§12) |
 | nuevo servicio `yobot_cw_tika` | `apache/tika:latest-full`, redes `easypanel` + `easypanel-yobot_cw`, sin dominio (solo interno) |
 
