@@ -152,4 +152,9 @@ COPY --from=pre-builder /app/.git_sha /app/.git_sha
 
 WORKDIR /app
 
+# Self-healing en swarm: task unhealthy (proceso wedged) => reemplazo automatico.
+# start-period cubre el boot (bundle check + db:migrate) antes de exigir respuesta.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=240s --retries=3 \
+  CMD wget -qO- -T 4 http://127.0.0.1:3000/api || exit 1
+
 EXPOSE 3000
