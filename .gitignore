@@ -105,3 +105,4 @@ CLAUDE.local.md
 local/
 docker-compose.override.yaml
 Procfile.worktree
+.nodeterm/project.json
