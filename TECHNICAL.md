@@ -1,7 +1,7 @@
 ﻿# Chatwoot + Reply-AI — Documentación Técnica Unificada
 
-> **Versión**: Chatwoot 4.17.1 + Reply-AI / Meli  
-> **Última actualización**: 2026-09-01  
+> **Versión**: Chatwoot 4.18.0 + Reply-AI / Meli  
+> **Última actualización**: 2026-10-06  
 > **Propósito**: Referencia completa para agentes IA y desarrolladores.
 
 ---
@@ -891,6 +891,18 @@ Estos archivos NO existen en el upstream de Chatwoot, por lo que no generan conf
 8. Tras el deploy: verificar `/api` (`queue_services` + `data_services` en `ok`), el checklist §22.4 y el smoke post-venta.
 9. **HEALTHCHECK en la imagen** (self-healing): el runtime define `HEALTHCHECK` sobre `/api` (interval 30s, start-period 240s). En swarm, un task con el proceso wedged (threads bloqueados sin CPU, como ocurrió post-4.17.1) se reemplaza automáticamente en ~1-2 min. Nunca usar `docker restart` sobre contenedores de task: genera huérfanos y trae el wedged de vuelta — siempre `docker service update --force <servicio>`.
 10. **`data_services: "failing"` cosmético**: con las conexiones lazy de Rails 7.2, `Base.connection.active?` del healthcheck puede devolver false si el hilo aún no hizo un query real. Las queries funcionan — es un artefacto del endpoint de upstream, corregir en upstream (no tocar).
+
+### 15.2 Actualización a v4.18.0 (2026-10-06)
+
+Merge del tag `v4.18.0` (123 commits, sin commits posteriores en `upstream/master`). Resultado: 4 conflictos resueltos + verify 59/59 ✓.
+
+1. **Conflictos reales**: `db/schema.rb` (resolver → tomar upstream y regenerar con `db:migrate`, que vuelca las 10 tablas custom) + 2 modify/delete donde solo había cambio de permisos locales (`keyboardEventListenerMixins.js` y `public/robots.txt` — upstream los eliminó: fix de keydown leak y robots controller nuevo → aceptar `git rm`). `AGENTS.md`, `.gitignore`, `.env.example` y `es/login.json` auto-merge limpio (las adiciones local/upstream quedan en regiones distintas).
+2. **Migraciones upstream (3, sin colisión con custom)**: `20260811000001_backfill_missing_ai_assignee_types` (solo datos, idempotente), `20260813000000_add_geo_location_to_audits`, `20260831000000_add_provider_name_to_social_channels`. La convención `2099...` sigue funcionando (custom ≤ `20260809000000`).
+3. **Dependencias**: Gemfile/Rails 7.2.3.1/Ruby 3.4.4 sin cambios; solo pnpm (`@chatwoot/prosemirror-schema` 1.4.1→1.4.5). El código está volume-mounted: no hizo falta rebuild de imágenes — `docker compose up -d --force-recreate rails sidekiq vite` basta (los entrypoints corren `bundle install` / `pnpm install --force`).
+4. **Vite frío**: las primeras requests a `/app` tardan ~3 min mientras el entrypoint de vite hace `pnpm install --force` — no es un cuelgue, repetir cuando `VITE ready` aparezca en logs.
+5. **Blindaje §22 / gate nuevo**: v4.18.0 agrega `ChatwootApp.self_hosted_paid?` (`%w[premium enterprise].include?(ChatwootHub.pricing_plan)`). Cubierto por `Custom::ChatwootHub#pricing_plan → 'enterprise'` (verify en runtime: `self_hosted_paid? = true`, `pricing_plan = enterprise`). Los swaps `self_hosted_enterprise? → self_hosted_paid?` en `Enterprise::Account` (captain sync/enable_default_features) son equivalente-con-igual-valor para nosotros.
+6. **`GET /auth/sign_in` → 500 en dev**: `UnsafeRedirectError` porque `.env` local tiene `FRONTEND_URL=https://w1206-app.site` (producción) y el redirect cross-host lo bloquea Rails. **Preexistente** (`def new` y `login_page_url` sin cambios entre tags; en prod el Host coincide con FRONTEND_URL). El flujo real del SPA (`POST /auth/sign_in` → 401 con creds malas) funciona.
+7. **Symlinks `CLAUDE.md` / `.windsurf/rules/chatwoot.md`**: son symlinks a AGENTS.md ilegibles desde Windows sobre `\\wsl.localhost` (git status los marca M fantasma; upstream no los cambió entre tags → no estorban al merge ni al commit).
 
 ---
 

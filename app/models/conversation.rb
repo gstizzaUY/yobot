@@ -4,7 +4,6 @@
 #
 #  id                     :integer          not null, primary key
 #  additional_attributes  :jsonb
-#  ai_assignee_type       :string
 #  agent_last_seen_at     :datetime
 #  ai_assignee_type       :string
 #  assignee_last_seen_at  :datetime
