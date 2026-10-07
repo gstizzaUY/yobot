@@ -45,7 +45,7 @@
         -1568
       ],
       "parameters": {
-        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst trigger = $('Execute Workflow Trigger').first().json.body;\nconst account = $('get_account_details').first().json;\nconst isBridge = account.bridge_enabled === true;\nif (isBridge) {\n  const msg = trigger.message || {};\n  if (!msg.id) throw new Error('Bridge: datos de mensaje incompletos (pendiente forward completo de Yobot)');\n  return { messages: [msg] };\n}\nconst res = await fetch('https://api.mercadolibre.com' + trigger.resource + '?tag=post_sale', { headers: { Authorization: 'Bearer ' + account.access_token } });\nif (!res.ok) throw new Error('ML message fetch: ' + res.status);\nreturn await res.json();"
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst trigger = $('Execute Workflow Trigger').first().json.body;\nconst account = $('get_account_details').first().json;\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nif (isBridge) {\n  const msg = trigger.message || {};\n  if (!msg.id) throw new Error('Bridge: datos de mensaje incompletos (pendiente forward completo de Yobot)');\n  return { messages: [msg] };\n}\nconst res = await fetch('https://api.mercadolibre.com' + (String(trigger.resource || '').startsWith('/') ? trigger.resource : '/messages/' + trigger.resource) + '?tag=post_sale', { headers: { Authorization: 'Bearer ' + account.access_token } });\nif (!res.ok) throw new Error('ML message fetch: ' + res.status);\nreturn await res.json();"
       },
       "typeVersion": 2
     },
@@ -1184,10 +1184,10 @@
               "id": "n1",
               "operator": {
                 "type": "string",
-                "operation": "equals"
+                "operation": "notEquals"
               },
-              "leftValue": "={{ $input.first().json.body.event }}",
-              "rightValue": "bridge_message"
+              "leftValue": "={{ $input.first().json.body._id }}",
+              "rightValue": ""
             }
           ]
         }
@@ -2314,13 +2314,7 @@
             "index": 0
           }
         ],
-        [
-          {
-            "node": "check_idempotency",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "get_account_details": {
