@@ -7,6 +7,9 @@ Rails.application.routes.prepend do
   get  '/signup'             => 'landing#signup',              as: :reply_ai_signup
   post '/signup'             => 'landing#create_account',      as: :signup_process
   get  '/callback'           => 'landing#meli_callback',       as: :callback
+  # Landing de confirmación post-conexión ML (pública: también sirve para
+  # previsualizar/editar el diseño sin completar el OAuth).
+  get  '/bienvenido'         => 'landing#welcome',             as: :reply_ai_welcome
   get  '/dashboard'          => 'landing#dashboard',           as: :reply_ai_dashboard
   get  '/dashboard/status'   => 'landing#dashboard_status',    as: :reply_ai_dashboard_status
   get  '/dashboard/products'    => 'landing#dashboard_products',     as: :reply_ai_dashboard_products

@@ -312,6 +312,7 @@ end
 | GET | `/signup` | `signup` | Formulario de registro |
 | POST | `/signup` | `create_account` | Crea User + Account vía Platform API, crea 2 inboxes ("Pre-venta (MercadoLibre)" y "Post-venta (MercadoLibre)"), redirige a OAuth de ML |
 | GET | `/callback` | `meli_callback` | Callback OAuth2 de ML: guarda tokens, dispara sync de productos y tiendas |
+| GET | `/bienvenido` | `welcome` | Landing de confirmación post-conexión ML (pública; también sirve para previsualizar/editar el diseño sin OAuth) |
 | GET | `/go_to_chats` | `go_to_chats` | SSO al dashboard de Chatwoot |
 
 ### Endpoints del dashboard de configuración
@@ -398,7 +399,7 @@ Resolvers de contexto: `resolve_panel_sale` (venta por cw_conversation_id → di
    - Detecta país del vendedor (`site_id`)
    - Dispara `MeliSyncProductsWorker` (sync de catálogo)
    - Dispara `MeliSyncOfficialStoresWorker` (sync de tiendas)
-   - Redirige a página de bienvenida
+   - Redirige a `/bienvenido` (landing de confirmación pública, `landing/welcome.html.erb`; sin links a la app, solo email de soporte)
 
 ---
 
@@ -660,6 +661,7 @@ GET    /                                    landing#index
 GET    /signup                              landing#signup
 POST   /signup                              landing#create_account
 GET    /callback                            landing#meli_callback
+GET    /bienvenido                          landing#welcome
 GET    /dashboard                           landing#dashboard
 GET    /dashboard/status                    landing#dashboard_status
 GET    /dashboard/products                  landing#dashboard_products
