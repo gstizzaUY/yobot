@@ -401,6 +401,11 @@ Resolvers de contexto: `resolve_panel_sale` (venta por cw_conversation_id → di
    - Dispara `MeliSyncOfficialStoresWorker` (sync de tiendas)
    - Redirige a `/bienvenido` (landing de confirmación pública, `landing/welcome.html.erb`; sin links a la app, solo email de soporte)
 
+### Autenticación del dashboard (2026-10-12)
+
+- `set_account` autentica primero con la cookie `cw_d_session_info` que el SPA guarda (tokens devise_token_auth validados server-side con `valid_token?` + expiración) y usa la sesión Warden como fallback. Antes solo aceptaba Warden, que no existe en logins por token → `/dashboard` redirigía a `/signup`.
+- El logout limpia la sesión Warden vía `Custom::DeviseOverrides::SessionsController#destroy` (`sign_out(:user)`), enganchado con `prepend_mod_with` (el core ya llama el hook). Sin esto, la identidad del flujo signup/OAuth sobrevivía al logout.
+
 ---
 
 ## 7. Workers (Sidekiq)
@@ -465,7 +470,7 @@ end
 
 ## 8. Middleware de UI (InjectCssMiddleware)
 
-`custom/lib/reply_ai/inject_css_middleware.rb` (325 líneas)
+`custom/lib/reply_ai/inject_css_middleware.rb` (~460 líneas)
 
 ### Qué hace
 
@@ -479,6 +484,7 @@ Inyecta CSS y JavaScript en las respuestas HTML del dashboard (`/app/*`).
 | Oculta panel central vacío | Limpia el estado "sin conversaciones" |
 | Oculta sección Campañas | `li:has(a[href*="/campaigns"])` |
 | Oculta Centro de ayuda | `li:has(a[href*="/portals"])` |
+| Oculta sección Llamadas (2026-10-12) | `li.grid:has(a[href*="/calls"])` — los administradores la ven (el gate desactiva el CSS completo) |
 | Oculta sub-items de Ajustes | Solo deja "Respuestas personalizadas" |
 | Oculta items del menú de perfil | Solo deja "Cerrar sesión" |
 | Oculta botón "Redactar nueva conversación" | Botón lápiz |
@@ -489,15 +495,16 @@ Inyecta CSS y JavaScript en las respuestas HTML del dashboard (`/app/*`).
 
 ### JavaScript inyectado
 
-1. **Patch de permisos de Reports**: Agrega `'agent'` a los permisos de la ruta `account_overview_reports` para que agentes vean Reportes.
-2. **Detector de inbox Meli**: `MutationObserver` que agrega clase `reply-ai-meli-inbox` al `<body>` cuando el inbox activo contiene "MercadoLibre".
-3. **Link "Configuración Bot"**: Inyecta un item en el menú de perfil que navega a `/dashboard?account_id=X`. Detecta el `account_id` del Vue store, del dataset del sidebar switcher, o del path.
+1. **Gate de rol (2026-10-12)**: decide en el cliente si el usuario es privilegiado (`SuperAdmin` o `administrator` de la **cuenta activa**) leyendo el Vue store (`getCurrentUser`/`getCurrentRole`) y **desactiva** el `<style>` de restricciones (`style.disabled`). Expone `window.__replyAiIsPrivileged()` para los demás scripts y re-evalúa cada 500 ms (cubre cambios de cuenta sin recarga). Motivo: los logins del SPA no crean sesión Warden (`store: false`), así que el chequeo server-side no puede distinguir el rol.
+2. **Patch de permisos de Reports**: Agrega `'agent'` a los permisos de la ruta `account_overview_reports` para que agentes vean Reportes.
+3. **Detector de inbox Meli**: `MutationObserver` que agrega clase `reply-ai-meli-inbox` al `<body>` cuando la conversación activa pertenece a un inbox que contiene "MercadoLibre" (vía store: `getSelectedChat` → `inboxes/getInbox`; funciona también con un solo inbox). Además oculta el acordeón de Macros (solo usuarios restringidos).
+4. **Link "Configuración Bot"**: Inyecta un item en el menú de perfil que navega a `/dashboard?account_id=X`. Detecta el `account_id` del Vue store, del dataset del sidebar switcher, o del path.
+5. **Banner de mediación**: muestra un banner fijo cuando la conversación activa tiene la label `reclamo-mediacion` (usa `getSelectedChat` + `conversationLabels/getConversationLabels`).
 
 ### Control de acceso
 
-El middleware verifica la sesión Warden para decidir qué inyectar:
-- **SuperAdmins y Admins**: Solo el link "Configuración Bot" (sin restricciones de UI).
-- **Agentes**: CSS completo de restricciones + link de configuración.
+- **Server-side (fast-path)**: `privileged_session?` mira la sesión Warden (`warden.user.user.key`). En la práctica nunca da `true` (el login del SPA usa `store: false`; el SuperAdmin entra con scope `super_admin`), por lo que siempre se inyecta el payload completo.
+- **Client-side (autoritativo, 2026-10-12)**: el gate de rol desactiva el CSS para SuperAdmins y administradores de la cuenta activa. Los agentes mantienen las restricciones; los privilegiados ven la UI completa de Chatwoot.
 
 ---
 

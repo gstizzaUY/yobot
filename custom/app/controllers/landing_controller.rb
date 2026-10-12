@@ -2039,9 +2039,10 @@ class LandingController < ApplicationController
   end
 
   def set_account
-    # Usamos warden directamente: evita que devise_token_auth limpie la sesión
-    # antes de que podamos verificarla
-    user = warden.user(:user)
+    # Cookie del SPA primero (refleja la sesión viva del navegador: los logins
+    # por token no crean sesión Warden). Warden queda como fallback para el
+    # flujo signup/OAuth, que sí la crea.
+    user = user_from_auth_cookie || warden.user(:user)
     unless user
       redirect_to reply_ai_signup_path and return
     end
@@ -2064,6 +2065,22 @@ class LandingController < ApplicationController
     # Fallback: primera cuenta disponible excluyendo las de la cuenta de sistema
     system_account_ids = User.find_by(email: ENV.fetch('SYSTEM_ADMIN_EMAIL', ''))&.account_ids || []
     @account = user.accounts.where.not(id: system_account_ids).first || user.accounts.first
+  end
+
+  # Autentica al usuario desde la cookie cw_d_session_info que el SPA guarda
+  # (JSON con access-token/client/uid de devise_token_auth). La cookie es
+  # JS-readable, pero la validación server-side (hash + expiración) impide forjados.
+  def user_from_auth_cookie
+    raw = cookies['cw_d_session_info']
+    return nil if raw.blank?
+
+    data = JSON.parse(raw)
+    user = User.from_email(data['uid'].to_s)
+    return nil unless user&.valid_token?(data['access-token'].to_s, data['client'].to_s)
+
+    user
+  rescue StandardError
+    nil
   end
 
   def setup_dashboard_vars

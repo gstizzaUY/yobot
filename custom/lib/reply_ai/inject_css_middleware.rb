@@ -24,10 +24,8 @@ module ReplyAi
 
 
         /* ── Ocultar panel central de estado vacío (sin conversaciones) ── */
-        main .flex.flex-col.items-center.justify-center.h-full,
-        section .flex.flex-col.items-center.justify-center.h-full,
-        .conversation-details-wrap + div.flex.flex-col.items-center.justify-center.h-full,
-        .conversation-details-wrap ~ div.flex.flex-col.items-center.justify-center.h-full {
+        /* Root exacto de EmptyState.vue (combinación de clases única) */
+        .flex-1.min-w-0.px-0.flex.flex-col.items-center.justify-center.h-full.bg-n-surface-1 {
           display: none !important;
         }
 
@@ -38,6 +36,11 @@ module ReplyAi
 
         /* ── Ocultar sección completa Centro de ayuda ── */
         li.grid:has(a[href*="/portals"]) {
+          display: none !important;
+        }
+
+        /* ── Ocultar sección "Llamadas" (solo visible para administradores) ── */
+        li.grid:has(a[href*="/calls"]) {
           display: none !important;
         }
 
@@ -54,8 +57,9 @@ module ReplyAi
           display: none !important;
         }
 
-        /* ── Ocultar botón "Redactar nueva conversación" (lápiz junto al buscador) ── */
-        button:has(span.i-lucide-pen-line) {
+        /* ── Ocultar botón "Redactar nueva conversación" (lápiz del sidebar) ── */
+        /* Se excluye el botón "editar filtro" de ChatListHeader (mismo icono) */
+        button:has(span.i-lucide-pen-line):not(#toggleConversationFilterButton) {
           display: none !important;
         }
 
@@ -100,6 +104,49 @@ module ReplyAi
         }
       </style>
 
+      <script id="reply-ai-role-gate">
+        // Decide el rol en el cliente: el SPA conoce al usuario real (el login
+        // por token no crea sesión Warden server-side). Si es SuperAdmin o
+        // administrador de la CUENTA ACTIVA, desactiva las restricciones CSS.
+        (function () {
+          var STYLE_ID = 'reply-ai-custom-css';
+          var privileged = false;
+          var known = false;
+
+          window.__replyAiIsPrivileged = function () { return known && privileged; };
+
+          function getStore() {
+            var appEl = document.getElementById('app');
+            return appEl && appEl.__vue_app__
+              ? appEl.__vue_app__.config.globalProperties.$store
+              : null;
+          }
+
+          function evaluate() {
+            var store = getStore();
+            if (!store) return;
+            var user = store.getters.getCurrentUser;
+            if (!user || !user.id) return;
+            var isPrivileged =
+              user.type === 'SuperAdmin' ||
+              store.getters.getCurrentRole === 'administrator';
+            known = true;
+            if (isPrivileged === privileged) return;
+            privileged = isPrivileged;
+            var style = document.getElementById(STYLE_ID);
+            if (style) style.disabled = privileged;
+            document.documentElement.setAttribute(
+              'data-reply-ai-privileged',
+              String(privileged)
+            );
+          }
+
+          // Re-evalúa al cambiar de cuenta (navegación client-side) sin recargar.
+          setInterval(evaluate, 500);
+          evaluate();
+        })();
+      </script>
+
       <script id="reply-ai-reports-patch">
         // Parchamos el meta de la ruta overview_reports para incluir 'agent'
         // de modo que Chatwoot la muestre en la barra lateral para agentes.
@@ -134,27 +181,52 @@ module ReplyAi
           var MELI_KEYWORD = 'MercadoLibre';
           var BODY_CLASS   = 'reply-ai-meli-inbox';
 
-          function checkInbox() {
-            // InboxName renderiza: .conversation--header--actions span.truncate
-            // con el texto "Pre-venta (MercadoLibre)"
-            var inboxNameEl = document.querySelector(
-              '.conversation--header--actions span.truncate'
-            );
+          function getStore() {
+            var appEl = document.getElementById('app');
+            return appEl && appEl.__vue_app__
+              ? appEl.__vue_app__.config.globalProperties.$store
+              : null;
+          }
 
-            if (inboxNameEl && inboxNameEl.textContent.includes(MELI_KEYWORD)) {
+          function isMeliConversation(store) {
+            try {
+              var conversation = store.getters.getSelectedChat;
+              var inbox = conversation && conversation.inbox_id
+                ? store.getters['inboxes/getInbox'](conversation.inbox_id)
+                : null;
+              return Boolean(inbox && (inbox.name || '').includes(MELI_KEYWORD));
+            } catch (e) {
+              return false;
+            }
+          }
+
+          function checkInbox() {
+            var store = getStore();
+            if (!store) return;
+
+            // Inbox de la conversación activa desde el store (funciona también
+            // con un solo inbox, a diferencia del nombre en el header).
+            if (isMeliConversation(store)) {
               document.body.classList.add(BODY_CLASS);
             } else {
               document.body.classList.remove(BODY_CLASS);
             }
 
             // Ocultar acordeón de Macros detectando el h5 con texto "Macros"
-            // h5 tiene clase text-sm, por eso no usamos closest('.text-sm')
-            // subimos: h5 → .flex.justify-between → button.drag-handle → div.text-sm (AccordionItem) → div (woot-feature-toggle)
+            // (igual en en/es/pt_BR). Solo para usuarios restringidos: los
+            // privilegiados conservan la UI completa.
+            // h5 → button.drag-handle → div.text-sm (AccordionItem) → woot-feature-toggle
+            var restricted = !(window.__replyAiIsPrivileged && window.__replyAiIsPrivileged());
             document.querySelectorAll('.drag-handle h5').forEach(function(h5) {
               if (h5.textContent.trim() === 'Macros') {
                 var btn = h5.closest('button.drag-handle');
                 if (btn && btn.parentElement && btn.parentElement.parentElement) {
-                  btn.parentElement.parentElement.setAttribute('data-reply-ai-hidden', 'macros');
+                  var wrapper = btn.parentElement.parentElement;
+                  if (restricted) {
+                    wrapper.setAttribute('data-reply-ai-hidden', 'macros');
+                  } else {
+                    wrapper.removeAttribute('data-reply-ai-hidden');
+                  }
                 }
               }
             });
@@ -285,7 +357,7 @@ module ReplyAi
 
           function activeConversationLabels(store) {
             try {
-              var conv = store.getters.getSelectedChatConversation;
+              var conv = store.getters.getSelectedChat;
               if (!conv || !conv.id) return [];
               return store.getters['conversationLabels/getConversationLabels'](conv.id) || [];
             } catch (e) {
