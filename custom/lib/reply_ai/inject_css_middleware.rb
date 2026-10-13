@@ -334,10 +334,18 @@ module ReplyAi
             ul.insertBefore(li, logoutWrapper);
           }
 
-          setInterval(modify, 100);
+          // Observer con debounce (evita correr en cada mutación del DOM) +
+          // intervalo de baja frecuencia como red de seguridad.
+          var timer = null;
+          new MutationObserver(function () {
+            if (timer) return;
+            timer = setTimeout(function () {
+              timer = null;
+              modify();
+            }, 150);
+          }).observe(document.documentElement, { childList: true, subtree: true });
 
-          new MutationObserver(function () { modify(); })
-            .observe(document.documentElement, { childList: true, subtree: true });
+          setInterval(modify, 1000);
 
           modify();
         })();
@@ -396,8 +404,17 @@ module ReplyAi
           }
 
           setInterval(updateBanner, 1500);
-          new MutationObserver(updateBanner)
-            .observe(document.documentElement, { childList: true, subtree: true });
+
+          // Observer con debounce (evita correr en cada mutación del DOM)
+          var timer = null;
+          new MutationObserver(function () {
+            if (timer) return;
+            timer = setTimeout(function () {
+              timer = null;
+              updateBanner();
+            }, 150);
+          }).observe(document.documentElement, { childList: true, subtree: true });
+
           updateBanner();
         })();
       </script>
@@ -410,9 +427,10 @@ module ReplyAi
     def call(env)
       status, headers, body = @app.call(env)
 
-      # Solo intervenir en rutas del dashboard de Chatwoot
+      # Solo intervenir en rutas del dashboard de Chatwoot; el login no necesita nada
       path = env['PATH_INFO'].to_s
       return [status, headers, body] unless path.start_with?('/app')
+      return [status, headers, body] if path == '/app/login'
 
       content_type = headers['Content-Type'] || headers['content-type'] || ''
       return [status, headers, body] unless content_type.include?('text/html')
@@ -423,40 +441,12 @@ module ReplyAi
       body.close if body.respond_to?(:close)
 
       if full_body.include?('</head>')
-        if privileged_session?(env)
-          # Admins y SuperAdmins: solo inyectar el link de Configuración Bot
-          full_body.sub!('</head>', "#{CONFIG_LINK_JS}</head>")
-        else
-          # Agentes: CSS de restricciones + todos los scripts (incluye el link)
-          full_body.sub!('</head>', "#{CUSTOM_CSS}#{CONFIG_LINK_JS}</head>")
-        end
+        # El rol se decide client-side (role gate): se inyecta siempre el payload completo
+        full_body.sub!('</head>', "#{CUSTOM_CSS}#{CONFIG_LINK_JS}</head>")
         headers['Content-Length'] = full_body.bytesize.to_s
       end
 
       [status, headers, [full_body]]
-    end
-
-    private
-
-    # Devuelve true si el usuario es SuperAdmin de plataforma O administrador de la cuenta.
-    # En ambos casos se muestra el UI completo de Chatwoot sin restricciones.
-    def privileged_session?(env)
-      session = env['rack.session'] || {}
-
-      warden_key = session['warden.user.user.key']
-      return false unless warden_key.is_a?(Array)
-
-      user_id = warden_key.dig(0, 0)
-      return false unless user_id
-
-      # SuperAdmin de plataforma: siempre sin restricciones
-      return true if User.where(id: user_id, type: 'SuperAdmin').exists?
-
-      # Administrador de cualquier cuenta: sin restricciones
-      # No dependemos del path porque en la carga inicial puede ser solo /app
-      AccountUser.where(user_id: user_id, role: 'administrator').exists?
-    rescue StandardError
-      false
     end
   end
 end

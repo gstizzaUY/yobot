@@ -148,7 +148,6 @@ custom/
 │   └── views/landing/
 │       ├── index.html.erb
 │       ├── signup.html.erb
-│       ├── setup_meli.html.erb
 │       ├── meli_error.html.erb
 │       ├── welcome.html.erb
 │       ├── dashboard.html.erb             (~2900 líneas; tabs Pre-Venta/Post-Venta/Informes)
@@ -157,7 +156,6 @@ custom/
 │       ├── claim_panel.html.erb           (Dashboard App Reclamo ML, ficha + timeline)
 │       ├── sale_panel.html.erb            (Dashboard App Venta ML, 2026-08-08)
 │       ├── product_panel.html.erb         (Dashboard App Producto ML, ficha de producto 2026-08-09)
-│       ├── auth_sync.html.erb
 │       ├── _products_table.html.erb       (213 líneas)
 │       ├── _doc_card.html.erb             (102 líneas)
 │       ├── _doc_row.html.erb
@@ -166,7 +164,7 @@ custom/
 ├── lib/
 │   ├── custom.rb                          ← module Custom; end
 │   └── reply_ai/
-│       ├── inject_css_middleware.rb       (325 líneas)
+│       ├── inject_css_middleware.rb       (392 líneas)
 │       ├── token_refresh_worker.rb        (38 líneas)
 │       ├── meli_sync_products_worker.rb   (119 líneas)
 │       ├── meli_sync_official_stores_worker.rb (42 líneas)
@@ -490,7 +488,7 @@ end
 
 ## 8. Middleware de UI (InjectCssMiddleware)
 
-`custom/lib/reply_ai/inject_css_middleware.rb` (~460 líneas)
+`custom/lib/reply_ai/inject_css_middleware.rb` (~390 líneas)
 
 ### Qué hace
 
@@ -523,8 +521,8 @@ Inyecta CSS y JavaScript en las respuestas HTML del dashboard (`/app/*`).
 
 ### Control de acceso
 
-- **Server-side (fast-path)**: `privileged_session?` mira la sesión Warden (`warden.user.user.key`). En la práctica nunca da `true` (el login del SPA usa `store: false`; el SuperAdmin entra con scope `super_admin`), por lo que siempre se inyecta el payload completo.
-- **Client-side (autoritativo, 2026-10-12)**: el gate de rol desactiva el CSS para SuperAdmins y administradores de la cuenta activa. Los agentes mantienen las restricciones; los privilegiados ven la UI completa de Chatwoot.
+- **Client-side (autoritativo)**: el gate de rol desactiva el CSS para SuperAdmins y administradores de la cuenta activa. Los agentes mantienen las restricciones; los privilegiados ven la UI completa de Chatwoot.
+- El middleware inyecta **siempre el payload completo** y **saltea `/app/login`** (2026-10-13: se eliminó el chequeo server-side de la sesión Warden —`privileged_session?`— que nunca aplicaba, y se agregaron debounce 150 ms en los observers de config-link/banner + intervalo de config-link a 1 s).
 
 ---
 
@@ -534,7 +532,7 @@ Inyecta CSS y JavaScript en las respuestas HTML del dashboard (`/app/*`).
 Registra `custom/` en Zeitwerk y configura vistas. Ver sección 14.
 
 ### 9.2 `reply-ai_routes.rb`
-Define 29 rutas prependidas al router de Rails. Ver sección 12.
+Define las rutas custom prependidas al router de Rails. Ver sección 12.
 
 ### 9.3 `reply_ai_account_associations.rb`
 Extiende `Account` con `has_many` para los 5 modelos custom.
