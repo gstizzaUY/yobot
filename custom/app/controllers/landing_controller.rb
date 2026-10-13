@@ -72,65 +72,15 @@ class LandingController < ApplicationController
       real_user_token = real_user.access_token&.token
       setup_account_channels(account, real_user.id, real_user_token) if real_user_token
 
-      # 6. Degradar al usuario real a agente (el setup ya está completo)
-      RestClient.put(
-        "#{internal_base}/api/v1/accounts/#{account.id}/agents/#{user_data['id']}",
-        { agent: { role: 'agent' } }.to_json,
-        { api_access_token: real_user_token, content_type: :json, accept: :json }
-      ) rescue nil
+      # 6. Degradar al vendedor a agente y asociar los usuarios de reply-AI
+      # (shadow SuperAdmin + agente común), igual que en las cuentas bridge
+      setup_account_users(account, real_user, real_user_token)
 
-      # 7. Asociar el shadow user a la nueva cuenta como administrador
-      shadow_email = ENV.fetch('SYSTEM_ADMIN_EMAIL')
-      Rails.logger.info "[DEBUG] SYSTEM_ADMIN_EMAIL desde ENV: #{shadow_email}"
-      shadow_user = User.find_by(email: shadow_email)
-      if shadow_user
-        Rails.logger.info "[DEBUG] Shadow user encontrado: id=#{shadow_user.id}, email=#{shadow_user.email}"
-        RestClient.post(
-          "#{internal_base}/platform/api/v1/accounts/#{account_data['id']}/account_users",
-          { user_id: shadow_user.id, role: 'administrator' }.to_json,
-          { 'api_access_token' => platform_token, content_type: :json, accept: :json }
-        )
-      else
-        Rails.logger.warn "[DEBUG] Shadow user NO encontrado con email: #{shadow_email}"
-      end
-
-      # 7.5. Agregar usuario agente común reply-ai a la nueva cuenta
-      reply_agent = ensure_reply_agent_user
-      if reply_agent
-        begin
-          # Vincular a la cuenta como agente vía Platform API (igual que el shadow user en el paso 7)
-          RestClient.post(
-            "#{internal_base}/platform/api/v1/accounts/#{account_data['id']}/account_users",
-            { user_id: reply_agent.id, role: 'agent' }.to_json,
-            { 'api_access_token' => platform_token, content_type: :json, accept: :json }
-          ) rescue nil
-          # Agregar a inboxes (AR additive: no reemplaza miembros existentes)
-          account.inboxes.each do |inbox|
-            InboxMember.find_or_create_by!(user_id: reply_agent.id, inbox_id: inbox.id)
-          end
-          # Agregar a teams vía API usando el token del shadow_user (ya es admin de esta cuenta)
-          shadow_token = User.find_by(email: ENV.fetch('SYSTEM_ADMIN_EMAIL', ''))&.access_token&.token
-          account.teams.each do |team|
-            if shadow_token
-              RestClient.post(
-                "#{internal_base}/api/v1/accounts/#{account.id}/teams/#{team.id}/team_members",
-                { user_ids: [reply_agent.id] }.to_json,
-                { api_access_token: shadow_token, content_type: :json, accept: :json }
-              ) rescue nil
-            else
-              TeamMember.find_or_create_by!(user_id: reply_agent.id, team_id: team.id)
-            end
-          end
-        rescue StandardError => e
-          Rails.logger.error "Error adding reply agent to account #{account.id}: #{e.message}"
-        end
-      end
-
-      # 8. Iniciar sesión Rails vía Devise (persiste durante el flujo ML → callback;
+      # 7. Iniciar sesión Rails vía Devise (persiste durante el flujo ML → callback;
       # el vendedor no usa la app después de la confirmación)
       sign_in(User.find(user_data['id']))
 
-      # 9. Redirigir directamente a ML Auth (state = account_id para el callback)
+      # 8. Redirigir directamente a ML Auth (state = account_id para el callback)
       redirect_to ml_auth_url(account.id), allow_other_host: true
     rescue => e
       render html: "Error al crear la cuenta: #{e.message}. <a href='/signup'>Reintentar</a>".html_safe, status: 500
@@ -828,6 +778,8 @@ class LandingController < ApplicationController
     real_user_token = real_user.access_token&.token
     # Misma infraestructura que las cuentas nativas: equipos, inboxes, labels y webhooks
     setup_account_channels(account, real_user.id, real_user_token) if real_user_token
+    # Mismos usuarios que las cuentas nativas: vendedor a agente + shadow SuperAdmin + agente común
+    setup_account_users(account, real_user, real_user_token)
 
     MeliCredential.create!(
       account: account,
@@ -2271,6 +2223,64 @@ class LandingController < ApplicationController
       "&client_id=#{ENV.fetch('ML_APP_ID')}" \
       "&redirect_uri=#{ENV.fetch('ML_REDIRECT_URI')}" \
       "&state=#{state}"
+  end
+
+  # Degrada al vendedor a agente y asocia los usuarios de reply-AI a la cuenta:
+  # shadow SuperAdmin como administrator y agente común como agent (miembro de
+  # inboxes y equipos). Compartido entre create_account (nativas) y
+  # bridge_register (bridge) para que ambas tengan los mismos usuarios y comportamiento.
+  def setup_account_users(account, real_user, real_user_token)
+    # El vendedor no usa la app: queda como agente (el setup ya está completo)
+    RestClient.put(
+      "#{internal_base}/api/v1/accounts/#{account.id}/agents/#{real_user.id}",
+      { agent: { role: 'agent' } }.to_json,
+      { api_access_token: real_user_token, content_type: :json, accept: :json }
+    ) rescue nil
+
+    # Shadow SuperAdmin (desarrollador/soporte) como administrator
+    platform_token = ENV.fetch('CHATWOOT_PLATFORM_TOKEN')
+    shadow_email = ENV.fetch('SYSTEM_ADMIN_EMAIL')
+    shadow_user = User.find_by(email: shadow_email)
+    if shadow_user
+      RestClient.post(
+        "#{internal_base}/platform/api/v1/accounts/#{account.id}/account_users",
+        { user_id: shadow_user.id, role: 'administrator' }.to_json,
+        { 'api_access_token' => platform_token, content_type: :json, accept: :json }
+      )
+    else
+      Rails.logger.warn "Shadow user NO encontrado con email: #{shadow_email}"
+    end
+
+    # Agente común reply-AI (operador real de la app)
+    reply_agent = ensure_reply_agent_user
+    return unless reply_agent
+
+    begin
+      RestClient.post(
+        "#{internal_base}/platform/api/v1/accounts/#{account.id}/account_users",
+        { user_id: reply_agent.id, role: 'agent' }.to_json,
+        { 'api_access_token' => platform_token, content_type: :json, accept: :json }
+      ) rescue nil
+      # Inboxes (additive: no reemplaza miembros existentes)
+      account.inboxes.each do |inbox|
+        InboxMember.find_or_create_by!(user_id: reply_agent.id, inbox_id: inbox.id)
+      end
+      # Equipos vía API con el token del shadow (admin de la cuenta)
+      shadow_token = shadow_user&.access_token&.token
+      account.teams.each do |team|
+        if shadow_token
+          RestClient.post(
+            "#{internal_base}/api/v1/accounts/#{account.id}/teams/#{team.id}/team_members",
+            { user_ids: [reply_agent.id] }.to_json,
+            { api_access_token: shadow_token, content_type: :json, accept: :json }
+          ) rescue nil
+        else
+          TeamMember.find_or_create_by!(user_id: reply_agent.id, team_id: team.id)
+        end
+      end
+    rescue StandardError => e
+      Rails.logger.error "Error adding reply agent to account #{account.id}: #{e.message}"
+    end
   end
 
   # Crea la infraestructura de canales de una cuenta nueva (nativa o bridge):
