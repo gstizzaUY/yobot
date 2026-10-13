@@ -126,7 +126,8 @@ class LandingController < ApplicationController
         end
       end
 
-      # 8. Iniciar sesión Rails vía Devise (persiste durante el flujo ML → callback → dashboard)
+      # 8. Iniciar sesión Rails vía Devise (persiste durante el flujo ML → callback;
+      # el vendedor no usa la app después de la confirmación)
       sign_in(User.find(user_data['id']))
 
       # 9. Redirigir directamente a ML Auth (state = account_id para el callback)
@@ -188,12 +189,9 @@ class LandingController < ApplicationController
       # Actualizar locale y custom_attributes juntos con update_columns (bypasea validaciones de limits)
       @account.update_columns(locale: locale, custom_attributes: attrs)
 
-      # Autenticar al usuario y hacer sign_in para persistir la sesión
-      user = @account.users.where.not(email: ENV.fetch('SYSTEM_ADMIN_EMAIL')).first
-      sign_in(:user, user) if user
-
-      # Redirigir a la landing de confirmación. La sesión Devise ya quedó
-      # persistida por sign_in y el destino es público (no la toca).
+      # No re-firmamos sesión acá: la del vendedor ya quedó creada en
+      # create_account y no debe quedar con la identidad de otro usuario.
+      # El vendedor no usa la app: solo ve la confirmación (página pública).
       redirect_to reply_ai_welcome_path
     rescue => e
       render html: "Error vinculando MercadoLibre: #{e.message}".html_safe, status: 500
@@ -291,7 +289,7 @@ class LandingController < ApplicationController
       redirect_to reply_ai_signup_path and return
     end
 
-    user = account.users.where.not(email: ENV.fetch('SYSTEM_ADMIN_EMAIL')).first
+    user = go_to_chats_user(account)
     unless user
       redirect_to reply_ai_signup_path and return
     end
@@ -1242,6 +1240,7 @@ class LandingController < ApplicationController
   def claims_index
     @claims = @account.meli_claims.order(updated_at: :desc).limit(200)
     @claims_pendientes = @account.meli_claims.pendientes.count
+    @magic_link_to_chats = go_to_chats_path(t: signed_account_token(@account.id))
     render 'claims'
   end
 
@@ -2082,6 +2081,18 @@ class LandingController < ApplicationController
     user
   rescue StandardError
     nil
+  end
+
+  # Usuario para el SSO de "Ir a mis chats": el usuario actual del dashboard
+  # (agente común o shadow, resuelto por cookie/Warden) si tiene acceso a la
+  # cuenta. Fallback: el agente común de reply-AI (operador de la app); para
+  # cuentas bridge (sin agente común) queda el único usuario no-shadow.
+  def go_to_chats_user(account)
+    current = user_from_auth_cookie || warden.user(:user)
+    return current if current && (current.type == 'SuperAdmin' || current.account_ids.include?(account.id))
+
+    account.users.find_by(email: ENV.fetch('REPLY_AGENT_EMAIL', 'usuario-reply@replylatam.com')) ||
+      account.users.where.not(email: ENV.fetch('SYSTEM_ADMIN_EMAIL')).first
   end
 
   def setup_dashboard_vars
