@@ -397,9 +397,10 @@ Implicancias de diseño:
     - Degrada al vendedor a agente (no usa la app); asocia shadow SuperAdmin + agente común reply-AI (el operador real)
    - Inicia sesión Devise y redirige a OAuth de MercadoLibre
 
-> **`bridge_register` usa la misma infraestructura** (2026-08-04): `setup_account_channels` +
-> password que cumple las reglas de complejidad de Chatwoot. Antes no creaba equipos ni labels
-> y no seteaba auto-resolve.
+> **`bridge_register` usa la misma infraestructura** (2026-08-04; usuarios alineados 2026-10-13):
+> `setup_account_channels` + `setup_account_users` (degrada al vendedor a agente y asocia shadow
+> SuperAdmin + agente común, igual que las cuentas nativas) + password que cumple las reglas de
+> complejidad de Chatwoot. Antes no creaba equipos ni labels y no seteaba auto-resolve.
 > **Auto-cierre**: ya no se configura desde Reply (se eliminó la card del dashboard y el default
 > en las cuentas). El vendedor lo activa nativamente en Chatwoot (Settings → Conversation Workflows)
 > si lo desea. La conversación del reclamo se cierra a mano.
