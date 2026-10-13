@@ -2,41 +2,45 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/brand-assets/logo_reply-ai_thumbnail.svg">
+    <title>No pudimos vincular tu cuenta — reply-AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <title>Error de Vinculación - Reply-AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
-<body class="bg-gray-50 flex items-center justify-center min-h-screen p-6">
-    <div class="max-w-md w-full bg-white rounded-3xl shadow-xl p-10 text-center border border-red-50">
-        <div class="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">⚠️</div>
-        
-        <% if @session_alive %>
-            <h1 class="text-2xl font-black text-gray-800 mb-4">La vinculación falló</h1>
-            <p class="text-gray-600 mb-8">
-                Parece que no pudimos conectar con tu cuenta de MercadoLibre. No te preocupes, tus datos de registro están a salvo.
-            </p>
-            
-            <% 
-               # Re-generamos la URL de ML usando el mismo state para no perder el registro
-               retry_url = "https://auth.mercadolibre.com/authorization?response_type=code&client_id=#{ENV['ML_APP_ID']}&redirect_uri=#{ENV['ML_REDIRECT_URI']}&state=#{@state}" 
-            %>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
+    <!-- Navegación -->
+    <nav class="max-w-7xl mx-auto p-6 flex justify-between items-center w-full">
+        <div class="flex items-center gap-2">
+            <img src="/brand-assets/logo_reply-ai.png" alt="reply-AI" class="h-10">
+        </div>
+    </nav>
 
-            <div class="space-y-4">
-                <a href="<%= retry_url %>" class="block w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition shadow-lg">
-                    Intentar vincular nuevamente
-                </a>
-                <a href="/signup" class="block text-sm text-gray-400 hover:text-gray-600 transition">
-                    Volver al inicio
-                </a>
-            </div>
-        <% else %>
-            <h1 class="text-2xl font-black text-gray-800 mb-4">Sesión expirada</h1>
+    <!-- Error de vinculación -->
+    <main class="flex-1 flex items-center justify-center px-4">
+        <div class="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-md border border-gray-100 text-center">
+            <div class="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">⚠️</div>
+            <h1 class="text-3xl font-black text-gray-800 mb-4">No pudimos vincular tu cuenta</h1>
             <p class="text-gray-600 mb-8">
-                El proceso de registro tardó demasiado por seguridad. Por favor, vuelve a completar el formulario.
+                Hubo un problema al conectar con tu cuenta de MercadoLibre. No te preocupes:
+                tus datos de registro están a salvo y podés intentarlo de nuevo.
             </p>
-            <a href="/signup" class="block w-full bg-gray-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition">
-                Ir al formulario de registro
+            <a href="<%= @retry_url %>"
+               class="block w-full bg-orange-600 text-white py-4 rounded-2xl font-black text-lg hover:bg-orange-700 transition shadow-lg shadow-orange-100 mb-6">
+                Reintentar vinculación
             </a>
-        <% end %>
-    </div>
+            <div class="text-sm text-gray-500">
+                ¿Necesitás ayuda? Escribinos a
+                <a href="mailto:soporte@replylatam.com" class="text-orange-600 underline font-semibold">soporte@replylatam.com</a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center py-10 text-gray-400 text-sm border-t border-gray-100">
+        &copy; 2026 reply-AI. Todos los derechos reservados.
+    </footer>
 </body>
 </html>

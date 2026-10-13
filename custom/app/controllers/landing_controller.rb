@@ -25,13 +25,22 @@ class LandingController < ApplicationController
 
   # PASO 1: Crear usuario y cuenta vía Platform API → sesión Devise → ML Auth
   def create_account
-    # Validación: ¿ya existe un usuario con este email asociado a una cuenta?
     email = params[:email].to_s.downcase.strip
+
+    # Validación local (boundary): evita llegar a la Platform API con datos inválidos
+    if params[:user_name].blank? || params[:account_name].blank?
+      return render_signup_error('Completá tu nombre y el nombre de la empresa.')
+    end
+    return render_signup_error('Ingresá un correo electrónico válido.') unless email.match?(Devise.email_regexp)
+
+    unless Devise.password_length.include?(params[:password].to_s.length)
+      return render_signup_error("La contraseña debe tener entre #{Devise.password_length.min} y #{Devise.password_length.max} caracteres.")
+    end
+
+    # Validación: ¿ya existe un usuario con este email asociado a una cuenta?
     user = User.find_by(email: email)
     if user && user.accounts.exists?
-      flash[:alert] = 'Ya existe una cuenta registrada con este correo electrónico. Por favor, inicia sesión o recupera tu acceso.'
-      redirect_to '/signup'
-      return
+      return render_signup_error('Ya existe una cuenta registrada con este correo electrónico. Por favor, inicia sesión o recupera tu acceso.')
     end
 
     platform_token = ENV.fetch('CHATWOOT_PLATFORM_TOKEN')
@@ -156,7 +165,9 @@ class LandingController < ApplicationController
       # El vendedor no usa la app: solo ve la confirmación (página pública).
       redirect_to reply_ai_welcome_path
     rescue => e
-      render html: "Error vinculando MercadoLibre: #{e.message}".html_safe, status: 500
+      Rails.logger.error("meli_callback error: #{e.message}")
+      @retry_url = ml_auth_url(@account.id)
+      render 'landing/meli_error', status: :internal_server_error
     end
   end
 
@@ -2051,6 +2062,12 @@ class LandingController < ApplicationController
 
     account.users.find_by(email: ENV.fetch('REPLY_AGENT_EMAIL', 'usuario-reply@replylatam.com')) ||
       account.users.where.not(email: ENV.fetch('SYSTEM_ADMIN_EMAIL')).first
+  end
+
+  # Error de validación del signup: re-renderiza el formulario con 422 y mensaje claro
+  def render_signup_error(message)
+    flash.now[:alert] = message
+    render :signup, status: :unprocessable_entity
   end
 
   def setup_dashboard_vars

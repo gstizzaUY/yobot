@@ -382,7 +382,7 @@ Implicancias de diseño:
 
 ### Flujo de signup
 
-1. Usuario completa formulario en `/signup` (name, email, password, account_name)
+1. Usuario completa formulario en `/signup` (name, email, password, account_name). Validación local (2026-10-13): presencia de nombre/empresa, email (`Devise.email_regexp`) y password `6..128`; los errores re-renderizan el formulario con **422** + flash (incluido el email duplicado)
 2. `create_account`:
    - Crea User vía `POST /platform/api/v1/users`
    - Crea Account vía `POST /platform/api/v1/accounts`
@@ -419,6 +419,7 @@ Implicancias de diseño:
    - Dispara `MeliSyncOfficialStoresWorker` (sync de tiendas)
    - Redirige a `/bienvenido` (landing de confirmación pública, `landing/welcome.html.erb`; sin links a la app, solo email de soporte)
    - No re-firma sesión: la del vendedor ya quedó creada en `create_account` y no se pisa con otro usuario (el vendedor no usa la app después de la confirmación)
+   - Si falla el intercambio/setup → `landing/meli_error`: página con botón "Reintentar vinculación" (re-genera `ml_auth_url` del mismo `account`) + email de soporte (2026-10-13)
 
 ### Autenticación del dashboard (2026-10-12)
 
