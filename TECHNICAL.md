@@ -313,7 +313,7 @@ end
 | POST | `/signup` | `create_account` | Crea User + Account vía Platform API, crea 2 inboxes ("Pre-venta (MercadoLibre)" y "Post-venta (MercadoLibre)"), redirige a OAuth de ML |
 | GET | `/callback` | `meli_callback` | Callback OAuth2 de ML: guarda tokens, dispara sync de productos y tiendas |
 | GET | `/bienvenido` | `welcome` | Landing de confirmación post-conexión ML (pública; también sirve para previsualizar/editar el diseño sin OAuth) |
-| GET | `/go_to_chats` | `go_to_chats` | SSO al dashboard de Chatwoot |
+| GET | `/go_to_chats` | `go_to_chats` | SSO a Chatwoot: loguea al usuario actual del dashboard (agente común/shadow) si tiene acceso a la cuenta; fallback: agente común. Valida token firmado `t` |
 
 ### Endpoints del dashboard de configuración
 
@@ -365,6 +365,21 @@ end
 
 Resolvers de contexto: `resolve_panel_sale` (venta por cw_conversation_id → display_id → pack_id → sale_id) y `resolve_panel_claim` (claim por cw_conversation_id → contact_inbox.source_id → conversación). Ver §21.
 
+### Modelo de usuarios por cuenta (2026-10-13)
+
+Tres usuarios por cuenta, con roles de negocio distintos:
+
+| Usuario | Email | Tipo / rol | Rol de negocio |
+|---------|-------|-----------|----------------|
+| **Vendedor** (owner) | el del formulario | normal, `agent` | Dueño de la cuenta de MercadoLibre. Conecta ML desde `/signup`, llega a la confirmación (`/bienvenido`) y **no usa la app**. |
+| **Agente común** | `usuario-reply@replylatam.com` (`REPLY_AGENT_EMAIL`) | normal, `agent` en todas las cuentas | Agente de la agencia reply-AI. **Es el usuario real de la aplicación**: configura el bot por cuenta (dashboard Reply-AI) y atiende conversaciones en Chatwoot. Miembro de **todas** las cuentas por diseño. |
+| **Shadow** | `admin-reply@replylatam.com` (`SYSTEM_ADMIN_EMAIL`) | `SuperAdmin`, `administrator` de todas las cuentas | Usuario del desarrollador: acceso global para monitoreo y soporte. |
+
+Implicancias de diseño:
+- Que el agente común vea todas las cuentas es **intencional** (gestiona todos los vendedores), no un leak cross-tenant.
+- El "Ir a mis chats" (`go_to_chats`) loguea al **usuario actual del dashboard** (agente común o shadow, resuelto por cookie/Warden) si tiene acceso a la cuenta; fallback: agente común (2026-10-13).
+- El vendedor no necesita sesión post-confirmación; su sesión no debe quedar con la identidad de otro usuario.
+
 ### Flujo de signup
 
 1. Usuario completa formulario en `/signup` (name, email, password, account_name)
@@ -379,7 +394,7 @@ Resolvers de contexto: `resolve_panel_sale` (venta por cw_conversation_id → di
      - Crea **14 labels**: las 9 de IA/post-venta (`esperando_respuesta_manual`, `esperando_tiempo_retraso_programado`, `procesando_con_ia`, `respondida_con_ia`, `respondida_manualmente`, `bot-procesando`, `atencion-humana`, `atencion-prioritaria`, `mensajeria-bloqueada`) + **5 de reclamos** (`reclamo-abierto`, `reclamo-mediacion`, `reclamo-cerrado`, `reclamo-pendiente-accion`, `reclamo-derivado`)
      - Crea 4 webhooks para integración con n8n (Salida Manual, Post-Venta IA, Post-Venta Salida, **Reclamos Salida**)
      - Registra las **3 Dashboard Apps**: **"Reclamo ML"** (`/dashboard/claim-panel?conversation_id={{conversation.id}}`), **"Venta ML"** (`/dashboard/sale-panel?conversation_id={{conversation.id}}`) y **"Producto ML"** (`/dashboard/product-panel?conversation_id={{conversation.id}}`) — ver §21
-    - Degrada al usuario real a agente; asocia shadow user + usuario agente común
+    - Degrada al vendedor a agente (no usa la app); asocia shadow SuperAdmin + agente común reply-AI (el operador real)
    - Inicia sesión Devise y redirige a OAuth de MercadoLibre
 
 > **`bridge_register` usa la misma infraestructura** (2026-08-04): `setup_account_channels` +
@@ -401,6 +416,7 @@ Resolvers de contexto: `resolve_panel_sale` (venta por cw_conversation_id → di
    - Dispara `MeliSyncProductsWorker` (sync de catálogo)
    - Dispara `MeliSyncOfficialStoresWorker` (sync de tiendas)
    - Redirige a `/bienvenido` (landing de confirmación pública, `landing/welcome.html.erb`; sin links a la app, solo email de soporte)
+   - No re-firma sesión: la del vendedor ya quedó creada en `create_account` y no se pisa con otro usuario (el vendedor no usa la app después de la confirmación)
 
 ### Autenticación del dashboard (2026-10-12)
 
@@ -777,7 +793,7 @@ GET    /dashboard/product-panel/data        landing#product_panel_data
 | `OPENAI_WHISPER_MODEL` | Modelo de transcripción de audio (default `whisper-1`, Fase 1) |
 | `REPLY_RECEIVE_ONLY` | **Modo recepción solamente** (`true`/`false`, ver §19): habilita el gate de testing; las cuentas marcadas `receive_only` reciben/ingestan pero no envían a ML/Yobot. Debe estar en `.env` (rails la lee vía `env_file`) y en `docker-compose.yaml` para `n8n-main` y `n8n-worker` (n8n no tiene `env_file` — la var se pasa explícita con default `false`) |
 | `INTERNAL_API_SECRET` | Secret para los endpoints internos de n8n (`x-internal-secret`: `/rag/search`, `/rag/pv_search`, `/bot_active`, `/conversation_ai_gate`) |
-| `REPLY_AGENT_EMAIL` / `REPLY_AGENT_NAME` / `REPLY_AGENT_PASSWORD` | Usuario agente común reply-ai (creado en signup) |
+| `REPLY_AGENT_EMAIL` / `REPLY_AGENT_NAME` / `REPLY_AGENT_PASSWORD` | Agente de la agencia reply-AI — **usuario real de la app** (creado en signup, miembro de todas las cuentas) |
 | `BRIDGE_SECRET` / `YOBOT_BRIDGE_URL` | Bridge Yobot — **requeridas para el bridge** (2026-08-05). Rails las lee de `.env` (constante `BridgeAuth::BRIDGE_SECRET` al boot; cambiarlas requiere recrear el contenedor). n8n las lee de docker-compose (`n8n-main` + `n8n-worker`). `YOBOT_BRIDGE_URL` vacía → `BridgeApi` degrada con error claro (`bridge_not_configured`) |
 | `YOBOT_ML_APP_ID` / `YOBOT_ML_SECRET_KEY` | Credenciales de la **app de ML de Yobot** — refresh directo a ML de los usuarios **MIGRADOS** (perfil §18.9, implementado 2026-08-07): `TokenRefreshWorker` refresca el token del seller con estas credenciales + su `refresh_token` (el token lo emitió la app de Yobot; solo esa app puede refrescarlo). Verificado en el piloto (cuenta 50) |
 | `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` | **Migración RAG desde Yobot** (§18.10, 2026-08-08): URL del proyecto Supabase de Yobot (`https://pwooibyvhlimuhtgtpsu.supabase.co`) + service role key. `YobotRagMigrator` lee los chunks (`{ml_user_id}` pre / `pv_{ml_user_id}` post) vía REST y los importa a Reply. Si faltan, el worker falla con error claro |
