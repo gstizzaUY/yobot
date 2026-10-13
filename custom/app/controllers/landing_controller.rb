@@ -239,7 +239,7 @@ class LandingController < ApplicationController
     render partial: 'products_table', locals: { rag_partial: 'pv_doc_row', tab_param: 'pv-prods' }, layout: false
   end
 
-  # PASO 4: "Ir a mis chats" — verifica token firmado, obtiene SSO token vía Platform API y redirige a Chatwoot ya logueado
+  # PASO 4: "Ir a mis chats" — verifica token firmado, genera el SSO link y redirige a Chatwoot ya logueado
   def go_to_chats
     account_id = verify_account_token(params[:t])
     unless account_id
@@ -256,12 +256,7 @@ class LandingController < ApplicationController
       redirect_to reply_ai_signup_path and return
     end
 
-    login_res  = RestClient.get(
-      "#{internal_base}/platform/api/v1/users/#{user.id}/login",
-      { 'api_access_token' => ENV.fetch('CHATWOOT_PLATFORM_TOKEN'), accept: :json }
-    )
-    login_data = JSON.parse(login_res.body)
-    sso_params = URI.decode_www_form(URI.parse(login_data['url']).query).to_h
+    sso_params = URI.decode_www_form(URI.parse(user.generate_sso_link).query).to_h
     target     = ERB::Util.url_encode("/app/accounts/#{account.id}/conversations")
 
     redirect_to "#{public_base}/app/login?#{sso_params.to_query}&redirect_url=#{target}", allow_other_host: true
@@ -2247,48 +2242,24 @@ class LandingController < ApplicationController
     AccountUser.find_by!(account: account, user: real_user).update!(role: 'agent')
 
     # Shadow SuperAdmin (desarrollador/soporte) como administrator
-    platform_token = ENV.fetch('CHATWOOT_PLATFORM_TOKEN')
-    shadow_email = ENV.fetch('SYSTEM_ADMIN_EMAIL')
-    shadow_user = User.find_by(email: shadow_email)
+    shadow_user = User.find_by(email: ENV.fetch('SYSTEM_ADMIN_EMAIL'))
     if shadow_user
-      RestClient.post(
-        "#{internal_base}/platform/api/v1/accounts/#{account.id}/account_users",
-        { user_id: shadow_user.id, role: 'administrator' }.to_json,
-        { 'api_access_token' => platform_token, content_type: :json, accept: :json }
-      )
+      account.account_users.find_or_initialize_by(user_id: shadow_user.id).update!(role: 'administrator')
     else
-      Rails.logger.warn "Shadow user NO encontrado con email: #{shadow_email}"
+      Rails.logger.warn "Shadow user NO encontrado con email: #{ENV.fetch('SYSTEM_ADMIN_EMAIL')}"
     end
 
-    # Agente común reply-AI (operador real de la app)
+    # Agente común reply-AI (operador real de la app): agente + inboxes + equipos
     reply_agent = ensure_reply_agent_user
     return unless reply_agent
 
-    begin
-      RestClient.post(
-        "#{internal_base}/platform/api/v1/accounts/#{account.id}/account_users",
-        { user_id: reply_agent.id, role: 'agent' }.to_json,
-        { 'api_access_token' => platform_token, content_type: :json, accept: :json }
-      ) rescue nil
-      # Inboxes (additive: no reemplaza miembros existentes)
-      account.inboxes.each do |inbox|
-        InboxMember.find_or_create_by!(user_id: reply_agent.id, inbox_id: inbox.id)
-      end
-      # Equipos vía API con el token del shadow (admin de la cuenta)
-      shadow_token = shadow_user&.access_token&.token
-      account.teams.each do |team|
-        if shadow_token
-          RestClient.post(
-            "#{internal_base}/api/v1/accounts/#{account.id}/teams/#{team.id}/team_members",
-            { user_ids: [reply_agent.id] }.to_json,
-            { api_access_token: shadow_token, content_type: :json, accept: :json }
-          ) rescue nil
-        else
-          TeamMember.find_or_create_by!(user_id: reply_agent.id, team_id: team.id)
-        end
-      end
-    rescue StandardError => e
-      Rails.logger.error "Error adding reply agent to account #{account.id}: #{e.message}"
+    account.account_users.find_or_initialize_by(user_id: reply_agent.id).update!(role: 'agent')
+    # Inboxes (additive: no reemplaza miembros existentes)
+    account.inboxes.each do |inbox|
+      InboxMember.find_or_create_by!(user_id: reply_agent.id, inbox_id: inbox.id)
+    end
+    account.teams.each do |team|
+      team.add_members([reply_agent.id])
     end
   end
 
