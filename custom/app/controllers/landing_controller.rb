@@ -74,7 +74,7 @@ class LandingController < ApplicationController
 
       # 6. Degradar al vendedor a agente y asociar los usuarios de reply-AI
       # (shadow SuperAdmin + agente común), igual que en las cuentas bridge
-      setup_account_users(account, real_user, real_user_token)
+      setup_account_users(account, real_user)
 
       # 7. Iniciar sesión Rails vía Devise (persiste durante el flujo ML → callback;
       # el vendedor no usa la app después de la confirmación)
@@ -110,6 +110,19 @@ class LandingController < ApplicationController
         { content_type: :json, accept: :json }
       )
       meli_data = JSON.parse(response.body)
+
+      # Reconexión en otra cuenta: el seller ya está conectado en la cuenta
+      # original. Se refrescan los tokens ahí (sigue funcionando igual), NO se
+      # reasigna la credencial y se avisa. La cuenta nueva queda sin credencial.
+      existing = MeliCredential.find_by(ml_user_id: meli_data['user_id'].to_s)
+      if existing && existing.account_id != @account.id
+        existing.update!(
+          access_token: meli_data['access_token'],
+          refresh_token: meli_data['refresh_token'],
+          expires_at: Time.current + meli_data['expires_in'].seconds
+        )
+        render 'landing/meli_already_connected' and return
+      end
 
       MeliCredential.find_or_initialize_by(ml_user_id: meli_data['user_id'].to_s).update!(
         account_id: @account.id,
@@ -779,7 +792,7 @@ class LandingController < ApplicationController
     # Misma infraestructura que las cuentas nativas: equipos, inboxes, labels y webhooks
     setup_account_channels(account, real_user.id, real_user_token) if real_user_token
     # Mismos usuarios que las cuentas nativas: vendedor a agente + shadow SuperAdmin + agente común
-    setup_account_users(account, real_user, real_user_token)
+    setup_account_users(account, real_user)
 
     MeliCredential.create!(
       account: account,
@@ -2229,13 +2242,11 @@ class LandingController < ApplicationController
   # shadow SuperAdmin como administrator y agente común como agent (miembro de
   # inboxes y equipos). Compartido entre create_account (nativas) y
   # bridge_register (bridge) para que ambas tengan los mismos usuarios y comportamiento.
-  def setup_account_users(account, real_user, real_user_token)
-    # El vendedor no usa la app: queda como agente (el setup ya está completo)
-    RestClient.put(
-      "#{internal_base}/api/v1/accounts/#{account.id}/agents/#{real_user.id}",
-      { agent: { role: 'agent' } }.to_json,
-      { api_access_token: real_user_token, content_type: :json, accept: :json }
-    ) rescue nil
+  def setup_account_users(account, real_user)
+    # El vendedor no usa la app: queda como agente (el setup ya está completo).
+    # Update directo (mismo efecto que PUT /agents/:id) para no depender de
+    # self-calls internos; si falta el account_user, falla fuerte.
+    AccountUser.find_by!(account: account, user: real_user).update!(role: 'agent')
 
     # Shadow SuperAdmin (desarrollador/soporte) como administrator
     platform_token = ENV.fetch('CHATWOOT_PLATFORM_TOKEN')

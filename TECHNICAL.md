@@ -411,6 +411,7 @@ Implicancias de diseño:
 2. ML redirige a `/callback?code=...&state=...` — el `state` es un **token firmado** (`MessageVerifier`, purpose `:meli_oauth`, 2 h) con el `account_id` (2026-10-13)
 3. `meli_callback`:
    - Valida el `state` firmado; si no verifica → 404 (evita session hijack: antes el `state` era el `account_id` plano)
+   - Si el `ml_user_id` ya está conectado en **otra cuenta**: refresca los tokens en la credencial original (no la reasigna) y muestra `landing/meli_already_connected`; la cuenta nueva queda sin credencial (2026-10-13)
    - Intercambia `authorization_code` por tokens OAuth
    - Guarda `MeliCredential`
    - Detecta país del vendedor (`site_id`)
