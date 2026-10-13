@@ -68,9 +68,8 @@ class LandingController < ApplicationController
       )
 
       # 5. Crear equipos, bandejas de entrada, labels y webhooks
-      real_user       = User.find(user_data['id'])
-      real_user_token = real_user.access_token&.token
-      setup_account_channels(account, real_user.id, real_user_token) if real_user_token
+      real_user = User.find(user_data['id'])
+      setup_account_channels(account, real_user.id)
 
       # 6. Degradar al vendedor a agente y asociar los usuarios de reply-AI
       # (shadow SuperAdmin + agente común), igual que en las cuentas bridge
@@ -788,9 +787,8 @@ class LandingController < ApplicationController
     )
 
     real_user = User.find(user_data['id'])
-    real_user_token = real_user.access_token&.token
     # Misma infraestructura que las cuentas nativas: equipos, inboxes, labels y webhooks
-    setup_account_channels(account, real_user.id, real_user_token) if real_user_token
+    setup_account_channels(account, real_user.id)
     # Mismos usuarios que las cuentas nativas: vendedor a agente + shadow SuperAdmin + agente común
     setup_account_users(account, real_user)
 
@@ -2223,7 +2221,7 @@ class LandingController < ApplicationController
   ].freeze
 
   def internal_base
-    'http://localhost:3000'
+    ENV.fetch('INTERNAL_BASE_URL', 'http://localhost:3000')
   end
 
   def public_base
@@ -2297,85 +2295,42 @@ class LandingController < ApplicationController
   # Crea la infraestructura de canales de una cuenta nueva (nativa o bridge):
   # equipos, bandejas de entrada, labels y webhooks. Compartido entre
   # create_account (signup) y bridge_register (sellers de Yobot).
-  def setup_account_channels(account, user_id, user_token)
-    return if user_token.blank?
-
+  # Todo directo en proceso (sin self-calls HTTP): más rápido, sin consumir
+  # threads del pool y con errores explícitos (validaciones).
+  def setup_account_channels(account, user_id)
     ['Pre-Venta', 'Post-Venta'].each do |team_name|
-      team_res = RestClient.post(
-        "#{internal_base}/api/v1/accounts/#{account.id}/teams",
-        { name: team_name }.to_json,
-        { api_access_token: user_token, content_type: :json, accept: :json }
-      )
-      team_id = JSON.parse(team_res.body)['id']
-      RestClient.post(
-        "#{internal_base}/api/v1/accounts/#{account.id}/teams/#{team_id}/team_members",
-        { user_ids: [user_id] }.to_json,
-        { api_access_token: user_token, content_type: :json, accept: :json }
-      )
+      team = account.teams.create!(name: team_name)
+      team.add_members([user_id])
     end
 
     ['Pre-venta (MercadoLibre)', 'Post-venta (MercadoLibre)', 'Reclamos (MercadoLibre)'].each do |inbox_name|
-      inbox_res = RestClient.post(
-        "#{internal_base}/api/v1/accounts/#{account.id}/inboxes",
-        { name: inbox_name, channel: { type: 'api', webhook_url: '' } }.to_json,
-        { api_access_token: user_token, content_type: :json, accept: :json }
-      )
-      inbox_id = JSON.parse(inbox_res.body)['id']
-      RestClient.post(
-        "#{internal_base}/api/v1/accounts/#{account.id}/inbox_members",
-        { inbox_id: inbox_id, user_ids: [user_id] }.to_json,
-        { api_access_token: user_token, content_type: :json, accept: :json }
-      ) rescue nil
+      channel = Channel::Api.create!(account: account, webhook_url: '')
+      inbox = account.inboxes.create!(name: inbox_name, channel: channel)
+      inbox.add_members([user_id])
     end
 
     default_labels.each do |label|
-      RestClient.post(
-        "#{internal_base}/api/v1/accounts/#{account.id}/labels",
-        label.to_json,
-        { api_access_token: user_token, content_type: :json, accept: :json }
-      ) rescue nil
+      account.labels.create!(label)
     end
 
     default_webhooks.each do |webhook|
-      RestClient.post(
-        "#{internal_base}/api/v1/accounts/#{account.id}/webhooks",
-        { webhook: webhook }.to_json,
-        { api_access_token: user_token, content_type: :json, accept: :json }
-      ) rescue nil
+      account.webhooks.create!(webhook)
     end
 
-    # Dashboard App: panel de gestión del reclamo embebido en el sidebar de la
-    # conversación (bandeja Reclamos). {{conversation.id}} lo resuelve Chatwoot.
-    RestClient.post(
-      "#{internal_base}/api/v1/accounts/#{account.id}/dashboard_apps",
-      {
-        title: 'Reclamo ML',
-        content: [{ type: 'frame', url: "#{public_base}/dashboard/claim-panel?conversation_id={{conversation.id}}" }]
-      }.to_json,
-      { api_access_token: user_token, content_type: :json, accept: :json }
-    ) rescue nil
-
-    # Dashboard App: detalles de la venta embebidos en el sidebar de la conversación
-    # post-venta. El contexto llega por postMessage (appContext); la URL no se sustituye.
-    RestClient.post(
-      "#{internal_base}/api/v1/accounts/#{account.id}/dashboard_apps",
-      {
-        title: 'Venta ML',
-        content: [{ type: 'frame', url: "#{public_base}/dashboard/sale-panel?conversation_id={{conversation.id}}" }]
-      }.to_json,
-      { api_access_token: user_token, content_type: :json, accept: :json }
-    ) rescue nil
-
-    # Dashboard App: ficha del producto de la conversación (item ML). El contexto
-    # llega por postMessage (appContext); el item se resuelve desde la venta.
-    RestClient.post(
-      "#{internal_base}/api/v1/accounts/#{account.id}/dashboard_apps",
-      {
-        title: 'Producto ML',
-        content: [{ type: 'frame', url: "#{public_base}/dashboard/product-panel?conversation_id={{conversation.id}}" }]
-      }.to_json,
-      { api_access_token: user_token, content_type: :json, accept: :json }
-    ) rescue nil
+    # Dashboard Apps: paneles embebidos en el sidebar de la conversación.
+    # {{conversation.id}} lo resuelve Chatwoot; el contexto de Venta/Producto
+    # llega por postMessage (appContext).
+    [
+      { title: 'Reclamo ML', panel: 'claim-panel' },
+      { title: 'Venta ML', panel: 'sale-panel' },
+      { title: 'Producto ML', panel: 'product-panel' }
+    ].each do |app|
+      account.dashboard_apps.create!(
+        title: app[:title],
+        content: [{ type: 'frame', url: "#{public_base}/dashboard/#{app[:panel]}?conversation_id={{conversation.id}}" }],
+        user_id: user_id
+      )
+    end
   end
 
   def default_webhooks

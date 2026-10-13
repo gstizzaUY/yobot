@@ -388,7 +388,7 @@ Implicancias de diseño:
    - Crea Account vía `POST /platform/api/v1/accounts`
    - Vincula User como administrator vía `POST /platform/api/v1/accounts/:id/account_users`
    - Configura `custom_attributes` con defaults + `settings.auto_resolve_after = 4320` (72h)
-   - `setup_account_channels(account, user_id, user_token)` (helper compartido con `bridge_register`):
+   - `setup_account_channels(account, user_id)` (helper compartido con `bridge_register`; directo en proceso, sin self-calls HTTP — 2026-10-13):
      - Crea 2 equipos: "Pre-Venta" y "Post-Venta" (con el usuario como miembro)
      - Crea 3 API-channel inboxes: "Pre-venta (MercadoLibre)", "Post-venta (MercadoLibre)" y **"Reclamos (MercadoLibre)"**
      - Crea **14 labels**: las 9 de IA/post-venta (`esperando_respuesta_manual`, `esperando_tiempo_retraso_programado`, `procesando_con_ia`, `respondida_con_ia`, `respondida_manualmente`, `bot-procesando`, `atencion-humana`, `atencion-prioritaria`, `mensajeria-bloqueada`) + **5 de reclamos** (`reclamo-abierto`, `reclamo-mediacion`, `reclamo-cerrado`, `reclamo-pendiente-accion`, `reclamo-derivado`)
@@ -795,6 +795,7 @@ GET    /dashboard/product-panel/data        landing#product_panel_data
 | `OPENAI_WHISPER_MODEL` | Modelo de transcripción de audio (default `whisper-1`, Fase 1) |
 | `REPLY_RECEIVE_ONLY` | **Modo recepción solamente** (`true`/`false`, ver §19): habilita el gate de testing; las cuentas marcadas `receive_only` reciben/ingestan pero no envían a ML/Yobot. Debe estar en `.env` (rails la lee vía `env_file`) y en `docker-compose.yaml` para `n8n-main` y `n8n-worker` (n8n no tiene `env_file` — la var se pasa explícita con default `false`) |
 | `INTERNAL_API_SECRET` | Secret para los endpoints internos de n8n (`x-internal-secret`: `/rag/search`, `/rag/pv_search`, `/bot_active`, `/conversation_ai_gate`) |
+| `INTERNAL_BASE_URL` | Base URL para los self-calls internos del controlador (default `http://localhost:3000`). Opcional: solo hace falta si cambia host/puerto interno |
 | `REPLY_AGENT_EMAIL` / `REPLY_AGENT_NAME` / `REPLY_AGENT_PASSWORD` | Agente de la agencia reply-AI — **usuario real de la app** (creado en signup, miembro de todas las cuentas) |
 | `BRIDGE_SECRET` / `YOBOT_BRIDGE_URL` | Bridge Yobot — **requeridas para el bridge** (2026-08-05). Rails las lee de `.env` (constante `BridgeAuth::BRIDGE_SECRET` al boot; cambiarlas requiere recrear el contenedor). n8n las lee de docker-compose (`n8n-main` + `n8n-worker`). `YOBOT_BRIDGE_URL` vacía → `BridgeApi` degrada con error claro (`bridge_not_configured`) |
 | `YOBOT_ML_APP_ID` / `YOBOT_ML_SECRET_KEY` | Credenciales de la **app de ML de Yobot** — refresh directo a ML de los usuarios **MIGRADOS** (perfil §18.9, implementado 2026-08-07): `TokenRefreshWorker` refresca el token del seller con estas credenciales + su `refresh_token` (el token lo emitió la app de Yobot; solo esa app puede refrescarlo). Verificado en el piloto (cuenta 50) |
