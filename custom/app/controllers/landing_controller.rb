@@ -139,7 +139,8 @@ class LandingController < ApplicationController
 
   # PASO 2: Callback de MercadoLibre — sesión Rails ya activa, guarda credenciales y redirige al dashboard
   def meli_callback
-    @account = Account.find_by(id: params[:state])
+    account_id = verify_account_token(params[:state], purpose: :meli_oauth)
+    @account = Account.find_by(id: account_id)
 
     unless @account
       render html: 'Error: cuenta no encontrada.'.html_safe, status: 404 and return
@@ -2137,15 +2138,15 @@ class LandingController < ApplicationController
     @products       = products_scope.offset((@page - 1) * @per_page).limit(@per_page)
   end
 
-  def signed_account_token(account_id)
+  def signed_account_token(account_id, purpose: nil)
     ActiveSupport::MessageVerifier.new(Rails.application.secret_key_base)
-                                  .generate(account_id, expires_in: 2.hours)
+                                  .generate(account_id, expires_in: 2.hours, purpose: purpose)
   end
 
-  def verify_account_token(token)
+  def verify_account_token(token, purpose: nil)
     return nil if token.blank?
     ActiveSupport::MessageVerifier.new(Rails.application.secret_key_base)
-                                  .verify(token)
+                                  .verify(token, purpose: purpose)
   rescue ActiveSupport::MessageVerifier::InvalidSignature
     nil
   end
@@ -2254,10 +2255,11 @@ class LandingController < ApplicationController
   end
 
   def ml_auth_url(account_id)
+    state = ERB::Util.url_encode(signed_account_token(account_id, purpose: :meli_oauth))
     "https://auth.mercadolibre.com/authorization?response_type=code" \
       "&client_id=#{ENV.fetch('ML_APP_ID')}" \
       "&redirect_uri=#{ENV.fetch('ML_REDIRECT_URI')}" \
-      "&state=#{account_id}"
+      "&state=#{state}"
   end
 
   # Crea la infraestructura de canales de una cuenta nueva (nativa o bridge):
