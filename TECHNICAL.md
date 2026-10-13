@@ -1,8 +1,9 @@
 ﻿# Chatwoot + Reply-AI — Documentación Técnica Unificada
 
 > **Versión**: Chatwoot 4.18.0 + Reply-AI / Meli  
-> **Última actualización**: 2026-10-06  
-> **Propósito**: Referencia completa para agentes IA y desarrolladores.
+> **Última actualización**: 2026-10-13  
+> **Propósito**: Referencia completa para agentes IA y desarrolladores.  
+> **Entornos**: `w1206-app.site` = **local/dev** (túnel Cloudflare); producción = Easypanel (`yobot-cw-yobot-app.bsj9p0.easypanel.host`). Ver **§24**.
 
 ---
 
@@ -42,6 +43,7 @@
 21. [Paneles Dashboard Apps (Venta ML, Reclamo ML, Producto ML)](#21-paneles-dashboard-apps-venta-ml-reclamo-ml-producto-ml)
 22. [Enterprise sin licencia — blindaje custom](#22-enterprise-sin-licencia-blindaje-custom-2026-08-31)
 23. [Despliegue de n8n a producción](#23-despliegue-de-n8n-a-producción-2026-09-01)
+24. [Entornos e infraestructura](#24-entornos-e-infraestructura-2026-10-13)
 
 ---
 
@@ -938,7 +940,7 @@ Merge del tag `v4.18.0` (123 commits, sin commits posteriores en `upstream/maste
 3. **Dependencias**: Gemfile/Rails 7.2.3.1/Ruby 3.4.4 sin cambios; solo pnpm (`@chatwoot/prosemirror-schema` 1.4.1→1.4.5). El código está volume-mounted: no hizo falta rebuild de imágenes — `docker compose up -d --force-recreate rails sidekiq vite` basta (los entrypoints corren `bundle install` / `pnpm install --force`).
 4. **Vite frío**: las primeras requests a `/app` tardan ~3 min mientras el entrypoint de vite hace `pnpm install --force` — no es un cuelgue, repetir cuando `VITE ready` aparezca en logs.
 5. **Blindaje §22 / gate nuevo**: v4.18.0 agrega `ChatwootApp.self_hosted_paid?` (`%w[premium enterprise].include?(ChatwootHub.pricing_plan)`). Cubierto por `Custom::ChatwootHub#pricing_plan → 'enterprise'` (verify en runtime: `self_hosted_paid? = true`, `pricing_plan = enterprise`). Los swaps `self_hosted_enterprise? → self_hosted_paid?` en `Enterprise::Account` (captain sync/enable_default_features) son equivalente-con-igual-valor para nosotros.
-6. **`GET /auth/sign_in` → 500 en dev**: `UnsafeRedirectError` porque `.env` local tiene `FRONTEND_URL=https://w1206-app.site` (producción) y el redirect cross-host lo bloquea Rails. **Preexistente** (`def new` y `login_page_url` sin cambios entre tags; en prod el Host coincide con FRONTEND_URL). El flujo real del SPA (`POST /auth/sign_in` → 401 con creds malas) funciona.
+6. **`GET /auth/sign_in` → 500 en dev**: `UnsafeRedirectError` porque `.env` local tiene `FRONTEND_URL=https://w1206-app.site` (la URL pública del **dev** vía túnel — ver §24) y el redirect cross-host lo bloquea Rails. **Preexistente** (`def new` y `login_page_url` sin cambios entre tags; en prod el Host coincide con `FRONTEND_URL`). El flujo real del SPA (`POST /auth/sign_in` → 401 con creds malas) funciona.
 7. **Symlinks `CLAUDE.md` / `.windsurf/rules/chatwoot.md`**: son symlinks a AGENTS.md ilegibles desde Windows sobre `\\wsl.localhost` (git status los marca M fantasma; upstream no los cambió entre tags → no estorban al merge ni al commit).
 8. **Verificación de producción (2026-10-06, post-deploy)**: build Actions #32 `passing` → webhook Easypanel → `/api` → `{"version":"4.18.0","queue_services":"ok","data_services":"ok"}`. En la terminal del servicio app: `db:migrate:status` → **0 pendientes** (el start del servicio aplica las migraciones upstream — solo el schema guard de boot es custom-only), `rails runner custom/verify.rb` → **59/59 ✓**, gates → `self_hosted_paid?=true` / `pricing_plan=enterprise` / `self_hosted_enterprise?=true`. Smoke HTTP: `/`, `/signup`, `/robots.txt` (nuevo controller) → 200; `/bot_active` → 401. Rollback: tag `pre-upgrade-v4.17.1`.
 
@@ -2517,6 +2519,50 @@ re-aplicar las mismas variables en la UI o se pierden.
    pruebas controladas (§19).
 5. TIKA: sin el servicio `yobot_cw_tika`, `process_attachments` falla solo para PDFs (Vision y
    Whisper no dependen de Tika).
+
+---
+
+## 24. Entornos e infraestructura (2026-10-13)
+
+> **Clave para no confundirse**: `https://w1206-app.site` es la instancia **LOCAL (dev)** expuesta por un túnel Cloudflare — **no es producción**.
+
+### 24.1 Topología
+
+| | Local (dev) | Producción |
+|---|---|---|
+| URL pública | `https://w1206-app.site` (túnel Cloudflare → máquina local) | `https://yobot-cw-yobot-app.bsj9p0.easypanel.host` (red interna: `http://yobot_cw_yobot-app:3000`) |
+| Stack | `docker compose` local: chatwoot + postgres + redis + sidekiq + n8n + tika + vite | Stack **duplicado** en **Easypanel** (servicios `yobot_cw_*`) |
+| Código | Volume-mounted desde el working tree (los cambios se ven al instante) | Imagen construida desde GitHub |
+| DB | `chatwoot_development` | `chatwoot_production` |
+| n8n | `n8nn.w1206-app.site` (dev) | `yobot-cw-n8n-main.bsj9p0.easypanel.host` (§23) |
+
+### 24.2 Deploy de la app
+
+1. Commit + `git push origin master` (repo `gstizzaUY/yobot`).
+2. **GitHub Actions** construye la imagen y dispara el deploy a **Easypanel** (webhook).
+3. Easypanel recrea los servicios.
+
+> En las sesiones de trabajo, **"subir a producción" = push a GitHub** (el Action hace el resto). No se toca Easypanel a mano salvo para variables de entorno (§23.3).
+
+### 24.3 Verificación — ojo con el host
+
+- Un `curl`/navegador a **`w1206-app.site` valida la instancia LOCAL** (el working tree), **no el deploy real**. En dev el código se sirve al instante, así que los checks "post-deploy" contra ese host pasan aunque el Action todavía no haya terminado.
+- Para confirmar el **deploy real**: `https://yobot-cw-yobot-app.bsj9p0.easypanel.host/api` (o el dominio propio una vez migrado).
+- Checklist post-deploy en producción: `/api` (`queue_services`/`data_services`), `/`, `/signup` y el checklist de §22.4.
+
+### 24.4 Migración a dominio propio (`reply-ai.online`) — plan
+
+Cuando `reply-ai.online` apunte a Easypanel:
+
+1. **App de MercadoLibre**: registrar `https://reply-ai.online/callback` como redirect URI.
+2. **Env de Easypanel** (`yobot_cw_yobot-app`): `FRONTEND_URL=https://reply-ai.online` + `ML_REDIRECT_URI=https://reply-ai.online/callback` → redeploy/restart.
+3. **⚠️ Backfill de Dashboard Apps**: las 3 apps por cuenta guardan la URL absoluta del host con el que se crearon. Al cambiar el dominio, el iframe queda en otro origen → no comparte la cookie de sesión → 302 a `/signup` (ver `docs/PANELES_DASHBOARD_APPS.md`). Actualizar `dashboard_apps.content` de las cuentas existentes (las nuevas nacen con el dominio nuevo).
+4. **DNS/Cloudflare**: apuntar `reply-ai.online` a Easypanel.
+5. **Bridge Yobot (opcional)**: `REPLY_AI_BRIDGE_URL` hoy apunta a `w1206-app.site` (dev); actualizar si el bridge debe ir contra producción.
+6. **n8n: sin cambios** (usa la red interna `http://yobot_cw_yobot-app:3000`).
+7. La instancia local (túnel `w1206-app.site`) puede quedar igual.
+
+> Notas: el código custom es **domain-agnóstico** (todo pasa por `FRONTEND_URL`/`ML_REDIRECT_URI` o rutas relativas; `INTERNAL_BASE_URL` default `localhost:3000` es interno). Rails no restringe hosts (no hay `config.hosts`).
 
 ---
 

@@ -1,7 +1,13 @@
 # Chatwoot + Reply-AI Development Guidelines
 
-> **Full technical reference**: `TECHNICAL.md` (761 líneas, leer ANTES de trabajar en este proyecto).  
+> **Full technical reference**: `TECHNICAL.md` (leer ANTES de trabajar en este proyecto).  
 > **Custom layer**: Todo el código Reply-AI / MercadoLibre vive en `custom/`. NUNCA modificar archivos en `app/`.
+
+## Entornos (local vs producción)
+
+- **Local/dev**: stack completo en `docker compose` + túnel Cloudflare → `https://w1206-app.site` (el código se sirve del working tree al instante). **No es producción.**
+- **Producción**: stack duplicado en **Easypanel** → `https://yobot-cw-yobot-app.bsj9p0.easypanel.host`. Se despliega con **push a GitHub** (`master`) → GitHub Actions → Easypanel.
+- Un `curl`/check a `w1206-app.site` valida el **local**, no el deploy real. Detalle, checklist de deploy y plan de dominio propio (`reply-ai.online`) en `TECHNICAL.md` **§24**.
 
 ## Build / Test / Lint
 
