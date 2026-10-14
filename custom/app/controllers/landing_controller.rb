@@ -2382,7 +2382,7 @@ class LandingController < ApplicationController
       },
       'config' => {
         'theme' => 'light',
-        'chatGPTEnabled' => true,
+        'chatGPTEnabled' => false,
         'prompts' => {
           'condicionProducto' => '', 'envios' => '', 'garantia' => '',
           'mediosPago' => '', 'otros' => '', 'precio' => '', 'saludoGeneral' => ''
@@ -2395,7 +2395,7 @@ class LandingController < ApplicationController
         },
         'response_delay' => { 'enabled' => true, 'seconds' => 60 },
         'post_venta_ia' => {
-          'enabled'   => true,
+          'enabled'   => false,
           'model'     => 'gpt-4o-mini',
           'logistica' => { 'enabled' => true },
           'soporte'   => { 'enabled' => true, 'fallback_to_human' => true },

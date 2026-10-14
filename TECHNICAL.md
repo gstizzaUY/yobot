@@ -387,7 +387,7 @@ Implicancias de diseño:
    - Crea User vía `POST /platform/api/v1/users`
    - Crea Account vía `POST /platform/api/v1/accounts`
    - Vincula User como administrator vía `POST /platform/api/v1/accounts/:id/account_users`
-   - Configura `custom_attributes` con defaults + `settings.auto_resolve_after = 4320` (72h)
+   - Configura `custom_attributes` con defaults + `settings.auto_resolve_after = 4320` (72h). Desde 2026-10-14 los bots nacen **desactivados**: pre-venta (`config.chatGPTEnabled = false`) y post-venta (`config.post_venta_ia.enabled = false`) — se activan manualmente desde el dashboard. Aplica también a `bridge_register` (comparten `default_reply_ai_config`)
    - `setup_account_channels(account, user_id)` (helper compartido con `bridge_register`; directo en proceso, sin self-calls HTTP — 2026-10-13):
      - Crea 2 equipos: "Pre-Venta" y "Post-Venta" (con el usuario como miembro)
      - Crea 3 API-channel inboxes: "Pre-venta (MercadoLibre)", "Post-venta (MercadoLibre)" y **"Reclamos (MercadoLibre)"**
