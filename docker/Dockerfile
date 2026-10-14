@@ -154,7 +154,10 @@ WORKDIR /app
 
 # Self-healing en swarm: task unhealthy (proceso wedged) => reemplazo automatico.
 # start-period cubre el boot (bundle check + db:migrate) antes de exigir respuesta.
+# Web: responde /api en 3000. Worker (sidekiq): no sirve HTTP en 3000 — su health
+# server es SidekiqAlive en 7433 (200 vivo / 500 colgado). Sin este fallback el
+# worker quedaba unhealthy y el orquestador lo reiniciaba cada ~4 min (2026-10-14).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=240s --retries=3 \
-  CMD wget -qO- -T 4 http://127.0.0.1:3000/api || exit 1
+  CMD wget -qO- -T 4 http://127.0.0.1:3000/api || wget -qO- -T 4 http://127.0.0.1:7433/ || exit 1
 
 EXPOSE 3000

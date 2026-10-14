@@ -929,7 +929,7 @@ Estos archivos NO existen en el upstream de Chatwoot, por lo que no generan conf
 6. **`.dockerignore` excluye symlinks de IDE** (`.windsurf`, `CLAUDE.md`): el build context desde Windows no los transfiere (`invalid file request`).
 7. **`docker restart` sobre un contenedor de swarm task crea huérfanos** (el task viejo sigue corriendo + swarm crea reemplazo → tráfico partido). Para redeployar un servicio: `docker service update --force <servicio>` o el botón Deploy de Easypanel.
 8. Tras el deploy: verificar `/api` (`queue_services` + `data_services` en `ok`), el checklist §22.4 y el smoke post-venta.
-9. **HEALTHCHECK en la imagen** (self-healing): el runtime define `HEALTHCHECK` sobre `/api` (interval 30s, start-period 240s). En swarm, un task con el proceso wedged (threads bloqueados sin CPU, como ocurrió post-4.17.1) se reemplaza automáticamente en ~1-2 min. Nunca usar `docker restart` sobre contenedores de task: genera huérfanos y trae el wedged de vuelta — siempre `docker service update --force <servicio>`.
+9. **HEALTHCHECK en la imagen** (self-healing): el runtime define `HEALTHCHECK` sobre `/api` (interval 30s, start-period 240s) **con fallback a `http://127.0.0.1:7433/` (SidekiqAlive) para el worker**: `yobot-worker` no sirve HTTP en 3000 y sin el fallback Docker lo marcaba unhealthy y el orquestador lo reiniciaba cada ~4 min (fix 2026-10-14). En swarm, un task con el proceso wedged (threads bloqueados sin CPU, como ocurrió post-4.17.1) se reemplaza automáticamente en ~1-2 min. Nunca usar `docker restart` sobre contenedores de task: genera huérfanos y trae el wedged de vuelta — siempre `docker service update --force <servicio>`.
 10. **`data_services: "failing"` cosmético**: con las conexiones lazy de Rails 7.2, `Base.connection.active?` del healthcheck puede devolver false si el hilo aún no hizo un query real. Las queries funcionan — es un artefacto del endpoint de upstream, corregir en upstream (no tocar).
 
 ### 15.2 Actualización a v4.18.0 (2026-10-06)
@@ -2574,7 +2574,7 @@ Estos archivos fueron modificados respecto al upstream original de Chatwoot y de
 | Archivo | Cambio |
 |---------|--------|
 | `.dockerignore` | + exclusiones de IDE/symlinks (`.windsurf`, `CLAUDE.md`, `.idea`, `.vscode`) |
-| `docker/Dockerfile` | `NODE_OPTIONS --max-old-space-size=6144` (build de assets 4.17) + `HEALTHCHECK` sobre `/api` (self-healing en swarm) |
+| `docker/Dockerfile` | `NODE_OPTIONS --max-old-space-size=6144` (build de assets 4.17) + `HEALTHCHECK` sobre `/api` con fallback a SidekiqAlive `:7433` (self-healing web **y** worker) |
 | `.gitignore` | + `docker-compose.override.yaml`, `Procfile.worktree` |
 | `Gemfile` | +2 gems custom |
 | `Gemfile.lock` | Dependencias (regenerar con `bundle install`) |
