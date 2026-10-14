@@ -2016,24 +2016,38 @@ class LandingController < ApplicationController
       redirect_to reply_ai_signup_path and return
     end
 
-    # Si viene account_id en el parámetro, intentar usarlo
-    if params[:account_id].present?
-      requested = Account.find_by(id: params[:account_id])
-      if requested
-        # SuperAdmin puede acceder a cualquier cuenta sin tener account_user
-        is_super_admin = user.type == 'SuperAdmin'
-        # Administrador de cuenta: verificar membresía formal
-        has_access = is_super_admin || user.account_ids.include?(requested.id)
-        if has_access
-          @account = requested
-          return
-        end
-      end
+    # Cuentas que el usuario puede configurar (selector del topbar)
+    @available_accounts = user.accounts.order(:name)
+
+    # 1) Cuenta pedida por parámetro (link de entrada desde Chatwoot, selector,
+    #    formularios): si es válida, se usa y queda como cuenta activa de la sesión.
+    requested = Account.find_by(id: params[:account_id]) if params[:account_id].present?
+    if requested && account_accessible?(user, requested)
+      @account = requested
+      session[:reply_ai_account_id] = @account.id
+      return
     end
 
-    # Fallback: primera cuenta disponible excluyendo las de la cuenta de sistema
+    # 2) Cuenta activa de la sesión: mantiene la configuración entre paneles y
+    #    guardados aunque el form no lleve account_id. Fix 2026-10-14: antes se
+    #    caía siempre a la primera cuenta del usuario y los cambios terminaban
+    #    guardándose en otra cuenta.
+    session_account = Account.find_by(id: session[:reply_ai_account_id]) if session[:reply_ai_account_id].present?
+    if session_account && account_accessible?(user, session_account)
+      @account = session_account
+      return
+    end
+
+    # 3) Fallback: primera cuenta disponible excluyendo las de la cuenta de sistema
     system_account_ids = User.find_by(email: ENV.fetch('SYSTEM_ADMIN_EMAIL', ''))&.account_ids || []
     @account = user.accounts.where.not(id: system_account_ids).first || user.accounts.first
+    session[:reply_ai_account_id] = @account&.id
+  end
+
+  # SuperAdmin puede acceder a cualquier cuenta sin tener account_user;
+  # el resto necesita membresía formal.
+  def account_accessible?(user, account)
+    user.type == 'SuperAdmin' || user.account_ids.include?(account.id)
   end
 
   # Autentica al usuario desde la cookie cw_d_session_info que el SPA guarda
