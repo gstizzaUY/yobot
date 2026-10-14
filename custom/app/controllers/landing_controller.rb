@@ -5,7 +5,7 @@ require 'uri'
 class LandingController < ApplicationController
   include ReplyAi::BridgeAuth
 
-  skip_before_action :authenticate_user!, only: [:index, :signup, :create_account, :meli_callback, :welcome, :go_to_chats, :dashboard, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :rag_search, :update_store_greeting, :refresh_official_stores, :refresh_tokens, :bot_active, :conversation_ai_gate, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :pv_rag_search, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax, :migrate_rag_pre, :migrate_rag_post, :confidence_report, :bridge_question, :bridge_message, :bridge_order, :bridge_claim, :bridge_manual_response, :bridge_sign, :bridge_seller_status, :bridge_register, :bridge_sync_config, :bridge_message_status, :bridge_sync_conversation_reads, :claims_webhook, :claims_index, :claims_list, :claims_sync, :claim_detail, :claim_messages, :claim_evidences, :claim_send_message, :claim_send_evidence, :claim_refund, :claim_partial_refund, :claim_available_offers, :claim_allow_return, :claim_open_dispute, :claim_affects_reputation, :claim_agent_pending, :claim_agent_execute, :claim_agent_cancel, :claim_agent_rerun, :return_detail, :return_review, :return_reasons, :return_cost, :change_detail, :change_allow_replace, :claim_panel, :claim_panel_data, :sales_list, :sale_detail, :sale_panel, :sale_panel_data, :product_panel, :product_panel_data], raise: false
+  skip_before_action :authenticate_user!, only: [:index, :signup, :create_account, :meli_callback, :welcome, :go_to_chats, :dashboard, :logout, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :rag_search, :update_store_greeting, :refresh_official_stores, :refresh_tokens, :bot_active, :conversation_ai_gate, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :pv_rag_search, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax, :migrate_rag_pre, :migrate_rag_post, :confidence_report, :bridge_question, :bridge_message, :bridge_order, :bridge_claim, :bridge_manual_response, :bridge_sign, :bridge_seller_status, :bridge_register, :bridge_sync_config, :bridge_message_status, :bridge_sync_conversation_reads, :claims_webhook, :claims_index, :claims_list, :claims_sync, :claim_detail, :claim_messages, :claim_evidences, :claim_send_message, :claim_send_evidence, :claim_refund, :claim_partial_refund, :claim_available_offers, :claim_allow_return, :claim_open_dispute, :claim_affects_reputation, :claim_agent_pending, :claim_agent_execute, :claim_agent_cancel, :claim_agent_rerun, :return_detail, :return_review, :return_reasons, :return_cost, :change_detail, :change_allow_replace, :claim_panel, :claim_panel_data, :sales_list, :sale_detail, :sale_panel, :sale_panel_data, :product_panel, :product_panel_data], raise: false
   layout false
   before_action :set_account, only: [:dashboard, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :update_store_greeting, :refresh_official_stores, :refresh_tokens, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax, :migrate_rag_pre, :migrate_rag_post, :confidence_report, :claims_index, :claims_list, :claims_sync, :claim_detail, :claim_messages, :claim_evidences, :claim_send_message, :claim_send_evidence, :claim_refund, :claim_partial_refund, :claim_available_offers, :claim_allow_return, :claim_open_dispute, :claim_affects_reputation, :claim_agent_pending, :claim_agent_execute, :claim_agent_cancel, :claim_agent_rerun, :return_detail, :return_review, :return_reasons, :return_cost, :change_detail, :change_allow_replace, :claim_panel, :claim_panel_data, :sales_list, :sale_detail, :sale_panel, :sale_panel_data, :product_panel, :product_panel_data]
   # Modo recepción (testing): cuentas marcadas receive_only reciben/ingestan el flujo
@@ -1524,6 +1524,28 @@ class LandingController < ApplicationController
       pictures: source['pictures'] || [],
       description: description
     }
+  end
+
+  # Logout del dashboard: mismo efecto que el logout del SPA de Chatwoot
+  # (DELETE /auth/sign_out): invalida el token devise_token_auth del cliente,
+  # limpia la cookie cw_d_session_info y la sesión Warden, y vuelve al login.
+  def logout
+    user = user_from_auth_cookie || warden.user(:user)
+    if user
+      data = begin
+        JSON.parse(cookies['cw_d_session_info'].to_s)
+      rescue StandardError
+        {}
+      end
+      client = data['client'].to_s
+      if client.present? && user.tokens.present?
+        user.tokens.delete(client)
+        user.save!
+      end
+      sign_out(:user)
+    end
+    cookies.delete('cw_d_session_info')
+    redirect_to '/app/login'
   end
 
   private

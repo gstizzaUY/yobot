@@ -11,6 +11,7 @@ Rails.application.routes.prepend do
   # previsualizar/editar el diseño sin completar el OAuth).
   get  '/bienvenido'         => 'landing#welcome',             as: :reply_ai_welcome
   get  '/dashboard'          => 'landing#dashboard',           as: :reply_ai_dashboard
+  get  '/dashboard/logout'   => 'landing#logout',              as: :reply_ai_logout
   get  '/dashboard/status'   => 'landing#dashboard_status',    as: :reply_ai_dashboard_status
   get  '/dashboard/products'    => 'landing#dashboard_products',     as: :reply_ai_dashboard_products
   get  '/dashboard/pv-products' => 'landing#pv_dashboard_products',  as: :reply_ai_pv_dashboard_products
