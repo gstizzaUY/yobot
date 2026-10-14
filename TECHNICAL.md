@@ -513,13 +513,13 @@ Inyecta CSS y JavaScript en las respuestas HTML del dashboard (`/app/*`).
 | Oculta acciones de contacto | Merge, delete, etc. |
 | Oculta etiquetas de conversación | Sidebar labels |
 | Oculta Macros | Sidebar macros |
-| **MercadoLibre inbox**: oculta emoji, attachments, mic, firma, copilot | Solo cuando `body.reply-ai-meli-inbox` |
+| **MercadoLibre inbox**: oculta emoji, mic, firma y copilot en todos los inboxs Meli; el **clip de adjuntos** se oculta solo en **pre-venta** — en post-venta/reclamos queda visible (`body.reply-ai-meli-attachments`, 2026-10-14) | Solo cuando `body.reply-ai-meli-inbox` |
 
 ### JavaScript inyectado
 
 1. **Gate de rol (2026-10-12)**: decide en el cliente si el usuario es privilegiado (`SuperAdmin` o `administrator` de la **cuenta activa**) leyendo el Vue store (`getCurrentUser`/`getCurrentRole`) y **desactiva** el `<style>` de restricciones (`style.disabled`). Expone `window.__replyAiIsPrivileged()` para los demás scripts y re-evalúa cada 500 ms (cubre cambios de cuenta sin recarga). Motivo: los logins del SPA no crean sesión Warden (`store: false`), así que el chequeo server-side no puede distinguir el rol.
 2. **Patch de permisos de Reports**: Agrega `'agent'` a los permisos de la ruta `account_overview_reports` para que agentes vean Reportes.
-3. **Detector de inbox Meli**: `MutationObserver` que agrega clase `reply-ai-meli-inbox` al `<body>` cuando la conversación activa pertenece a un inbox que contiene "MercadoLibre" (vía store: `getSelectedChat` → `inboxes/getInbox`; funciona también con un solo inbox). Además oculta el acordeón de Macros (solo usuarios restringidos).
+3. **Detector de inbox Meli**: `MutationObserver` que agrega clase `reply-ai-meli-inbox` al `<body>` cuando la conversación activa pertenece a un inbox que contiene "MercadoLibre" (vía store: `getSelectedChat` → `inboxes/getInbox`; funciona también con un solo inbox). Si el inbox es de **post-venta o reclamos** agrega además `reply-ai-meli-attachments` (esos canales admiten archivos adjuntos → el clip queda visible; en pre-venta sigue oculto, 2026-10-14). Además oculta el acordeón de Macros (solo usuarios restringidos).
 4. **Link "Configuración Bot"**: Inyecta un item en el menú de perfil que navega a `/dashboard?account_id=X`. Detecta el `account_id` del Vue store, del dataset del sidebar switcher, o del path.
 5. **Banner de mediación**: muestra un banner fijo cuando la conversación activa tiene la label `reclamo-mediacion` (usa `getSelectedChat` + `conversationLabels/getConversationLabels`).
 
@@ -2522,6 +2522,29 @@ re-aplicar las mismas variables en la UI o se pierden.
    pruebas controladas (§19).
 5. TIKA: sin el servicio `yobot_cw_tika`, `process_attachments` falla solo para PDFs (Vision y
    Whisper no dependen de Tika).
+
+### 23.6 Incidente 2026-10-14: mensajes post-venta no llegaban a Chatwoot
+
+- **Síntoma**: el comprador enviaba un mensaje (notificación `messages`) y no aparecía en Chatwoot.
+- **Causa 1 (bloqueante)**: el nodo `get_message_details` de `postsale_main` en producción tenía el
+  código viejo. ML cambió el formato del `resource` en las notificaciones `messages` (antes un path,
+  ahora el **ID del mensaje**): la URL se armaba como `https://api.mercadolibre.com01a13c…` (host
+  inválido) → error de red → `ML message fetch: 0` (el helper de n8n descarta el status real).
+  Dev/local ya tenía el fix (`String(trigger.resource).startsWith('/') ? … : '/messages/' + resource`).
+- **Causa 2 (latente)**: 46 nodos en 5 workflows tenían el token literal **`TOKEN_NUEVO`** (placeholder
+  del reemplazo de token del mismo día) → hubieran dado 401 al alcanzarse.
+- **Fix aplicado (2026-10-14, vía API de n8n — PUT workflows)**: token real en los 46 nodos +
+  URL corregida en `get_message_details` (verificado en `entity` y en la **versión activa**).
+- **Verificación end-to-end**: re-disparo de la notificación por el webhook (body sintético con `_id`
+  nuevo) → conversación **post-venta #7** creada con el mensaje entrante del comprador ✓.
+- **Aprendizajes**:
+  - Los **"Retry" de ejecuciones usan el snapshot viejo** del workflow → para verificar un fix hay que
+    disparar una notificación nueva (o POST al webhook con `_id` nuevo).
+  - Los reemplazos masivos de token por SQL deben cubrir `workflow_entity` **y** `workflow_history`, y
+    **no** usar placeholders en el SQL (el literal queda pegado y da 401 silencioso).
+  - Comparar prod vs repo (API `GET /workflows`) detecta nodos desactualizados: quedan diferencias
+    menores de detección de bridge (`account.bridge_enabled` vs `status === 'bridge' && …`) en
+    `postsale_main`/`questions_main` — solo afectan cuentas bridge.
 
 ---
 
