@@ -506,6 +506,7 @@ Inyecta CSS y JavaScript en las respuestas HTML del dashboard (`/app/*`).
 | Oculta sección Campañas | `li:has(a[href*="/campaigns"])` |
 | Oculta Centro de ayuda | `li:has(a[href*="/portals"])` |
 | Oculta sección Llamadas (2026-10-12) | `li.grid:has(a[href*="/calls"])` — los administradores la ven (el gate desactiva el CSS completo) |
+| Oculta sección Capitán (2026-10-14) | `li.grid:has(a[href*="/captain"])` — solo administradores la ven (gate de rol) |
 | Oculta sub-items de Ajustes | Solo deja "Respuestas personalizadas" |
 | Oculta items del menú de perfil | Solo deja "Cerrar sesión" |
 | Oculta botón "Redactar nueva conversación" | Botón lápiz |

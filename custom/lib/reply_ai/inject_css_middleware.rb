@@ -44,6 +44,11 @@ module ReplyAi
           display: none !important;
         }
 
+        /* ── Ocultar sección "Capitán" (solo visible para administradores) ── */
+        li.grid:has(a[href*="/captain"]) {
+          display: none !important;
+        }
+
         /* ── Ocultar sub-items de Ajustes (dejar solo Respuestas personalizadas) ── */
         li.child-item:has(a[href*="/settings/"]):not(:has(a[href*="/settings/canned-response"])) {
           display: none !important;
