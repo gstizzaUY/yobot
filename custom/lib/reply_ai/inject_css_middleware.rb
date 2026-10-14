@@ -89,11 +89,17 @@ module ReplyAi
 
         /* ── Ocultar botones del reply box cuando el inbox es MercadoLibre ── */
         /* Activo solo cuando el JS detecta el inbox y agrega .reply-ai-meli-inbox al body */
+        /* Emoji, nota de voz y firma: ocultos en TODOS los inboxs Meli (ML solo acepta texto) */
         body.reply-ai-meli-inbox .reply-box .left-wrap button:has(span.i-ph-smiley-sticker),
-        body.reply-ai-meli-inbox .reply-box .left-wrap button:has(span.i-ph-paperclip),
-        body.reply-ai-meli-inbox .reply-box .left-wrap .file-uploads,
         body.reply-ai-meli-inbox .reply-box .left-wrap button:has(span.i-ph-microphone),
         body.reply-ai-meli-inbox .reply-box .left-wrap button:has(span.i-ph-signature) {
+          display: none !important;
+        }
+
+        /* Adjuntos (clip): ocultos en pre-venta; visibles en post-venta/reclamos
+           (el JS agrega .reply-ai-meli-attachments cuando el inbox admite archivos) */
+        body.reply-ai-meli-inbox:not(.reply-ai-meli-attachments) .reply-box .left-wrap button:has(span.i-ph-paperclip),
+        body.reply-ai-meli-inbox:not(.reply-ai-meli-attachments) .reply-box .left-wrap .file-uploads {
           display: none !important;
         }
 
@@ -185,6 +191,9 @@ module ReplyAi
         (function () {
           var MELI_KEYWORD = 'MercadoLibre';
           var BODY_CLASS   = 'reply-ai-meli-inbox';
+          // Post-venta y reclamos admiten adjuntos en ML → el clip queda visible
+          var ATTACH_CLASS = 'reply-ai-meli-attachments';
+          var ATTACH_REGEX = /post-?venta|reclamo/i;
 
           function getStore() {
             var appEl = document.getElementById('app');
@@ -193,15 +202,16 @@ module ReplyAi
               : null;
           }
 
-          function isMeliConversation(store) {
+          function meliInboxName(store) {
             try {
               var conversation = store.getters.getSelectedChat;
               var inbox = conversation && conversation.inbox_id
                 ? store.getters['inboxes/getInbox'](conversation.inbox_id)
                 : null;
-              return Boolean(inbox && (inbox.name || '').includes(MELI_KEYWORD));
+              var name = (inbox && inbox.name) || '';
+              return name.includes(MELI_KEYWORD) ? name : null;
             } catch (e) {
-              return false;
+              return null;
             }
           }
 
@@ -211,10 +221,13 @@ module ReplyAi
 
             // Inbox de la conversación activa desde el store (funciona también
             // con un solo inbox, a diferencia del nombre en el header).
-            if (isMeliConversation(store)) {
+            var inboxName = meliInboxName(store);
+            if (inboxName) {
               document.body.classList.add(BODY_CLASS);
+              document.body.classList.toggle(ATTACH_CLASS, ATTACH_REGEX.test(inboxName));
             } else {
               document.body.classList.remove(BODY_CLASS);
+              document.body.classList.remove(ATTACH_CLASS);
             }
 
             // Ocultar acordeón de Macros detectando el h5 con texto "Macros"
