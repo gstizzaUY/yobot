@@ -425,6 +425,7 @@ Implicancias de diseño:
 
 - `set_account` autentica primero con la cookie `cw_d_session_info` que el SPA guarda (tokens devise_token_auth validados server-side con `valid_token?` + expiración) y usa la sesión Warden como fallback. Antes solo aceptaba Warden, que no existe en logins por token → `/dashboard` redirigía a `/signup`.
 - El logout limpia la sesión Warden vía `Custom::DeviseOverrides::SessionsController#destroy` (`sign_out(:user)`), enganchado con `prepend_mod_with` (el core ya llama el hook). Sin esto, la identidad del flujo signup/OAuth sobrevivía al logout.
+- **Cuenta activa (2026-10-14)**: `set_account` guarda la cuenta elegida (por `?account_id=`, ej. el link de entrada desde Chatwoot que inyecta el middleware) en `session[:reply_ai_account_id]` y la reusa cuando el request no trae el param. Antes, los formularios y links internos no llevaban `account_id` → los guardados caían al fallback (la primera cuenta del usuario) y podían modificar **otra** cuenta. El topbar del dashboard y de post-venta muestra la cuenta (nombre + `#id`) con un selector para cambiarla; los formularios principales incluyen `hidden_field_tag :account_id` (multi-pestaña).
 
 ---
 
