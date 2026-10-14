@@ -600,6 +600,7 @@ Rack::Utils::HTTP_STATUS_CODES[902] = 'Account Suspended'
 | `20990101000002_add_cw_conversation_ids.rb` | (renombrada desde `20260804000000` — ídem) Añade `cw_conversation_id` a `meli_claims` y `meli_orders` |
 | `20260808000001_create_meli_questions.rb` | Crea `meli_questions` (`if_not_exists` — fix crash loop producción 2026-08-31: la tabla nunca tuvo migración, solo el ALTER de retención explotaba al boot) |
 | `20260808210000_create_reply_ai_pre_memory.rb` | Crea `reply_ai_pre_memory` (`if_not_exists`; memoria de sesión pre-venta usada por `questions_main` en n8n) |
+| `20261014120000_unify_meli_products_date_columns.rb` | Renombra `meli_date_created`/`meli_last_updated` → `date_created`/`last_updated` (los nombres que usa el worker de sync y `schema.rb`; los nombres con prefijo de `20260303044018` rompían el sync de productos en producción con `UnknownAttributeError`). No-op donde ya existe el nombre canónico |
 
 ---
 
