@@ -2850,6 +2850,21 @@ ejecutando el **prompt real resuelto** (template + contexto de la ejecución, si
 Script de verificación: `tmp/prompt_test.js` (resuelve las expresiones del template con un stub de
 `$('context:assembler')` y llama a OpenAI con la key del `.env`).
 
+**Fix 2026-10-15 (tercera iteración — contexto ignorado / procedimientos)**: pregunta *"¿cómo
+calibro la batería?"* → el contexto **sí** decía "la batería se calibra sola; no dejarla conectada al
+100%…" pero la IA respondió un **procedimiento manual genérico** (cargar 100%, descargar, reposar
+5 h…) que **contradice el doc** — y no se retuvo (el modelo no cree que le falte info). Dos cambios:
+(1) **Regla 7** en REGLAS CRÍTICAS (siempre activa): antes de responder, buscar el tema en el
+CONTEXTO TÉCNICO y, si está mencionado, responder con ESA información sin reemplazarla con
+procedimientos/pasos/datos de conocimiento general (si el contexto dice que algo se hace solo o no
+es necesario, responder eso); (2) la regla de retención ahora cubre **"dato o procedimiento
+concreto"** (se agregaron pasos / cómo hacer algo a la lista). Verificado con el harness (prompt
+real resuelto + contexto real de las ejecuciones 601 y 635, 3 muestras c/u): watts → 3/3 marcador
+`[SIN_INFORMACION]` ✓; batería → 3/3 responde "La batería se calibra sola…" **con el contexto** y
+sin pasos manuales ✓. Aplicado vía API + espejado al repo (commit `b87fb8f387`).
+**Patrón general**: los fixes de grounding deben cubrir los tres modos de falla — (a) dato ausente
+(marcador), (b) dato presente ignorado (contexto primero), (c) procedimientos inventados (regla 7).
+
 **Post-venta** (`postsale_main`): el generador de soporte usa la frase de derivación ("Para darte una
 solución precisa…") → `if_fallback_to_human?` → `set_human_label_support` (label `atencion-humana`;
 el gate corta la IA). **Fix 2026-10-15**: la condición ahora respeta
