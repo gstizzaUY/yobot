@@ -2745,6 +2745,11 @@ cambia el **nombre** (`Postgres chatwoot_development` vs `..._production`).
 **Mejora futura**: mover tokens/URLs a `$env.*` en los flujos (hoy están hardcodeados con valores
 dev en el repo).
 
+**Ejecutado (2026-10-15)**: primer sync corrido — 9/9 flujos actualizados desde prod
+(`postsale_main` 80 nodos, `postsale_outbound` 11, resto con tokens/URLs al día), sanitización
+verificada (0 referencias a hosts/tokens de producción), commit `268590febb`. Para repetirlo:
+`N8N_API_KEY=... python3 n8n/sync/sync_from_prod.py [--dry-run]`.
+
 ---
 
 ## Apéndice: Archivos Fuera del Scope Custom
