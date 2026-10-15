@@ -1,6 +1,7 @@
 {
   "name": "reply_ai_claims_outbound",
-  "active": false,
+  "active": true,
+  "id": "MClyYoLA6DHgznhr",
   "nodes": [
     {
       "parameters": {
@@ -187,8 +188,7 @@
   "settings": {
     "binaryMode": "separate",
     "executionOrder": "v1",
-    "availableInMCP": false
-  },
-  "versionId": "42040c35-899d-4a4b-88d4-10176c63039f",
-  "id": "MClyYoLA6DHgznhr"
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
 }

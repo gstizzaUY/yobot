@@ -34,7 +34,7 @@ SANITIZE = [
     ("Postgres chatwoot_production", "Postgres chatwoot_development"),
 ]
 
-KEEP_KEYS = ["name", "active", "nodes", "connections", "settings"]
+KEEP_KEYS = ["name", "active", "id", "nodes", "connections", "settings"]
 
 
 def api(path):
@@ -57,7 +57,7 @@ def main():
 
     dry = "--dry-run" in sys.argv
     workflows = api("/workflows?limit=100")["data"]
-    targets = sorted(w for w in workflows if w["name"].startswith("reply_ai_"))
+    targets = sorted((w for w in workflows if w["name"].startswith("reply_ai_")), key=lambda x: x["name"])
 
     changed, same = [], []
     for w in targets:

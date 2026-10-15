@@ -1,6 +1,7 @@
 {
   "name": "reply_ai_orders_main",
   "active": true,
+  "id": "267yHu6ne62J8FZjiMlMc",
   "nodes": [
     {
       "id": "bf8f5210-be47-4f61-a422-8a127ea5213a",
@@ -508,7 +509,5 @@
     "binaryMode": "separate",
     "availableInMCP": false,
     "executionOrder": "v1"
-  },
-  "versionId": "4bc0219c-75b5-474b-aeaf-3e97296ccec2",
-  "id": "267yHu6ne62J8FZjiMlMc"
+  }
 }

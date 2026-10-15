@@ -1,6 +1,7 @@
 {
   "name": "reply_ai_postsale_main",
   "active": true,
+  "id": "ryXMiGxGs0CBpknCbzpFB",
   "nodes": [
     {
       "id": "b6bd3c82-f452-41da-bf30-806e25fa7f6e",
@@ -45,7 +46,7 @@
         -1568
       ],
       "parameters": {
-        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst trigger = $('Execute Workflow Trigger').first().json.body;\nconst account = $('get_account_details').first().json;\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nif (isBridge) {\n  const msg = trigger.message || {};\n  if (!msg.id) throw new Error('Bridge: datos de mensaje incompletos (pendiente forward completo de Yobot)');\n  return { messages: [msg] };\n}\nconst res = await fetch('https://api.mercadolibre.com' + (String(trigger.resource || '').startsWith('/') ? trigger.resource : '/messages/' + trigger.resource) + '?tag=post_sale', { headers: { Authorization: 'Bearer ' + account.access_token } });\nif (!res.ok) throw new Error('ML message fetch: ' + res.status);\nreturn await res.json();"
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst trigger = $('Execute Workflow Trigger').first().json.body;\nconst account = $('get_account_details').first().json;\nconst isBridge = account.bridge_enabled === true;\nif (isBridge) {\n  const msg = trigger.message || {};\n  if (!msg.id) throw new Error('Bridge: datos de mensaje incompletos (pendiente forward completo de Yobot)');\n  return { messages: [msg] };\n}\nconst res = await fetch('https://api.mercadolibre.com' + (String(trigger.resource || '').startsWith('/') ? trigger.resource : '/messages/' + trigger.resource) + '?tag=post_sale', { headers: { Authorization: 'Bearer ' + account.access_token } });\nif (!res.ok) throw new Error('ML message fetch: ' + res.status);\nreturn await res.json();"
       },
       "typeVersion": 2
     },
@@ -58,7 +59,7 @@
         -1568
       ],
       "parameters": {
-        "jsCode": "const data = $input.first().json;\nconst msgs = data.messages || [];\nconst msg = [...msgs].reverse().find(m => m.status !== 'new') ?? msgs[msgs.length - 1];\nif (!msg) throw new Error('No messages found in response');\nconst sellerId = String($('Execute Workflow Trigger').first().json.body.user_id);\nconst resources = msg.message_resources ?? [];\nconst packRes = resources.find(r => r.name === 'packs');\nconst orderRes = resources.find(r => r.name === 'orders');\n// Fallback al pack_id del top-level del forward (Yobot lo manda siempre); ML no\n// incluye message_resources en todos los mensajes.\nconst bodyPackId = $('Execute Workflow Trigger').first().json.body.pack_id;\nconst packId = packRes?.id ?? bodyPackId ?? null;\nconst orderId = orderRes?.id ?? packId;\nreturn {\n  id: msg.id,\n  text: (msg.text ?? '').trim(),\n  from: msg.from,\n  to: msg.to,\n  status: msg.status,\n  message_type: String(msg.from?.user_id) === sellerId ? 'seller_to_buyer' : 'buyer_to_seller',\n  pack_id: packId,\n  order_id: orderId,\n  conversation_status: data.conversation_status,\n  attachments: msg.attachments || [],\n  has_attachments: (msg.attachments || []).length > 0,\n  message_resources: resources\n};"
+        "jsCode": "const data = $input.first().json;\nconst msgs = data.messages || [];\nconst msg = [...msgs].reverse().find(m => m.status !== 'new') ?? msgs[msgs.length - 1];\nif (!msg) throw new Error('No messages found in response');\nconst sellerId = String($('Execute Workflow Trigger').first().json.body.user_id);\nconst resources = msg.message_resources ?? [];\nconst packRes = resources.find(r => r.name === 'packs');\nconst orderRes = resources.find(r => r.name === 'orders');\n// Fallback al pack_id del top-level del forward (Yobot lo manda siempre); ML no\n// incluye message_resources en todos los mensajes.\nconst bodyPackId = $('Execute Workflow Trigger').first().json.body.pack_id;\nconst packId = packRes?.id ?? bodyPackId ?? null;\nconst orderId = orderRes?.id ?? packId;\nreturn {\n  id: msg.id,\n  text: (msg.text ?? '').trim(),\n  from: msg.from,\n  to: msg.to,\n  status: msg.status,\n  site_id: msg.site_id || null,\n  message_type: String(msg.from?.user_id) === sellerId ? 'seller_to_buyer' : 'buyer_to_seller',\n  pack_id: packId,\n  order_id: orderId,\n  conversation_status: data.conversation_status,\n  attachments: msg.message_attachments || [],\n  has_attachments: (msg.message_attachments || []).length > 0,\n  message_resources: resources\n};"
       },
       "typeVersion": 2
     },
@@ -219,11 +220,22 @@
         -1424
       ],
       "parameters": {
-        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('get_or_create_conversation').item.json.id }}/messages",
         "method": "POST",
-        "options": {},
-        "sendBody": true,
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('get_or_create_conversation').item.json.id }}/messages",
+        "authentication": "none",
         "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
         "bodyParameters": {
           "parameters": [
             {
@@ -240,14 +252,7 @@
             }
           ]
         },
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "api_access_token",
-              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
-            }
-          ]
-        }
+        "options": {}
       },
       "typeVersion": 4.4
     },
@@ -348,7 +353,7 @@
         -1440
       ],
       "parameters": {
-        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nfunction getSafe(n) { try { return $(n).first().json; } catch(e) { return {}; } }\n\nasync function safeFetch(url, headers) {\n  try {\n    const r = await fetch(url, { method: 'GET', headers });\n    if (!r.ok) return null;\n    return await r.json();\n  } catch(e) { return null; }\n}\n\nconst account     = getSafe('get_account_details');\nconst msgDetails  = getSafe('normalize_message');\nconst ragResult   = getSafe('rag_search');\nconst convDetails = getSafe('get_or_create_conversation');\nconst token       = account.access_token;\n\nconst orderId = msgDetails.order_id;\nlet order    = null;\nlet shipment = null;\n\nif (account.bridge_enabled === true) {\n  const triggerBody = $('Execute Workflow Trigger').first().json.body;\n  order = triggerBody.order || null;\n  shipment = triggerBody.shipment || null;\n} else if (orderId && token) {\n  order = await safeFetch(\n    `https://api.mercadolibre.com/orders/${orderId}`,\n    { Authorization: `Bearer ${token}` }\n  );\n  if (order?.shipping?.id) {\n    shipment = await safeFetch(\n      `https://api.mercadolibre.com/shipments/${order.shipping.id}`,\n      { Authorization: `Bearer ${token}` }\n    );\n  }\n}\n\n// Fetch últimos 8 mensajes para contexto de conversación\nconst histData = await safeFetch(\n  `https://w1206-app.site/api/v1/accounts/${account.chatwoot_account_id}/conversations/${convDetails.id}/messages`,\n  { api_access_token: 'TSL8r4ctWYzXJF9fiAS1Z8RV' }\n);\nconst histMsgs = (histData?.payload || []).filter(m => !m.private && m.content);\nconst history = histMsgs.slice(-8).map(m =>\n  `${m.message_type === 0 ? 'Cliente' : 'Vendedor'}: ${m.content}`\n).join('\\n');\n\nconst orderCtx = order\n  ? `ID: ${order.id} | Estado: ${order.status} | Total: ${order.currency_id} ${order.total_amount} | Productos: ${(order.order_items||[]).map(i=>i.item?.title).join(', ')}`\n  : '(Sin datos de pedido)';\n\nconst shipCtx = shipment\n  ? `ID: ${shipment.id} | Estado: ${shipment.status} | Tracking: ${shipment.tracking_number||'N/A'} | Fecha estimada: ${shipment.estimated_handling_limit?.date || shipment.estimated_delivery_time?.date || 'N/A'}`\n  : '(Sin datos de envío)';\n\nreturn {\n  message:               msgDetails.text || '',\n  conversation_id:       convDetails.id,\n  account_id:            account.chatwoot_account_id,\n  ml_user_id:            $('Execute Workflow Trigger').first().json.body.user_id,\n  buyer_user_id:         String(msgDetails.from?.user_id || ''),\n  pack_id:               msgDetails.pack_id,\n  order_context:         orderCtx,\n  shipment_context:      shipCtx,\n  rag_context:           ragResult.context || '',\n  conversation_history:  history,\n  prompts:               account.prompts || {},\n  pv_ia:                 (() => { try { const r = account.pv_ia; return (typeof r === 'string') ? JSON.parse(r) : (r || {}); } catch(e) { return {}; } })(),\n  attachment_context:    getSafe('process_attachments').attachment_context || ''\n};\n"
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nfunction getSafe(n) { try { return $(n).first().json; } catch(e) { return {}; } }\n\nasync function safeFetch(url, headers) {\n  try {\n    const r = await fetch(url, { method: 'GET', headers });\n    if (!r.ok) return null;\n    return await r.json();\n  } catch(e) { return null; }\n}\n\nconst account     = getSafe('get_account_details');\nconst msgDetails  = getSafe('normalize_message');\nconst ragResult   = getSafe('rag_search');\nconst convDetails = getSafe('get_or_create_conversation');\nconst token       = account.access_token;\n\nconst orderId = msgDetails.order_id;\nlet order    = null;\nlet shipment = null;\n\nif (account.bridge_enabled === true) {\n  const triggerBody = $('Execute Workflow Trigger').first().json.body;\n  order = triggerBody.order || null;\n  shipment = triggerBody.shipment || null;\n} else if (orderId && token) {\n  let orderIds = [String(orderId)];\n  const pack = await safeFetch(\n    `https://api.mercadolibre.com/packs/${orderId}`,\n    { Authorization: `Bearer ${token}` }\n  );\n  if (pack && Array.isArray(pack.orders) && pack.orders.length) {\n    orderIds = pack.orders.map(o => String(o.id)).filter(Boolean);\n  }\n  const orders = [];\n  for (const oid of orderIds) {\n    const od = await safeFetch(\n      `https://api.mercadolibre.com/orders/${oid}`,\n      { Authorization: `Bearer ${token}` }\n    );\n    if (od) orders.push(od);\n  }\n  order = orders[0] || null;\n  if (order) order._all_items = orders.flatMap(o => o.order_items || []);\n  if (order?.shipping?.id) {\n    shipment = await safeFetch(\n      `https://api.mercadolibre.com/shipments/${order.shipping.id}`,\n      { Authorization: `Bearer ${token}` }\n    );\n  }\n}\n\n// Fetch últimos 8 mensajes para contexto de conversación\nconst histData = await safeFetch(\n  `https://w1206-app.site/api/v1/accounts/${account.chatwoot_account_id}/conversations/${convDetails.id}/messages`,\n  { api_access_token: 'TSL8r4ctWYzXJF9fiAS1Z8RV' }\n);\n// Solo mensajes reales (0=cliente, 1=vendedor): excluye actividad (2) y plantillas (3)\nconst histMsgs = (histData?.payload || []).filter(m => !m.private && m.content && (m.message_type === 0 || m.message_type === 1));\nconst history = histMsgs.slice(-8).map(m =>\n  `${m.message_type === 0 ? 'Cliente' : 'Vendedor'}: ${m.content}`\n).join('\\n');\n\nconst orderItems = order ? (order._all_items || order.order_items || []) : [];\nconst orderCtx = order\n  ? `ID: ${order.id} | Estado: ${order.status} | Total: ${order.currency_id} ${order.total_amount} | Productos: ${orderItems.map(i=>i.item?.title).filter(Boolean).join(', ') || '(sin títulos)'}`\n  : '(Sin datos de pedido)';\n\nconst shipDate = shipment\n  ? (shipment.shipping_option?.estimated_delivery_final?.date\n    || shipment.shipping_option?.estimated_delivery_time?.date\n    || shipment.estimated_delivery_final?.date\n    || shipment.estimated_delivery_time?.date\n    || shipment.estimated_handling_limit?.date\n    || 'N/A')\n  : 'N/A';\nconst shipCtx = shipment\n  ? `ID: ${shipment.id} | Estado: ${shipment.status} | Tracking: ${shipment.tracking_number||'N/A'} | Fecha estimada de entrega: ${shipDate}`\n  : '(Sin datos de envío)';\n\n// Detalle del producto comprado: ML directo (item + description) con fallback al item de la orden\nconst orderItem = orderItems[0]?.item || {};\nconst firstItemId = orderItem.id || '';\nlet item = null;\nlet itemDesc = '';\nif (firstItemId && token) {\n  item = await safeFetch(\n    `https://api.mercadolibre.com/items/${firstItemId}`,\n    { Authorization: `Bearer ${token}` }\n  );\n  const desc = await safeFetch(\n    `https://api.mercadolibre.com/items/${firstItemId}/description`,\n    { Authorization: `Bearer ${token}` }\n  );\n  itemDesc = String(desc?.plain_text || desc?.text || '').slice(0, 400);\n}\nconst itemAttrs = (item?.attributes || [])\n  .filter(a => a && a.value_name)\n  .slice(0, 10)\n  .map(a => `${a.name || a.id}: ${a.value_name}`)\n  .join(' | ');\nconst variationAttrs = (orderItem.variation_attributes || [])\n  .filter(a => a && a.value_name)\n  .map(a => `${a.name || a.id}: ${a.value_name}`)\n  .join(' | ');\nconst productCtx = item\n  ? `Título: ${item.title || orderItem.title || '(sin título)'} | Condición: ${item.condition || orderItem.condition || 'N/A'} | Precio: ${item.currency_id || ''} ${item.price || ''}${variationAttrs ? ' | Variante comprada: ' + variationAttrs : ''}${itemAttrs ? ' | Atributos: ' + itemAttrs : ''}${item.warranty ? ' | Garantía: ' + item.warranty : ''}${itemDesc ? ' | Descripción: ' + itemDesc : ''}`\n  : (orderItem.title\n      ? `Título: ${orderItem.title} | Condición: ${orderItem.condition || 'N/A'}${variationAttrs ? ' | Variante comprada: ' + variationAttrs : ''}${orderItem.warranty ? ' | Garantía: ' + orderItem.warranty : ''}`\n      : '(Sin datos de producto)');\n\nconst buyerData = getSafe('get_buyer_details');\nconst buyerName = buyerData.nickname || '';\nconst buyerCity = buyerData.address?.city || '';\n\n// Registro de la interpretación del adjunto como nota privada (visible para agentes)\nconst attachmentCtx = getSafe('process_attachments').attachment_context || '';\nif (attachmentCtx) {\n  await fetch(\n    `https://w1206-app.site/api/v1/accounts/${account.chatwoot_account_id}/conversations/${convDetails.id}/messages`,\n    {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json', api_access_token: 'TSL8r4ctWYzXJF9fiAS1Z8RV' },\n      body: JSON.stringify({ content: `📎 Interpretación del adjunto (IA):\\n${attachmentCtx}`, message_type: 'outgoing', private: true })\n    }\n  );\n}\n\n// Bloque de contexto único: mismo contenido para clasificador y generadores\nconst contextBlock = [\n  `COMPRADOR: ${buyerName || '(sin nombre)'}${buyerCity ? ' — ' + buyerCity : ''}`,\n  `PEDIDO: ${orderCtx}`,\n  `PRODUCTO: ${productCtx}`,\n  `ENVÍO: ${shipCtx}`,\n  `ADJUNTO DEL CLIENTE: ${attachmentCtx || '(ninguno)'}`,\n  `INSTRUCCIONES DEL VENDEDOR: ${(account.prompts && account.prompts.otros) || '(ninguna)'}`,\n  `BASE DE CONOCIMIENTO:\\n${ragResult?.context || '(sin documentación)'}`,\n  `HISTORIAL:\\n${history || '(ninguno)'}`,\n].join('\\n\\n');\n\nreturn {\n  message:               msgDetails.text || '',\n  conversation_id:       convDetails.id,\n  account_id:            account.chatwoot_account_id,\n  ml_user_id:            $('Execute Workflow Trigger').first().json.body.user_id,\n  buyer_user_id:         String(msgDetails.from?.user_id || ''),\n  buyer_name:            buyerName,\n  buyer_city:            buyerCity,\n  product_context:       productCtx,\n  pack_id:               msgDetails.pack_id,\n  order_context:         orderCtx,\n  shipment_context:      shipCtx,\n  rag_context:           ragResult.context || '',\n  conversation_history:  history,\n  prompts:               account.prompts || {},\n  pv_ia:                 (() => { try { const r = account.pv_ia; return (typeof r === 'string') ? JSON.parse(r) : (r || {}); } catch(e) { return {}; } })(),\n  attachment_context:    attachmentCtx,\n  context_block:         contextBlock\n};\n"
       },
       "typeVersion": 2
     },
@@ -389,7 +394,7 @@
       ],
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
-        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0,\n  max_tokens: 10,\n  messages: [\n    {\n      role: 'system',\n      content: 'Clasificá el mensaje de un cliente en una conversación de e-commerce post-venta. Respondé ÚNICAMENTE con una sola palabra sin puntuación: saludo, logistica, soporte, reclamo, o cierre.\\n- saludo: saludo, presentación, mensaje conversacional sin consulta específica (ej: hola, buenas noches, cómo estás, gracias sin cerrar)\\n- logistica: tracking, cuándo llega, demoras, dirección, estado del envío\\n- soporte: cómo usar el producto, compatibilidad, instrucciones, especificaciones técnicas\\n- reclamo: producto dañado, falta pieza, no funciona, devolución, reembolso, queja formal\\n- cierre: conformidad explícita con la solución recibida, despedida clara después de resolver (ej: muchas gracias quedé conforme, listo todo solucionado)'\n    },\n    {\n      role: 'user',\n      content: `HISTORIAL:\\n${$('context_assembler').item.json.conversation_history || '(sin historial)'}\\n\\nMENSAJE ACTUAL: ${$('context_assembler').item.json.message}`\n    }\n  ]\n}) }}",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0,\n  max_tokens: 10,\n  messages: [\n    {\n      role: 'system',\n      content: 'Clasificá el mensaje de un cliente en una conversación de e-commerce post-venta. Respondé ÚNICAMENTE con una sola palabra sin puntuación: saludo, logistica, soporte, reclamo, o cierre.\\n- saludo: saludo, presentación, mensaje conversacional sin consulta específica (ej: hola, buenas noches, cómo estás, gracias sin cerrar)\\n- logistica: tracking, cuándo llega, demoras, dirección, estado del envío\\n- soporte: cómo usar el producto, compatibilidad, instrucciones, especificaciones técnicas\\n- reclamo: producto dañado, falta pieza, no funciona, devolución, reembolso, queja formal\\n- cierre: conformidad explícita con la solución recibida, despedida clara después de resolver (ej: muchas gracias quedé conforme, listo todo solucionado)\\n- Si hay un adjunto (imagen/archivo) con un producto dañado, distinto al comprado o con un problema, clasificá soporte o reclamo (nunca saludo)'\n    },\n    {\n      role: 'user',\n      content: `CONTEXTO:\\n${$('context_assembler').item.json.context_block || '(sin contexto)'}\\n\\nMENSAJE ACTUAL: ${$('context_assembler').item.json.message}`\n    }\n  ]\n}) }}",
         "method": "POST",
         "options": {},
         "sendBody": true,
@@ -551,7 +556,7 @@
       ],
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
-        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.7,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un agente de post-venta experto y empático. Respondé SIEMPRE en el idioma del cliente. Dá información logística precisa basada en el contexto disponible.\\n\\nCONTEXTO DEL PEDIDO:\\n' + $('context_assembler').item.json.order_context + '\\n\\nCONTEXTO DEL ENVÍO:\\n' + $('context_assembler').item.json.shipment_context + '\\n\\nSi no encontrás la info exacta, decí: \"Voy a consultar el estado y te aviso a la brevedad.\" Nunca inventes fechas ni números de tracking.\\n\\nINSTRUCCIONES DEL VENDEDOR: ' + ($('context_assembler').item.json.prompts?.otros || '') + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nINSTRUCCIONES ADICIONALES LOGÍSTICA: ' + ($('context_assembler').item.json.pv_ia?.prompts?.logistica || '')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.7,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un agente de post-venta experto y empático. Respondé SIEMPRE en el idioma del cliente. Dá información logística precisa basada en el contexto.\\nNo ofrezcas acciones que no podés ejecutar (no preguntes \"¿querés que consulte?\" ni prometas verificaciones ni avisos futuros). Si no tenés la info exacta, respondé exactamente: \"Voy a consultar el estado y te aviso a la brevedad.\" Nunca inventes fechas ni números de tracking.\\n\\n' + ($('context_assembler').item.json.context_block || '') + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nINSTRUCCIONES ADICIONALES LOGÍSTICA: ' + ($('context_assembler').item.json.pv_ia?.prompts?.logistica || '')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
         "method": "POST",
         "options": {},
         "sendBody": true,
@@ -631,7 +636,7 @@
       ],
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
-        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.7,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un especialista técnico de post-venta empático. Respondé SIEMPRE en el idioma del cliente.\\n\\nBASE DE CONOCIMIENTO:\\n' + ($('context_assembler').item.json.rag_context || 'No hay documentación técnica disponible.') + '\\n\\nCONTEXTO DEL PEDIDO: ' + $('context_assembler').item.json.order_context + '\\n\\nINSTRUCCIONES DEL VENDEDOR: ' + ($('context_assembler').item.json.prompts?.otros || '') + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nINSTRUCCIONES ADICIONALES SOPORTE: ' + ($('context_assembler').item.json.pv_ia?.prompts?.soporte || '') + '\\n\\nSi no encontrás la solución, respondé exactamente: \"Para darte una solución precisa, he transferido este chat a uno de mis compañeros especialistas. Te responderán a la brevedad.\"'\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.7,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un especialista técnico de post-venta empático. Respondé SIEMPRE en el idioma del cliente. Usá la BASE DE CONOCIMIENTO y los datos del PRODUCTO del contexto.\\nNo ofrezcas acciones que no podés ejecutar. Si no encontrás la solución, respondé exactamente: \"Para darte una solución precisa, he transferido este chat a uno de mis compañeros especialistas. Te responderán a la brevedad.\"\\n\\n' + ($('context_assembler').item.json.context_block || '') + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nINSTRUCCIONES ADICIONALES SOPORTE: ' + ($('context_assembler').item.json.pv_ia?.prompts?.soporte || '')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
         "method": "POST",
         "options": {},
         "sendBody": true,
@@ -779,7 +784,7 @@
       ],
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
-        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.8,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un agente de post-venta cordial. El cliente está cerrando la conversación con un mensaje positivo. Respondé brevemente (máximo 2 oraciones): agradecés su elección y te despedís alentando futuras compras. Respondé SIEMPRE en el mismo idioma del cliente.' + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nINSTRUCCIONES CIERRE: ' + ($('context_assembler').item.json.pv_ia?.prompts?.cierre || '')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.8,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un agente de post-venta cordial. El cliente está cerrando la conversación con un mensaje positivo. Respondé brevemente (máximo 2 oraciones): agradecés su elección y te despedís alentando futuras compras. Respondé SIEMPRE en el mismo idioma del cliente.\\n\\n' + ($('context_assembler').item.json.context_block || '') + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nINSTRUCCIONES CIERRE: ' + ($('context_assembler').item.json.pv_ia?.prompts?.cierre || '')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
         "method": "POST",
         "options": {},
         "sendBody": true,
@@ -1118,7 +1123,7 @@
       ],
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
-        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.8,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un agente de post-venta amigable. El cliente te envió un saludo o mensaje de apertura. Respondé con un saludo cálido, breve y natural. Preguntale en qué podés ayudarle con su compra. Respondé SIEMPRE en el mismo idioma del cliente. Máximo 2 oraciones.\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '') + '\\n\\nHISTORIAL:\\n' + ($('context_assembler').item.json.conversation_history || '(ninguno)')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
+        "body": "={{ JSON.stringify({\n  model: ($('context_assembler').item.json.pv_ia?.model || 'gpt-4o-mini'),\n  temperature: 0.8,\n  messages: [\n    {\n      role: 'system',\n      content: 'Sos un agente de post-venta amigable. El cliente te envió un saludo o mensaje de apertura. Respondé con un saludo cálido, breve y natural. Preguntale en qué podés ayudarle con su compra. Respondé SIEMPRE en el mismo idioma del cliente. Máximo 2 oraciones.\\nSi tenés el nombre del comprador, usalo con naturalidad. Si hay un adjunto, tenelo en cuenta y mencionalo; si no coincide con el producto comprado o es ambiguo, preguntá al cliente por qué lo envió. No ofrezcas acciones que no podés ejecutar.\\n\\n' + ($('context_assembler').item.json.context_block || '') + '\\n\\nTONO: ' + ($('context_assembler').item.json.pv_ia?.prompts?.tono || '')\n    },\n    { 'role': 'user', 'content': $('context_assembler').item.json.message }\n  ]\n}) }}",
         "method": "POST",
         "options": {},
         "sendBody": true,
@@ -1186,7 +1191,7 @@
                 "type": "string",
                 "operation": "notEquals"
               },
-              "leftValue": "={{ $input.first().json.body._id }}",
+              "leftValue": "={{ $input.first().json.body._id || '' }}",
               "rightValue": ""
             }
           ]
@@ -1777,7 +1782,7 @@
         -1900
       ],
       "parameters": {
-        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst msg = $('normalize_message').first().json;\nconst account = $('get_account_details').first().json;\nconst TIKA_URL = $env.TIKA_URL || 'http://tika:9998';\nconst OPENAI_KEY = $env.OPENAI_API_KEY || '';\nconst descs = [];\n\nasync function processBuffer(att, buf) {\n  const mime = att.mime_type || att.type || '';\n  try {\n    if (mime.startsWith('image/')) {\n      const r = await fetch('https://api.openai.com/v1/chat/completions', {\n        method: 'POST',\n        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },\n        body: JSON.stringify({\n          model: $env.OPENAI_VISION_MODEL || 'gpt-4o-mini',\n          messages: [{ role: 'user', content: [\n            { type: 'text', text: 'Describí brevemente esta imagen enviada por un comprador en contexto post-venta (daño, falta de pieza, etc.).' },\n            { type: 'image_url', image_url: { url: `data:${mime};base64,${buf.toString('base64')}` } }\n          ] }],\n          max_tokens: 200\n        })\n      });\n      if (r.ok) { const j = await r.json(); descs.push(`Imagen: ${j.choices?.[0]?.message?.content || 'imagen recibida'}`); }\n    } else if (mime === 'application/pdf' || mime.includes('pdf')) {\n      const r = await fetch(`${TIKA_URL}/tika`, { method: 'PUT', body: buf, headers: { 'Content-Type': 'application/pdf' } });\n      if (r.ok) { const t = await r.text(); descs.push(`PDF: ${t.slice(0, 1500)}`); }\n    } else if (mime.startsWith('audio/')) {\n      const form = new FormData();\n      form.append('file', new Blob([buf], { type: mime }), `audio.${mime.split('/')[1] || 'mp3'}`);\n      form.append('model', $env.OPENAI_WHISPER_MODEL || 'whisper-1');\n      const r = await fetch('https://api.openai.com/v1/audio/transcriptions', {\n        method: 'POST',\n        headers: { Authorization: `Bearer ${OPENAI_KEY}` },\n        body: form\n      });\n      if (r.ok) { const j = await r.json(); descs.push(`Audio (transcripción): ${j.text || ''}`); }\n    } else {\n      descs.push(`Adjunto recibido (${mime || 'desconocido'})`);\n    }\n  } catch (e) {\n    descs.push('Adjunto recibido (no procesado)');\n  }\n}\n\n// Bridge: los adjuntos vienen en el forward (URLs de message_attachments, sin token ML)\nif (account.status === 'bridge' && account.bridge_enabled === true) {\n  const fwd = $('Execute Workflow Trigger').first().json.body || {};\n  const urls = Array.isArray(fwd.attachments) ? fwd.attachments : [];\n  for (const att of urls) {\n    try {\n      const url = typeof att === 'string' ? att : (att.url || att.id);\n      if (!url) continue;\n      const res = await fetch(url);\n      if (!res.ok) continue;\n      const buf = Buffer.from(await res.arrayBuffer());\n      await processBuffer(att, buf);\n    } catch (e) { /* sigue con el siguiente adjunto */ }\n  }\n  return { ...$input.first().json, attachment_context: descs.length ? descs.join('\\n') : '' };\n}\n\nconst token = account.access_token;\nconst attachments = msg.attachments || [];\nfor (const att of attachments) {\n  try {\n    const res = await fetch(`https://api.mercadolibre.com/messages/attachments/${att.id}?tag=post_sale`, { headers: { Authorization: `Bearer ${token}` } });\n    if (!res.ok) continue;\n    const buf = Buffer.from(await res.arrayBuffer());\n    await processBuffer(att, buf);\n  } catch (e) { /* sigue con el siguiente adjunto */ }\n}\nreturn { ...$input.first().json, attachment_context: descs.length ? descs.join('\\n') : '' };\n"
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst msg = $('normalize_message').first().json;\nconst account = $('get_account_details').first().json;\nconst TIKA_URL = $env.TIKA_URL || 'http://yobot_cw_tika:9998';\nconst OPENAI_KEY = $env.OPENAI_API_KEY || '';\nconst descs = [];\n\nasync function processBuffer(att, buf) {\n  const mime = att.mime_type || att.type || '';\n  try {\n    if (mime.startsWith('image/')) {\n      const r = await fetch('https://api.openai.com/v1/chat/completions', {\n        method: 'POST',\n        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },\n        body: JSON.stringify({\n          model: $env.OPENAI_VISION_MODEL || 'gpt-4o-mini',\n          messages: [{ role: 'user', content: [\n            { type: 'text', text: 'Describí brevemente esta imagen enviada por un comprador en contexto post-venta (daño, falta de pieza, etc.).' },\n            { type: 'image_url', image_url: { url: `data:${mime};base64,${buf.toString('base64')}` } }\n          ] }],\n          max_tokens: 200\n        })\n      });\n      if (r.ok) { const j = await r.json(); descs.push(`Imagen: ${j.choices?.[0]?.message?.content || 'imagen recibida'}`); }\n    } else if (mime === 'application/pdf' || mime.includes('pdf')) {\n      const r = await fetch(`${TIKA_URL}/tika`, { method: 'PUT', body: buf, headers: { 'Content-Type': 'application/pdf' } });\n      if (r.ok) { const t = await r.text(); descs.push(`PDF: ${t.slice(0, 1500)}`); }\n    } else if (mime.startsWith('audio/')) {\n      const form = new FormData();\n      form.append('file', new Blob([buf], { type: mime }), `audio.${mime.split('/')[1] || 'mp3'}`);\n      form.append('model', $env.OPENAI_WHISPER_MODEL || 'whisper-1');\n      const r = await fetch('https://api.openai.com/v1/audio/transcriptions', {\n        method: 'POST',\n        headers: { Authorization: `Bearer ${OPENAI_KEY}` },\n        body: form\n      });\n      if (r.ok) { const j = await r.json(); descs.push(`Audio (transcripción): ${j.text || ''}`); }\n    } else {\n      descs.push(`Adjunto recibido (${mime || 'desconocido'})`);\n    }\n  } catch (e) {\n    descs.push('Adjunto recibido (no procesado)');\n  }\n}\n\n// Bridge: los adjuntos vienen en el forward (URLs de message_attachments, sin token ML)\nif (account.status === 'bridge' && account.bridge_enabled === true) {\n  const fwd = $('Execute Workflow Trigger').first().json.body || {};\n  const urls = Array.isArray(fwd.attachments) ? fwd.attachments : [];\n  for (const att of urls) {\n    try {\n      const url = typeof att === 'string' ? att : (att.url || att.id);\n      if (!url) continue;\n      const res = await fetch(url);\n      if (!res.ok) continue;\n      const buf = Buffer.from(await res.arrayBuffer());\n      await processBuffer(att, buf);\n    } catch (e) { /* sigue con el siguiente adjunto */ }\n  }\n  return { ...$input.first().json, attachment_context: descs.length ? descs.join('\\n') : '' };\n}\n\nconst token = account.access_token;\nconst attachments = msg.attachments || [];\nfor (const att of attachments) {\n  try {\n    const res = await fetch(`https://api.mercadolibre.com/messages/attachments/${att.filename || att.id}?tag=post_sale&site_id=${msg.site_id || ''}`, { headers: { Authorization: `Bearer ${token}` } });\n    if (!res.ok) continue;\n    const buf = Buffer.from(await res.arrayBuffer());\n    await processBuffer(att, buf);\n  } catch (e) { /* sigue con el siguiente adjunto */ }\n}\nreturn { ...$input.first().json, attachment_context: descs.length ? descs.join('\\n') : '' };\n"
       },
       "typeVersion": 2
     },
@@ -2071,6 +2076,107 @@
       "parameters": {
         "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\n// Marca los mensajes del comprador como leídos en ML (el comprador ve \"Visto\") y sincroniza\n// los ticks read (✓✓ azul) de los mensajes del vendedor. Best-effort: no bloquea el flujo.\ntry {\n  const acct = $('get_account_details').first().json;\n  const conv = $('get_or_create_conversation').first().json;\n  const res = await fetch('http://rails:3000/api/bridge/sync-conversation-reads', {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json', 'x-internal-secret': 'reply_ai_internal_2026' },\n    body: JSON.stringify({ account_id: acct.chatwoot_account_id, conversation_id: conv.id })\n  });\n  return await res.json();\n} catch (e) {\n  return { ok: false, error: String(e.message || e) };\n}"
       }
+    },
+    {
+      "id": "dc759c9c-9a21-4c2d-8178-300157c4dfe1",
+      "name": "has_attachments?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -40480,
+        -1904
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 3,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "ha1",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $('normalize_message').first().json.has_attachments }}",
+              "rightValue": true
+            }
+          ]
+        },
+        "looseTypeValidation": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "4e8eff77-1e2e-415d-944c-cc88bc9c63f6",
+      "name": "download_attachments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -40240,
+        -2000
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_account_details').first().json;\nconst msg = $('normalize_message').first().json;\nconst attachments = msg.attachments || [];\nconst items = [];\nlet first = true;\nfor (const att of attachments) {\n  try {\n    const key = att.filename || att.id;\n    if (!key) continue;\n    const r = await fetch('https://api.mercadolibre.com/messages/attachments/' + key + '?tag=post_sale&site_id=' + (msg.site_id || ''), { headers: { Authorization: 'Bearer ' + account.access_token } });\n    if (!r.ok) continue;\n    const buf = Buffer.from(await r.arrayBuffer());\n    items.push({\n      json: { content: first ? (msg.text || '') : '' },\n      binary: { data: { data: buf.toString('base64'), mimeType: att.type || 'application/octet-stream', fileName: String(att.original_filename || key) } }\n    });\n    first = false;\n  } catch (e) { /* sigue con el siguiente adjunto */ }\n}\nif (!items.length) {\n  // Ningun adjunto se pudo descargar: item sin binary -> el HTTP multipart fallara ruidosamente\n  items.push({ json: { content: msg.text || '', error: 'no se pudo descargar ningun adjunto' } });\n}\nreturn items;\n"
+      }
+    },
+    {
+      "id": "5be5cece-479a-43eb-b6f7-348c23a8375b",
+      "name": "chatwoot_add_incoming_multipart",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -39984,
+        -2000
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('get_account_details').item.json.chatwoot_account_id }}/conversations/{{ $('get_or_create_conversation').item.json.id }}/messages",
+        "authentication": "none",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formData",
+              "name": "content",
+              "value": "={{ $json.content }}"
+            },
+            {
+              "parameterType": "formData",
+              "name": "message_type",
+              "value": "incoming"
+            },
+            {
+              "parameterType": "formData",
+              "name": "private",
+              "value": "false"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "attachments[]",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -2254,7 +2360,7 @@
       "main": [
         [
           {
-            "node": "get_order_state",
+            "node": "context_assembler",
             "type": "main",
             "index": 0
           }
@@ -2417,7 +2523,7 @@
       "main": [
         [
           {
-            "node": "chatwoot_add_incoming_message",
+            "node": "has_attachments?",
             "type": "main",
             "index": 0
           }
@@ -2473,7 +2579,7 @@
       "main": [
         [
           {
-            "node": "context_assembler",
+            "node": "process_attachments",
             "type": "main",
             "index": 0
           }
@@ -2932,13 +3038,52 @@
           }
         ]
       ]
+    },
+    "has_attachments?": {
+      "main": [
+        [
+          {
+            "node": "download_attachments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "chatwoot_add_incoming_message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "download_attachments": {
+      "main": [
+        [
+          {
+            "node": "chatwoot_add_incoming_multipart",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chatwoot_add_incoming_multipart": {
+      "main": [
+        [
+          {
+            "node": "sync_message_reads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "binaryMode": "separate",
     "availableInMCP": false,
-    "executionOrder": "v1"
-  },
-  "versionId": "cb3b8ed9-e5de-4bb1-8f3c-3750f97d56dc",
-  "id": "ryXMiGxGs0CBpknCbzpFB"
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
 }

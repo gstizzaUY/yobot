@@ -1,6 +1,7 @@
 {
   "name": "reply_ai_postsale_outbound",
   "active": true,
+  "id": "Ba44aWzQyoy6Q7lGju43W",
   "nodes": [
     {
       "id": "1e94424f-a6e5-49b9-830b-ee2f447b51d3",
@@ -29,7 +30,7 @@
         -608
       ],
       "parameters": {
-        "jsCode": "const data = $input.first().json.body || $input.first().json;\n\n// Solo mensajes outgoing (type 1 o string 'outgoing'), no privados\nconst isOutgoing = data.message_type === 1 || data.message_type === 'outgoing';\nif (!isOutgoing) {\n  return { forward: false, reason: 'not_outgoing', type: data.message_type };\n}\nif (data.private === true) {\n  return { forward: false, reason: 'private' };\n}\n\n// Ignorar mensajes espejados por n8n IA (ya fueron enviados a ML directamente)\nif (data.content_attributes?.source === 'n8n_ai') {\n  return { forward: false, reason: 'ai_mirror' };\n}\n\nconst conv = data.conversation;\nif (!conv) {\n  return { forward: false, reason: 'no_conversation' };\n}\n\nconst attrs = conv.additional_attributes || {};\nif (attrs.type !== 'post-venta') {\n  return { forward: false, reason: 'not_postsale', attrs_type: attrs.type };\n}\n\n// pack_id: desde additional_attributes o meta.source_id\nconst packId  = String(attrs.pack_id || conv.meta?.source_id || '');\n// buyer_user_id: identifier del contacto del contacto almacenado al crear la conversación\nconst buyerId = String(conv.meta?.sender?.identifier || '');\nconst accountId = data.account?.id;\nconst text    = (data.content || '').trim();\n\nif (!packId || !buyerId || !text) {\n  return { forward: false, reason: 'missing_data', packId, buyerId, hasText: !!text };\n}\n\nreturn {\n  forward:        true,\n  pack_id:        packId,\n  buyer_user_id:  buyerId,\n  account_id:     accountId,\n  text\n};\n"
+        "jsCode": "const data = $input.first().json.body || $input.first().json;\n\n// Solo mensajes outgoing (type 1 o string 'outgoing'), no privados\nconst isOutgoing = data.message_type === 1 || data.message_type === 'outgoing';\nif (!isOutgoing) {\n  return { forward: false, reason: 'not_outgoing', type: data.message_type };\n}\nif (data.private === true) {\n  return { forward: false, reason: 'private' };\n}\n\n// Ignorar mensajes espejados por n8n IA (ya fueron enviados a ML directamente)\nif (data.content_attributes?.source === 'n8n_ai') {\n  return { forward: false, reason: 'ai_mirror' };\n}\n\nconst conv = data.conversation;\nif (!conv) {\n  return { forward: false, reason: 'no_conversation' };\n}\n\nconst attrs = conv.additional_attributes || {};\nif (attrs.type !== 'post-venta') {\n  return { forward: false, reason: 'not_postsale', attrs_type: attrs.type };\n}\n\n// pack_id: desde additional_attributes o meta.source_id\nconst packId  = String(attrs.pack_id || conv.meta?.source_id || '');\n// buyer_user_id: identifier del contacto del contacto almacenado al crear la conversación\nconst buyerId = String(conv.meta?.sender?.identifier || '');\nconst accountId = data.account?.id;\nconst text    = (data.content || '').trim();\n\nconst attachments = data.attachments || [];\n\nif (!packId || !buyerId || (!text && !attachments.length)) {\n  return { forward: false, reason: 'missing_data', packId, buyerId, hasText: !!text };\n}\n\nreturn {\n  forward:        true,\n  pack_id:        packId,\n  buyer_user_id:  buyerId,\n  account_id:     accountId,\n  text,\n  attachments\n};\n"
       },
       "typeVersion": 2
     },
@@ -73,7 +74,7 @@
         -608
       ],
       "parameters": {
-        "query": "SELECT c.ml_user_id, c.access_token, c.status, c.bridge_enabled,\n       (SELECT a.custom_attributes->>'receive_only' FROM accounts a WHERE a.id = c.account_id) AS receive_only\nFROM meli_credentials c\nWHERE c.account_id = '{{ $('filter_and_extract').item.json.account_id }}'\nORDER BY c.id ASC\nLIMIT 1;",
+        "query": "SELECT c.ml_user_id, c.access_token, c.status, c.bridge_enabled,\n       (SELECT a.custom_attributes->'mercadolibre'->'user'->>'site_id' FROM accounts a WHERE a.id = c.account_id) AS site_id,\n       (SELECT a.custom_attributes->>'receive_only' FROM accounts a WHERE a.id = c.account_id) AS receive_only\nFROM meli_credentials c\nWHERE c.account_id = '{{ $('filter_and_extract').item.json.account_id }}'\nORDER BY c.id ASC\nLIMIT 1;",
         "options": {},
         "operation": "executeQuery"
       },
@@ -151,6 +152,108 @@
           ]
         }
       }
+    },
+    {
+      "id": "a4f1fa35-fcc1-476e-b92e-50d1b476d15d",
+      "name": "has_attachments_out?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        100,
+        100
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 3,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "ha1",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "leftValue": "={{ ($('filter_and_extract').first().json.attachments || []).length > 0 }}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "looseTypeValidation": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "9c6db98b-f603-43e1-a5da-72a42cbc53fb",
+      "name": "download_outbound_attachments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        340,
+        100
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst data = $('filter_and_extract').first().json;\nconst attachments = data.attachments || [];\nconst items = [];\nfor (const att of attachments) {\n  try {\n    const url = att.data_url || '';\n    if (!url) continue;\n    const r = await fetch(url);\n    if (!r.ok) continue;\n    const buf = Buffer.from(await r.arrayBuffer());\n    const ext = att.extension || 'bin';\n    const mime = att.content_type || (att.file_type === 'image' ? 'image/' + ext : 'application/octet-stream');\n    items.push({ json: {}, binary: { data: { data: buf.toString('base64'), mimeType: mime, fileName: 'adjunto.' + ext } } });\n  } catch (e) { /* sigue con el siguiente adjunto */ }\n}\nif (!items.length) items.push({ json: {} });\nreturn items;\n"
+      }
+    },
+    {
+      "id": "b98e7ed7-cd9f-496b-95ec-9017058fdca8",
+      "name": "upload_attachments_ml",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        580,
+        100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.mercadolibre.com/messages/attachments?tag=post_sale&site_id={{ $('get_ml_credentials').first().json.site_id }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('get_ml_credentials').first().json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b32dbc08-2dc0-42f5-b0ed-685dcc9dcb4c",
+      "name": "send_to_ml_with_attachments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        820,
+        100
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nconst account = $('get_ml_credentials').first().json;\nconst data = $('filter_and_extract').first().json;\nconst text = data.text || '';\nconst keys = $input.all().map(i => i.json && i.json.id).filter(Boolean);\nif (!keys.length) throw new Error('ML adjuntos: ninguna key subida');\nconst isBridge = account.status === 'bridge' && account.bridge_enabled === true;\nif ($env.REPLY_RECEIVE_ONLY === 'true' && account.receive_only === 'true') return { receive_only: true, text: text, skipped: true };\nif (isBridge) throw new Error('Bridge: adjuntos salientes no soportados (pendiente)');\nconst res = await fetch('https://api.mercadolibre.com/messages/packs/' + data.pack_id + '/sellers/' + account.ml_user_id + '?tag=post_sale', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + account.access_token },\n  body: JSON.stringify({ from: { user_id: String(account.ml_user_id) }, to: { user_id: data.buyer_user_id }, text: text, attachments: keys })\n});\nif (!res.ok) throw new Error('ML send (con adjuntos): ' + res.status);\nconst sent = await res.json();\nawait markDelivered(sent);\nreturn sent;\n\nasync function markDelivered(sent) {\n  const cwMessageId = $('chatwoot_webhook').item.json.body.id;\n  const mlMessageId = String(sent.message_id || sent.id || '');\n  if (!cwMessageId || !mlMessageId) return;\n  try {\n    await fetch('http://rails:3000/api/bridge/message-status', {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json', 'x-internal-secret': 'reply_ai_internal_2026' },\n      body: JSON.stringify({ account_id: data.account_id, message_id: cwMessageId, status: 'delivered', ml_message_id: mlMessageId })\n    });\n  } catch (e) {}\n}\n"
+      }
     }
   ],
   "connections": {
@@ -191,7 +294,7 @@
       "main": [
         [
           {
-            "node": "send_to_ml",
+            "node": "has_attachments_out?",
             "type": "main",
             "index": 0
           }
@@ -219,13 +322,63 @@
           }
         ]
       ]
+    },
+    "has_attachments_out?": {
+      "main": [
+        [
+          {
+            "node": "download_outbound_attachments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "send_to_ml",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "download_outbound_attachments": {
+      "main": [
+        [
+          {
+            "node": "upload_attachments_ml",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "upload_attachments_ml": {
+      "main": [
+        [
+          {
+            "node": "send_to_ml_with_attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_to_ml_with_attachments": {
+      "main": [
+        [
+          {
+            "node": "chatwoot_remove_manual_label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "binaryMode": "separate",
     "availableInMCP": false,
-    "executionOrder": "v1"
-  },
-  "versionId": "55c1d4a5-3b02-45b8-b492-cc1d6386fe88",
-  "id": "Ba44aWzQyoy6Q7lGju43W"
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
 }

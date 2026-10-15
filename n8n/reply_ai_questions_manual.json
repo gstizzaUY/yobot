@@ -1,6 +1,7 @@
 {
   "name": "reply_ai_questions_manual",
   "active": true,
+  "id": "lcRPkFmNl7GU-6U8EZIxR",
   "nodes": [
     {
       "id": "ae343f5f-6bac-4fe2-813e-d17cb14ae2e3",
@@ -399,8 +400,7 @@
   "settings": {
     "binaryMode": "separate",
     "availableInMCP": false,
-    "executionOrder": "v1"
-  },
-  "versionId": "cb7feed6-9f02-48e9-a9c1-6dbabf511a92",
-  "id": "lcRPkFmNl7GU-6U8EZIxR"
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
 }

@@ -1,6 +1,7 @@
 {
   "name": "reply_ai_postsale_webhook",
   "active": true,
+  "id": "aaaaaa01-0000-4000-8000-000000000005",
   "nodes": [
     {
       "parameters": {
@@ -69,7 +70,5 @@
     "executionOrder": "v1",
     "binaryMode": "separate",
     "availableInMCP": false
-  },
-  "versionId": "aaaaaa01-0000-4000-8000-000000000004",
-  "id": "aaaaaa01-0000-4000-8000-000000000005"
+  }
 }

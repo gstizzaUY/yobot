@@ -1,6 +1,7 @@
 {
   "name": "reply_ai_pv_embedding_generator",
   "active": true,
+  "id": "c91c2f34-183d-4cda-a703-3044cbe86ee5",
   "nodes": [
     {
       "parameters": {
@@ -164,7 +165,5 @@
     "executionOrder": "v1",
     "binaryMode": "separate",
     "availableInMCP": false
-  },
-  "versionId": "6cc6d8c5-cd65-48ba-9984-ef1264e208a7",
-  "id": "c91c2f34-183d-4cda-a703-3044cbe86ee5"
+  }
 }
