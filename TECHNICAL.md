@@ -2865,6 +2865,23 @@ sin pasos manuales ✓. Aplicado vía API + espejado al repo (commit `b87fb8f387
 **Patrón general**: los fixes de grounding deben cubrir los tres modos de falla — (a) dato ausente
 (marcador), (b) dato presente ignorado (contexto primero), (c) procedimientos inventados (regla 7).
 
+**Fix 2026-10-15 (cuarta iteración — auto-refuerzo de la memoria)**: la conv 16 volvió a responder
+el procedimiento manual **aunque v3 estaba activo y el contexto tenía "se calibra sola"** (verificado
+en el snapshot). Causa: el nodo `Postgres Chat Memory` (`reply_ai_pre_memory`, `sessionKey =
+from.id + "_" + item.id`, `contextWindowLength: 10`) le entrega al agente **sus propias respuestas
+anteriores** de la misma sesión comprador+item — incluidos el "180 watts" (×3) y el procedimiento
+manual de la conv 15 — y `gpt-4o-mini` los repite como hechos ✗ (auto-refuerzo: cualquier alucinación
+se vuelve "canon" de la sesión). **Regla 8** agregada a REGLAS CRÍTICAS: el historial es solo
+referencia, NO fuente de datos; si las respuestas anteriores contienen datos/procedimientos que no
+figuran en el CONTEXTO TÉCNICO, no repetirlos ni usarlos. Verificado con harness **simulando la
+memoria real** (se cargó el `chatHistory` real de las ejecuciones 653/664 como mensajes previos):
+batería → 5/5 "se calibra sola" (sin pasos manuales) ✓; watts → 5/5 `[SIN_INFORMACION]` ✓.
+Además se purgó `reply_ai_pre_memory` (contenía las respuestas alucinadas de prueba).
+**Lección**: al testear prompts RAG hay que replicar TODOS los inputs del agente real (memoria
+incluida); un harness sin memoria puede dar 3/3 y el flujo real fallar. Si en el futuro se quiere
+máxima seguridad, la alternativa es desconectar la memoria del agente pre-venta (las preguntas de
+ML son públicas e independientes).
+
 **Post-venta** (`postsale_main`): el generador de soporte usa la frase de derivación ("Para darte una
 solución precisa…") → `if_fallback_to_human?` → `set_human_label_support` (label `atencion-humana`;
 el gate corta la IA). **Fix 2026-10-15**: la condición ahora respeta
