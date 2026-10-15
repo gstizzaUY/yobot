@@ -2612,6 +2612,35 @@ referenciados con `$('nodo').item` requieren pairing — usar `.first()` cuando 
 - **Nuevo cron**: `reply_ai_claims_sync_job` (`ClaimsSyncAllWorker` cada 15 min) — respaldo del
   webhook: sync + upsert idempotente por cuenta.
 
+### 23.9 Contexto de la IA post-venta — P1 implementado (2026-10-15)
+
+Auditoría del contexto de las respuestas IA. **Hallazgo**: `context_assembler` ya incluía
+`attachment_context` (visión), pero **ningún clasificador/generador lo usaba**; `order_context`
+quedaba vacío (fallback `order_id = pack_id` → `GET /orders/{pack}` → 404) y el clasificador solo
+veía historial + mensaje (por eso una foto de producto + texto neutro clasificaba `saludo`).
+
+**Cambios en `postsale_main` (prod, vía API):**
+- `context_assembler`: resuelve pack→órdenes (`GET /packs/{pack}` → `/orders/{id}` de cada orden,
+  junta los títulos de todos los productos) y publica la interpretación del adjunto como
+  **nota privada** en la conversación (`message_type: outgoing`, `private: true`).
+- `classify_intent`: + `CONTEXTO DEL PEDIDO` + `ADJUNTO DEL CLIENTE` + regla "adjunto con producto
+  dañado/distinto al comprado → soporte o reclamo (nunca saludo)".
+- `generate_{saludo,logistica,soporte,cierre}_response`: + `ADJUNTO DEL CLIENTE` + instrucción
+  "si no coincide con el producto comprado o es ambiguo, preguntá al cliente por qué lo envió"
+  (saludo además + `CONTEXTO DEL PEDIDO`).
+
+**Resultado verificado** (mismo caso: compra de colchón + foto de laptop):
+- `order_context`: "…| Productos: Colchón De Espuma En Caja Freestyle Box 2 Plazas…" ✓
+- intent: `soporte` (antes `saludo`) ✓
+- Respuesta IA: "He recibido tu mensaje, pero noto que has adjuntado una imagen de un laptop Acer.
+  Sin embargo, tu pedido está relacionado con un colchón… ¿Podrías aclararme el motivo del archivo
+  que enviaste?" ✓
+- Nota privada en Chatwoot con la interpretación del adjunto ✓.
+
+**Pendiente (P2/P3)**: limpiar historial (excluir mensajes de actividad `message_type=2`), incluir
+nombre del comprador, detalle del producto (atributos/descripción), cargar prompts post-venta + RAG,
+y unificar un bloque de contexto único inyectado en todos los prompts.
+
 ---
 
 ## 24. Entornos e infraestructura (2026-10-13)
