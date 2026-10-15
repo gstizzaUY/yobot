@@ -2637,9 +2637,18 @@ veía historial + mensaje (por eso una foto de producto + texto neutro clasifica
   que enviaste?" ✓
 - Nota privada en Chatwoot con la interpretación del adjunto ✓.
 
-**Pendiente (P2/P3)**: limpiar historial (excluir mensajes de actividad `message_type=2`), incluir
-nombre del comprador, detalle del producto (atributos/descripción), cargar prompts post-venta + RAG,
-y unificar un bloque de contexto único inyectado en todos los prompts.
+**P2 implementado (2026-10-15, vía API):**
+- **Historial limpio**: se excluyen los mensajes de actividad/plantillas (`message_type` 2 y 3) y ahora
+  se inyecta en los 4 generadores (antes solo saludo).
+- **ETA del envío**: extracción corregida (`shipping_option.estimated_delivery_final.date` con fallbacks)
+  — antes "N/A" por buscar el campo en el nivel equivocado.
+- **Anti-promesas**: los generadores no deben ofrecer acciones que no pueden ejecutar; logística usa la
+  frase exacta de derivación ("Voy a consultar el estado y te aviso a la brevedad.").
+- **Comprador**: `buyer_name` (nickname) + `buyer_city` en el contexto; mención en los prompts.
+- Verificado: historial sin actividad ✓, ETA real ✓, respuesta con la frase de derivación ✓.
+
+**Pendiente (P3)**: detalle del producto (atributos/descripción), cargar prompts post-venta + RAG
+desde el dashboard, y unificar un bloque de contexto único inyectado en todos los prompts.
 
 ---
 
