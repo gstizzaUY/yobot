@@ -2816,10 +2816,10 @@ solución precisa…") → `if_fallback_to_human?` → `set_human_label_support`
 el gate corta la IA). **Fix 2026-10-15**: la condición ahora respeta
 `pv_ia.soporte.fallback_to_human` — antes lo ignoraba (la UI prometía una config sin efecto).
 
-**Pendiente (decisión de producto)**: el fallback de logística ("Voy a consultar el estado y te aviso
-a la brevedad.") no dispara handover — el comprador espera un aviso que no llega. Opciones:
-(a) etiquetar `atencion-humana` cuando la respuesta de logística contiene esa frase (como soporte),
-o (b) cambiar la frase para que no prometa.
+**Fallback de logística (aplicado 2026-10-15)**: cuando la respuesta de logística contiene
+"Voy a consultar el estado" se etiqueta `atencion-humana` (nodos `if_fallback_logistica?` +
+`set_human_label_logistica`, espejo del flujo de soporte) — el humano ve la conversación y el gate
+corta la IA. Nota: con el ETA real del envío (fix P2) este fallback debería ser poco frecuente.
 
 ---
 

@@ -325,7 +325,7 @@
       ],
       "parameters": {
         "url": "http://rails:3000/rag/pv_search",
-        "body": "={{ JSON.stringify({ account_id: $('get_account_details').first().json.chatwoot_account_id, query: $('normalize_message').first().json.text, item_id: String($('Execute Workflow Trigger').first().json.item_id || $('Execute Workflow Trigger').first().json.order?.items?.[0]?.item?.id || '') }) }}",
+        "body": "={{ JSON.stringify({ account_id: $('get_account_details').first().json.chatwoot_account_id, query: $('normalize_message').first().json.text, item_id: String($('Execute Workflow Trigger').first().json.item_id || $('Execute Workflow Trigger').first().json.order?.items?.[0]?.item?.id || ''), pack_id: $('normalize_message').first().json.pack_id }) }}",
         "method": "POST",
         "options": {},
         "sendBody": true,
@@ -967,11 +967,12 @@
             {
               "id": "f1",
               "operator": {
-                "type": "string",
-                "operation": "contains"
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
               },
-              "leftValue": "={{ $('generate_support_response').first().json.choices[0].message.content }}",
-              "rightValue": "Para darte una solución precisa"
+              "leftValue": "={{ $('generate_support_response').first().json.choices[0].message.content.includes('Para darte una solución precisa') && $('context_assembler').first().json.pv_ia?.soporte?.fallback_to_human !== false }}",
+              "rightValue": ""
             }
           ]
         }
@@ -2177,6 +2178,64 @@
         },
         "options": {}
       }
+    },
+    {
+      "id": "ef29240d-2051-498b-8b74-81d9e624756a",
+      "name": "if_fallback_logistica?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -36576,
+        -1920
+      ],
+      "parameters": {
+        "options": {},
+        "conditions": {
+          "options": {
+            "version": 3,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "l1",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              },
+              "leftValue": "={{ $('generate_logistics_response').first().json.choices[0].message.content }}",
+              "rightValue": "Voy a consultar el estado"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "e2edd838-006e-4753-bd59-dee370ceb84f",
+      "name": "set_human_label_logistica",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -36384,
+        -1824
+      ],
+      "parameters": {
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/labels",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "{\"labels\": [\"atencion-humana\"]}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        }
+      },
+      "typeVersion": 4.4
     }
   ],
   "connections": {
@@ -2745,7 +2804,7 @@
       "main": [
         [
           {
-            "node": "label_logistics_done",
+            "node": "if_fallback_logistica?",
             "type": "main",
             "index": 0
           }
@@ -3073,6 +3132,24 @@
         [
           {
             "node": "sync_message_reads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_fallback_logistica?": {
+      "main": [
+        [
+          {
+            "node": "set_human_label_logistica",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "label_logistics_done",
             "type": "main",
             "index": 0
           }
