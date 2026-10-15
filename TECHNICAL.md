@@ -2837,6 +2837,19 @@ en el CONTEXTO TÉCNICO, NUNCA lo inventes (ni potencias, ni medidas, ni precios
 Regla general: no mezclar instrucciones de improvisación con el control de confianza en el mismo
 prompt. Aplicado vía API de n8n y espejado al repo (`n8n/reply_ai_questions_main.json`).
 
+**Fix 2026-10-15 (segunda iteración — conocimiento paramétrico)**: con la corrección anterior el
+modelo **seguía respondiendo** "180 watts" (verificado en el snapshot de la ejecución: el prompt
+nuevo estaba activo): el modelo no lo consideraba "inventar" sino un dato que **sabía por su
+entrenamiento** (los cargadores del Nitro 5 son de 135/180 W). El bloque `# CONTROL DE CONFIANZA`
+ahora arranca con una **REGLA ABSOLUTA**: la única fuente válida de datos técnicos es el
+`CONTEXTO TÉCNICO`; si el dato pedido no figura literalmente, se responde `[SIN_INFORMACION] <…>` y
+**se prohíbe completar con conocimiento general, aunque parezca obvio o se conozca de productos
+similares**. El MISIÓN también dice "no lo completes con tu conocimiento general". Verificado
+ejecutando el **prompt real resuelto** (template + contexto de la ejecución, sin secretos) contra
+`gpt-4o-mini` con `temperature 0.7`: **3/3 muestras emiten `[SIN_INFORMACION]`** ✓.
+Script de verificación: `tmp/prompt_test.js` (resuelve las expresiones del template con un stub de
+`$('context:assembler')` y llama a OpenAI con la key del `.env`).
+
 **Post-venta** (`postsale_main`): el generador de soporte usa la frase de derivación ("Para darte una
 solución precisa…") → `if_fallback_to_human?` → `set_human_label_support` (label `atencion-humana`;
 el gate corta la IA). **Fix 2026-10-15**: la condición ahora respeta
