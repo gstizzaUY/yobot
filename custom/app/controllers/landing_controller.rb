@@ -664,6 +664,15 @@ class LandingController < ApplicationController
 
     return render json: { error: 'query requerido' }, status: :unprocessable_entity if query.blank?
 
+    # Cuentas nativas: el flujo manda pack_id (sin item) — resolver venta/categoría desde la DB
+    pack_id = params[:pack_id].to_s.presence
+    if item_id.blank? && pack_id.present?
+      item_id = MeliOrder.find_by(account_id: @account.id, pack_id: pack_id)&.item_id.to_s.presence
+    end
+    if category_id.blank? && item_id.present?
+      category_id = MeliProduct.find_by(account_id: @account.id, meli_item_id: item_id)&.category_id.to_s.presence
+    end
+
     embedding = openai_embedding(query)
 
     reference_ids = ['global']

@@ -38,11 +38,25 @@ module ReplyAi
              end
       text = text.strip
 
-      # 2. Guardar texto y avisar a n8n
+      # 2. Guardar el texto completo en el doc padre (queda sin embedding: el search lo saltea)
       doc.update_columns(content: text)
-      
-      # Webhook de n8n para generar el vector
-      RestClient.post(ENV['N8N_EMBEDDING_WEBHOOK_URL'], { doc_id: doc.id }.to_json, {content_type: :json}) rescue nil
+
+      # 3. Chunking: 1 fila por chunk con embedding propio + webhook por chunk
+      ReplyAiDocument.where(source_doc_id: doc.id).delete_all
+      chunks = ReplyAi::TextChunker.chunks(text)
+      chunks.each_with_index do |chunk, index|
+        row = ReplyAiDocument.create!(
+          account_id: doc.account_id,
+          level: doc.level,
+          reference_id: doc.reference_id,
+          file_name: "#{doc.file_name} [#{index + 1}/#{chunks.size}]",
+          content: chunk,
+          source: doc.source,
+          source_doc_id: doc.id,
+          chunk_index: index
+        )
+        RestClient.post(ENV['N8N_EMBEDDING_WEBHOOK_URL'], { doc_id: row.id }.to_json, { content_type: :json }) rescue nil
+      end
     end
   end
 end

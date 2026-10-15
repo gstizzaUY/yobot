@@ -2752,6 +2752,38 @@ verificada (0 referencias a hosts/tokens de producción), commit `268590febb`. P
 
 ---
 
+## 26. Sistema RAG (pre-venta + post-venta) — chunking y estado (2026-10-15)
+
+**Arquitectura** (pre = `reply_ai_documents`, post = `reply_ai_pv_documents`):
+- Upload (dashboard) → worker (`DocumentProcessorWorker` / `PvDocumentProcessorWorker`) extrae el texto
+  (Tika para PDF/DOCX; decodificación directa para .txt) → **chunking** → webhook n8n
+  (`embedding_generator` / `pv_embedding_generator`) → OpenAI `text-embedding-ada-002` (1536 dims) →
+  vector en la fila del chunk.
+- Búsqueda: `POST /rag/search` (pre) y `POST /rag/pv_search` (post, interno con `x-internal-secret`):
+  embedding de la query + `nearest_neighbors` (cosine) filtrado por `reference_ids`
+  (global + categoría + padre + item) → contexto para la IA (hasta 5 docs).
+- Jerarquía: `level` global/category/sub/product + `reference_id` (meli_item_id, meli_category_id o 'global').
+
+**Chunking (nuevo)**: antes cada documento generaba UN embedding del texto completo (diluía la
+búsqueda). Ahora `ReplyAi::TextChunker` (1000 chars, solape 150) crea **1 fila por chunk**
+(`source_doc_id` + `chunk_index`; migración `20261015120000`), cada una con su embedding. El doc padre
+guarda el texto completo sin embedding (el search lo saltea con `where.not(embedding: nil)`).
+Los docs migrados de Yobot ya venían chunkeados (`yobot_chunk_id`).
+
+**Resolución de item para post-venta nativa**: el flujo manda `pack_id` (el item del trigger está
+vacío en nativas) y `/rag/pv_search` resuelve `MeliOrder.pack_id → item_id` + `MeliProduct →
+category_id` para filtrar por los docs del producto.
+
+**Estado (2026-10-15)**: base **vacía** en prod (0 docs en #5/#6); pipeline verificado end-to-end en
+local — chunking ✓, embeddings 5/5 vía n8n+OpenAI ✓, búsqueda recupera los chunks relevantes ✓.
+Pendiente: cargar la documentación real desde el dashboard (nivel/referencia: `global` para manuales
+generales, `product` para docs de un ítem).
+
+**Notas**: `ada-002` (1536) — pasar a `text-embedding-3-small` requeriría re-embeddear todo. Sin
+umbral de distancia (siempre devuelve hasta 5): aceptable con KB chica.
+
+---
+
 ## Apéndice: Archivos Fuera del Scope Custom
 
 Estos archivos fueron modificados respecto al upstream original de Chatwoot y deben preservarse en merges:
