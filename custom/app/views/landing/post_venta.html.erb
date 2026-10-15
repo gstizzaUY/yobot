@@ -343,7 +343,7 @@
                             <label class="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-widest">Tono e identidad del agente</label>
                             <p class="text-[13px] text-gray-400 mb-2">Describe cómo debe hablar el agente. Aplica a todas las ramas. Ej: <em>"Usar usted, tono formal, no usar emojis."</em></p>
                             <textarea name="post_venta_ia[prompts][tono]" rows="2"
-                                placeholder="Ej: Usá un tono amigable y cercano, en español argentino. Dirigite siempre al cliente como 'vos'."
+                                placeholder="Cercano, profesional y empático. Tuteá al cliente. Mensajes de 2-4 oraciones, máximo 1 emoji. No menciones que sos una IA. Nunca inventes datos."
                                 class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus-brand text-[14px] leading-relaxed resize-none transition hover:border-gray-300"><%= @pv_ia.dig('prompts', 'tono') %></textarea>
                         </div>
 
@@ -370,7 +370,7 @@
                                 <div id="pv-logistica-prompt" class="px-4 py-3 <%= @pv_ia.dig('logistica', 'enabled') == false ? 'hidden' : '' %>">
                                     <label class="block text-xs text-gray-500 mb-1">Instrucciones adicionales para respuestas de envío</label>
                                     <textarea name="post_venta_ia[prompts][logistica]" rows="2"
-                                        placeholder="Ej: Nuestros envíos demoran 2-5 días hábiles. No prometas fechas exactas."
+                                        placeholder="Respondé con el estado real del envío (estado + tracking + fecha estimada del contexto). Si piden una fecha anterior a la estimada, explicá que no se puede garantizar y que vas a avisar ante cualquier novedad."
                                         class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus-brand text-[13px] resize-none transition hover:border-gray-300"><%= @pv_ia.dig('prompts', 'logistica') %></textarea>
                                 </div>
                             </div>
@@ -395,7 +395,7 @@
                                     <div>
                                         <label class="block text-xs text-gray-500 mb-1">Instrucciones adicionales para soporte</label>
                                         <textarea name="post_venta_ia[prompts][soporte]" rows="2"
-                                            placeholder="Ej: El producto tiene 1 año de garantía. Para reclamos, pedí foto del defecto."
+                                            placeholder="Para consultas de uso, armado, cuidado o especificaciones, usá los atributos y la descripción del PRODUCTO del contexto. Si es un problema (falla, pieza faltante, daño), pedí los detalles y ofrecé la garantía del vendedor o la derivación a un especialista."
                                             class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus-brand text-[13px] resize-none transition hover:border-gray-300"><%= @pv_ia.dig('prompts', 'soporte') %></textarea>
                                     </div>
                                     <label class="flex items-center gap-2.5 cursor-pointer">
@@ -427,7 +427,7 @@
                                     <div id="pv-escalacion-prompt" class="<%= @pv_ia.dig('reclamo', 'notify_customer') ? '' : 'hidden' %>">
                                         <label class="block text-xs text-gray-500 mb-1">Mensaje visible al cliente al escalar</label>
                                         <textarea name="post_venta_ia[prompts][escalacion]" rows="2"
-                                            placeholder="Ej: Lamentamos el inconveniente. Un especialista de nuestro equipo te va a contactar en menos de 24hs."
+                                            placeholder="Lamentamos el inconveniente. Un especialista de nuestro equipo se va a comunicar con vos a la brevedad."
                                             class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus-brand text-[13px] resize-none transition hover:border-gray-300"><%= @pv_ia.dig('prompts', 'escalacion') %></textarea>
                                     </div>
                                 </div>
@@ -453,7 +453,7 @@
                                     <div>
                                         <label class="block text-xs text-gray-500 mb-1">Instrucciones para el mensaje de despedida</label>
                                         <textarea name="post_venta_ia[prompts][cierre]" rows="2"
-                                            placeholder="Ej: Invitá siempre a seguirnos en Instagram @tienda y a dejar una reseña en ML."
+                                            placeholder="Agradecé la compra, deseá un buen descanso con el producto y dejá la puerta abierta para futuras consultas."
                                             class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus-brand text-[13px] resize-none transition hover:border-gray-300"><%= @pv_ia.dig('prompts', 'cierre') %></textarea>
                                     </div>
                                     <label class="flex items-center gap-2.5 cursor-pointer">
