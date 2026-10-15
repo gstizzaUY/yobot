@@ -2794,6 +2794,33 @@ la raíz), dejando inaccesibles las categorías intermedias (ML suele tener 3 ni
 **Notas**: `ada-002` (1536) — pasar a `text-embedding-3-small` requeriría re-embeddear todo. Sin
 umbral de distancia (siempre devuelve hasta 5): aceptable con KB chica.
 
+**Fixes post-chunking (2026-10-15)**: el panel de documentos y los destroys no filtraban los chunks
+(comparten `reference_id` con el doc padre): el panel ahora usa solo docs padre (`source_doc_id: nil`)
+en `@docs/@pv_docs/@docs_count/@pv_docs_count` y en el listado del modal; los 4 destroys
+(`destroy_document`, `destroy_document_ajax`, `pv_destroy_document`, `pv_destroy_document_ajax`)
+borran también los chunks — antes quedaban huérfanos **con embedding** y seguían respondiendo.
+
+---
+
+## 27. Control de confianza (pre-venta + post-venta) — auditoría (2026-10-15)
+
+**Pre-venta** (`questions_main`): config `requireRagOrConfidence` (cuenta) + `confidenceByCategory`
+(por categoría) → `context:assembler` calcula `require_conf` (override por la categoría del item) →
+el systemMessage del AI Agent pide `[SIN_INFORMACION] <mejor respuesta>` cuando la info no alcanza →
+`check_sin_info` (contains) → **true**: `update_meli_questions_retained` + `chatwoot_retained_note`
+(nota privada con la sugerencia; la pregunta **no** se responde) / **false**: sigue el flujo normal.
+Verificado ✓ — coherente con el RAG (el chunking y la jerarquía completa mejoran la info disponible).
+
+**Post-venta** (`postsale_main`): el generador de soporte usa la frase de derivación ("Para darte una
+solución precisa…") → `if_fallback_to_human?` → `set_human_label_support` (label `atencion-humana`;
+el gate corta la IA). **Fix 2026-10-15**: la condición ahora respeta
+`pv_ia.soporte.fallback_to_human` — antes lo ignoraba (la UI prometía una config sin efecto).
+
+**Pendiente (decisión de producto)**: el fallback de logística ("Voy a consultar el estado y te aviso
+a la brevedad.") no dispara handover — el comprador espera un aviso que no llega. Opciones:
+(a) etiquetar `atencion-humana` cuando la respuesta de logística contiene esa frase (como soporte),
+o (b) cambiar la frase para que no prometa.
+
 ---
 
 ## Apéndice: Archivos Fuera del Scope Custom

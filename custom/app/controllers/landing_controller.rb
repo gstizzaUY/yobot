@@ -458,6 +458,7 @@ class LandingController < ApplicationController
 
   def destroy_document
     doc = @account.reply_ai_documents.find(params[:id])
+    ReplyAiDocument.where(source_doc_id: doc.id).delete_all
     doc.file.purge if doc.file.attached?
     doc.destroy!
     redirect_to reply_ai_dashboard_path, notice: 'Documento eliminado.'
@@ -465,6 +466,7 @@ class LandingController < ApplicationController
 
   def destroy_document_ajax
     doc = @account.reply_ai_documents.find(params[:id])
+    ReplyAiDocument.where(source_doc_id: doc.id).delete_all
     doc.file.purge if doc.file.attached?
     doc.destroy!
     render json: { ok: true }
@@ -474,6 +476,7 @@ class LandingController < ApplicationController
 
   def pv_destroy_document_ajax
     doc = @account.reply_ai_pv_documents.find(params[:id])
+    ReplyAiPvDocument.where(source_doc_id: doc.id).delete_all
     doc.file.purge if doc.file.attached?
     doc.destroy!
     render json: { ok: true }
@@ -485,9 +488,9 @@ class LandingController < ApplicationController
     mode   = params[:mode].to_s
     ref_id = params[:reference_id].to_s
     @product_docs = if mode == 'pv'
-                     @account.reply_ai_pv_documents.where(reference_id: ref_id).order(created_at: :desc)
+                     @account.reply_ai_pv_documents.where(reference_id: ref_id, source_doc_id: nil).order(created_at: :desc)
                    else
-                     @account.reply_ai_documents.where(reference_id: ref_id).order(created_at: :desc)
+                     @account.reply_ai_documents.where(reference_id: ref_id, source_doc_id: nil).order(created_at: :desc)
                    end
     @mode  = mode
     @reference_id = ref_id
@@ -597,6 +600,7 @@ class LandingController < ApplicationController
 
   def pv_destroy_document
     doc = @account.reply_ai_pv_documents.find(params[:id])
+    ReplyAiPvDocument.where(source_doc_id: doc.id).delete_all
     doc.file.purge if doc.file.attached?
     doc.destroy!
     redirect_to reply_ai_dashboard_path(panel: 'panel-postventa-docs'), notice: 'Documento eliminado.'
@@ -2148,11 +2152,14 @@ class LandingController < ApplicationController
     @official_stores = MeliOfficialStore.for_account(@account.id)
     @default_greeting = @prompts['saludoGeneral'].to_s
 
-    # Mapa de documentos para saber qué tiene cada cosa
-    @docs       = @account.reply_ai_documents.index_by(&:reference_id)
-    @pv_docs    = @account.reply_ai_pv_documents.index_by(&:reference_id)
-    @docs_count    = @account.reply_ai_documents.group(:reference_id).count
-    @pv_docs_count = @account.reply_ai_pv_documents.group(:reference_id).count
+    # Mapa de documentos para saber qué tiene cada cosa (solo docs padre: los chunks del
+    # chunking RAG comparten reference_id y no deben listarse ni gestionarse desde el panel)
+    parent_docs    = @account.reply_ai_documents.where(source_doc_id: nil)
+    parent_pv_docs = @account.reply_ai_pv_documents.where(source_doc_id: nil)
+    @docs       = parent_docs.index_by(&:reference_id)
+    @pv_docs    = parent_pv_docs.index_by(&:reference_id)
+    @docs_count    = parent_docs.group(:reference_id).count
+    @pv_docs_count = parent_pv_docs.group(:reference_id).count
   end
 
   def setup_products_vars
