@@ -113,6 +113,13 @@ module ReplyAi
         img[src*="cw_image_width"] {
           border-radius: 8px;
         }
+
+        /* ── Ocultar pill lateral derecho (detalles de contacto / copilot) ── */
+        /* SidepanelSwitch.vue: ButtonGroup con esta combinación única de clases.
+           Para agentes (el role-gate desactiva este bloque para admins). */
+        .absolute.top-36.ltr\:right-2.\!z-20 {
+          display: none !important;
+        }
       </style>
 
       <script id="reply-ai-role-gate">
@@ -133,6 +140,22 @@ module ReplyAi
               : null;
           }
 
+          // Para agentes: el pill lateral está oculto por CSS, pero el panel
+          // puede haber quedado abierto de antes (o abrirse con Alt+O) → cerrarlo.
+          function closeRestrictedPanels() {
+            var store = getStore();
+            if (!store) return;
+            var current = store.getters.getUISettings || {};
+            if (current.is_contact_sidebar_open || current.is_copilot_panel_open) {
+              store.dispatch('updateUISettings', {
+                uiSettings: Object.assign({}, current, {
+                  is_contact_sidebar_open: false,
+                  is_copilot_panel_open: false,
+                }),
+              });
+            }
+          }
+
           function evaluate() {
             var store = getStore();
             if (!store) return;
@@ -142,14 +165,16 @@ module ReplyAi
               user.type === 'SuperAdmin' ||
               store.getters.getCurrentRole === 'administrator';
             known = true;
-            if (isPrivileged === privileged) return;
-            privileged = isPrivileged;
-            var style = document.getElementById(STYLE_ID);
-            if (style) style.disabled = privileged;
-            document.documentElement.setAttribute(
-              'data-reply-ai-privileged',
-              String(privileged)
-            );
+            if (isPrivileged !== privileged) {
+              privileged = isPrivileged;
+              var style = document.getElementById(STYLE_ID);
+              if (style) style.disabled = privileged;
+              document.documentElement.setAttribute(
+                'data-reply-ai-privileged',
+                String(privileged)
+              );
+            }
+            if (!isPrivileged) closeRestrictedPanels();
           }
 
           // Re-evalúa al cambiar de cuenta (navegación client-side) sin recargar.
@@ -270,6 +295,18 @@ module ReplyAi
         })();
       </script>
 
+    CSS
+
+    # CSS inyectado para TODOS los usuarios (el role-gate no lo apaga).
+    # Oculta el identificador del canal (hash) que Chatwoot muestra al lado del
+    # nombre en la lista de Canales (ChannelLeaf.vue, canales API).
+    ALL_USERS_CSS = <<~'CSS'.freeze
+      <style id="reply-ai-custom-css-all">
+        [data-test-id="channel-identifier"],
+        [data-test-id="channel-leaf-label"] > span[aria-hidden="true"] {
+          display: none !important;
+        }
+      </style>
     CSS
 
     # Script del link "Configuración Bot" — se inyecta para TODOS los usuarios.
@@ -460,7 +497,7 @@ module ReplyAi
 
       if full_body.include?('</head>')
         # El rol se decide client-side (role gate): se inyecta siempre el payload completo
-        full_body.sub!('</head>', "#{CUSTOM_CSS}#{CONFIG_LINK_JS}</head>")
+        full_body.sub!('</head>', "#{CUSTOM_CSS}#{ALL_USERS_CSS}#{CONFIG_LINK_JS}</head>")
         headers['Content-Length'] = full_body.bytesize.to_s
       end
 

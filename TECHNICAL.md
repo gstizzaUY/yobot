@@ -513,11 +513,20 @@ Inyecta CSS y JavaScript en las respuestas HTML del dashboard (`/app/*`).
 | Oculta acciones de contacto | Merge, delete, etc. |
 | Oculta etiquetas de conversación | Sidebar labels |
 | Oculta Macros | Sidebar macros |
+| **Oculta pill lateral derecho** (detalles de contacto / copilot) (2026-10-15) | `.absolute.top-36.ltr\:right-2.\!z-20` (`SidepanelSwitch.vue`) — solo agentes (gate de rol); el JS cierra el panel si quedó abierto |
 | **MercadoLibre inbox**: oculta emoji, mic, firma y copilot en todos los inboxs Meli; el **clip de adjuntos** se oculta solo en **pre-venta** — en post-venta/reclamos queda visible (`body.reply-ai-meli-attachments`, 2026-10-14) | Solo cuando `body.reply-ai-meli-inbox` |
+
+### CSS inyectado (todos los usuarios)
+
+Bloque `ALL_USERS_CSS` — no lo apaga el gate de rol.
+
+| Regla | Efecto |
+|-------|--------|
+| **Oculta el identificador del canal (hash)** (2026-10-15) | `[data-test-id="channel-identifier"]` + el separador `·` en la lista de Canales (`ChannelLeaf.vue`; el identificador es `inbox_identifier` en canales API) |
 
 ### JavaScript inyectado
 
-1. **Gate de rol (2026-10-12)**: decide en el cliente si el usuario es privilegiado (`SuperAdmin` o `administrator` de la **cuenta activa**) leyendo el Vue store (`getCurrentUser`/`getCurrentRole`) y **desactiva** el `<style>` de restricciones (`style.disabled`). Expone `window.__replyAiIsPrivileged()` para los demás scripts y re-evalúa cada 500 ms (cubre cambios de cuenta sin recarga). Motivo: los logins del SPA no crean sesión Warden (`store: false`), así que el chequeo server-side no puede distinguir el rol.
+1. **Gate de rol (2026-10-12; + cierre de paneles 2026-10-15)**: decide en el cliente si el usuario es privilegiado (`SuperAdmin` o `administrator` de la **cuenta activa**) leyendo el Vue store (`getCurrentUser`/`getCurrentRole`) y **desactiva** el `<style>` de restricciones (`style.disabled`). Expone `window.__replyAiIsPrivileged()` para los demás scripts y re-evalúa cada 500 ms (cubre cambios de cuenta sin recarga). Para agentes además **cierra** los paneles laterales (`is_contact_sidebar_open`/`is_copilot_panel_open` vía `updateUISettings`) — el pill está oculto por CSS, pero el panel puede haber quedado abierto o abrirse con Alt+O. Motivo: los logins del SPA no crean sesión Warden (`store: false`), así que el chequeo server-side no puede distinguir el rol.
 2. **Patch de permisos de Reports**: Agrega `'agent'` a los permisos de la ruta `account_overview_reports` para que agentes vean Reportes.
 3. **Detector de inbox Meli**: `MutationObserver` que agrega clase `reply-ai-meli-inbox` al `<body>` cuando la conversación activa pertenece a un inbox que contiene "MercadoLibre" (vía store: `getSelectedChat` → `inboxes/getInbox`; funciona también con un solo inbox). Si el inbox es de **post-venta o reclamos** agrega además `reply-ai-meli-attachments` (esos canales admiten archivos adjuntos → el clip queda visible; en pre-venta sigue oculto, 2026-10-14). Además oculta el acordeón de Macros (solo usuarios restringidos).
 4. **Link "Configuración Bot"**: Inyecta un item en el menú de perfil que navega a `/dashboard?account_id=X`. Detecta el `account_id` del Vue store, del dataset del sidebar switcher, o del path.
