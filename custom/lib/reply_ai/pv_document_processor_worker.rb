@@ -29,7 +29,7 @@ module ReplyAi
       text = text.strip
       doc.update_columns(content: text)
 
-      webhook_url = ENV.fetch('N8N_PV_EMBEDDING_WEBHOOK_URL', ENV['N8N_EMBEDDING_WEBHOOK_URL'])
+      webhook_url = ENV.fetch('N8N_PV_EMBEDDING_WEBHOOK_URL')
       ReplyAiPvDocument.where(source_doc_id: doc.id).delete_all
       chunks = ReplyAi::TextChunker.chunks(text)
       chunks.each_with_index do |chunk, index|
@@ -43,7 +43,7 @@ module ReplyAi
           source_doc_id: doc.id,
           chunk_index: index
         )
-        RestClient.post(webhook_url, { doc_id: row.id, doc_type: 'pv' }.to_json, { content_type: :json }) rescue nil
+        RestClient.post(webhook_url, { doc_id: row.id, doc_type: 'pv' }.to_json, { content_type: :json })
       end
     end
   end

@@ -55,7 +55,7 @@ module ReplyAi
           source_doc_id: doc.id,
           chunk_index: index
         )
-        RestClient.post(ENV['N8N_EMBEDDING_WEBHOOK_URL'], { doc_id: row.id }.to_json, { content_type: :json }) rescue nil
+        RestClient.post(ENV.fetch('N8N_EMBEDDING_WEBHOOK_URL'), { doc_id: row.id }.to_json, { content_type: :json })
       end
     end
   end
