@@ -2546,6 +2546,38 @@ re-aplicar las mismas variables en la UI o se pierden.
     menores de detección de bridge (`account.bridge_enabled` vs `status === 'bridge' && …`) en
     `postsale_main`/`questions_main` — solo afectan cuentas bridge.
 
+### 23.7 Adjuntos multimedia en post-venta (2026-10-15)
+
+Soporte completo de archivos en **ambos sentidos** (verificado end-to-end en prod):
+
+**Entrada (comprador → Chatwoot)** — `postsale_main`:
+- `normalize_message`: lee `msg.message_attachments` (no `msg.attachments`) y agrega `site_id`.
+- `chatwoot_add_incoming_message` → IF `has_attachments?`:
+  - sin adjuntos → HTTP node JSON (como antes);
+  - con adjuntos → `download_attachments` (Code: descarga de ML → binario) → `chatwoot_add_incoming_multipart`
+    (HTTP node **multipart-form-data** con `parameterType: formBinaryData` + `attachments[]`).
+- **El helper `fetch` de los Code nodes NO soporta FormData** (manda body vacío) → para multipart usar
+  siempre **HTTP Request node con binary** (código n8n nativo).
+- La descarga de adjuntos de ML **requiere `&site_id=`** (si falta → 400): `GET /messages/attachments/{filename}?tag=post_sale&site_id=…`
+  (la key es `filename`, no `id`).
+- **IA**: `process_attachments` (visión para imágenes, Tika para PDF, Whisper para audio) quedó reconectado
+  en la rama de IA: `rag_search → process_attachments → context_assembler` (corre solo con el bot post-venta
+  activo; el `attachment_context` entra al contexto del modelo).
+
+**Salida (agente → comprador)** — `postsale_outbound`:
+- `filter_and_extract`: extrae `data.attachments` del webhook y permite mensajes **sin texto** si hay adjuntos.
+- IF `has_attachments_out?`:
+  - sin adjuntos → `send_to_ml` (texto, como antes);
+  - con adjuntos → `download_outbound_attachments` (Code: `data_url` de Chatwoot → binario) →
+    `upload_attachments_ml` (HTTP multipart → `POST /messages/attachments?tag=post_sale&site_id=…` → key) →
+    `send_to_ml_with_attachments` (Code: envía `attachments: [keys]` en el mensaje de ML).
+- `get_ml_credentials` corre **antes** del IF (la rama de adjuntos necesita el token + `site_id`).
+- Límites ML: ≤25 MB, JPG/PNG/PDF/TXT, hasta 25 adjuntos, asociar la key dentro de 48 h.
+- Bridge: adjuntos salientes **no soportados** aún (lanza error explícito).
+
+**Notas operativas**: los `Retry` de ejecuciones usan el snapshot viejo del workflow; los Code nodes
+referenciados con `$('nodo').item` requieren pairing — usar `.first()` cuando el input viene de un Code node.
+
 ---
 
 ## 24. Entornos e infraestructura (2026-10-13)
