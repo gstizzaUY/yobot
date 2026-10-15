@@ -2783,10 +2783,18 @@ Los docs migrados de Yobot ya venían chunkeados (`yobot_chunk_id`).
 vacío en nativas) y `/rag/pv_search` resuelve `MeliOrder.pack_id → item_id` + `MeliProduct →
 category_id` para filtrar por los docs del producto.
 
-**Estado (2026-10-15)**: base **vacía** en prod (0 docs en #5/#6); pipeline verificado end-to-end en
-local — chunking ✓, embeddings 5/5 vía n8n+OpenAI ✓, búsqueda recupera los chunks relevantes ✓.
-Pendiente: cargar la documentación real desde el dashboard (nivel/referencia: `global` para manuales
-generales, `product` para docs de un ítem).
+**Estado (2026-10-15)**: RAG **operativo en producción** (cuenta #6): 10 docs de prueba cargados
+(5 niveles × pre/post), embeddings generados (los generadores de n8n con ejecuciones OK ✓) y búsquedas
+devolviendo los docs correctos — "cómo lavo la funda" trae **LAVAR-FUNDA como primer resultado** y la IA
+responde con el contenido del doc (máx 30°, secar a la sombra, sin secadora, paño con jabón neutro) ✓.
+
+**Incidente (2026-10-15)**: los uploads quedaban "Entrenado" **sin embedding** — los webhooks de
+embeddings nunca disparaban (generadores con 0 ejecuciones) y el worker lo ocultaba con `rescue nil`.
+Fix: `ENV.fetch` + sin `rescue nil` (fail-loudly, commit `d5d4f47374`) + **re-proceso** de los docs
+existentes (`DocumentProcessorWorker`/`PvDocumentProcessorWorker.new.perform(id)` por doc padre).
+Verificado: embeddings 5/5 + 5/5 OK, search con docs, respuesta de IA basada en el doc ✓.
+
+Pendiente: cargar la documentación real (reemplazar los docs de prueba).
 
 **Jerarquía completa (fix 2026-10-15)**: el sync guardaba solo la raíz + la hoja (con `parent_id` =
 la raíz), dejando inaccesibles las categorías intermedias (ML suele tener 3 niveles:
