@@ -2710,6 +2710,43 @@ Cuando `reply-ai.online` apunte a Easypanel:
 
 ---
 
+## 25. Sincronización de flujos n8n repo ↔ prod (plan, 2026-10-15)
+
+**Contexto**: los cambios de producción se aplican vía API de n8n (tokens, adjuntos, contexto IA,
+guard, etc.); `n8n/*.json` quedó desactualizado:
+
+| Flujo | Prod | Repo | Delta |
+|---|---|---|---|
+| `reply_ai_postsale_main` | 80 nodos | 77 | faltan `has_attachments?`, `download_attachments`, `chatwoot_add_incoming_multipart` + contenido (prompts P1–P3, guard, tokens/URLs) |
+| `reply_ai_postsale_outbound` | 11 nodos | 7 | faltan los 4 nodos de adjuntos salientes |
+| resto (7 flujos) | = | = | contenido desactualizado (tokens, prompts, URLs internas) |
+
+El repo usa valores dev (0 refs prod ✓). Las credenciales n8n comparten **IDs** entre dev y prod
+(`3sMbSrK2N5Vz3Xew` postgres, `J0q3ryllyiG4GRKP` header auth, `vHC1imcsHYCcvLxh` openai) — solo
+cambia el **nombre** (`Postgres chatwoot_development` vs `..._production`).
+
+**Plan**:
+1. **Script** `n8n/sync/sync_from_prod.py` (implementado): baja cada workflow `reply_ai_*`
+   (`N8N_API_KEY` por entorno — nunca en el repo), sanitiza y escribe `n8n/<nombre>.json`
+   (solo `name/active/nodes/connections/settings`; sin `pinData/staticData/versionId`).
+   `--dry-run` solo reporta.
+2. **Sanitización (prod → dev)**:
+   - `https://yobot-cw-yobot-app.bsj9p0.easypanel.host` → `https://w1206-app.site`
+   - `http://yobot_cw_yobot-app:3000` → `http://rails:3000`
+   - `https://yobot-cw-n8n-main.bsj9p0.easypanel.host` → `https://n8nn.w1206-app.site`
+   - token Chatwoot prod → token dev (`TSL8r4ct…`)
+   - `Postgres chatwoot_production` → `Postgres chatwoot_development`
+3. **Verificación**: `git diff n8n/` (verificar que no haya secretos de producción) →
+   commit `chore(n8n): sync flujos desde prod`.
+4. **Cadencia**: correr tras cada cambio de flujos en prod + commit. Los flujos **no** se despliegan
+   por git (Easypanel no gestiona n8n): el repo es respaldo/versión de referencia y base para recrear
+   entornos (los imports requieren re-vincular credenciales si los IDs no existen).
+
+**Mejora futura**: mover tokens/URLs a `$env.*` en los flujos (hoy están hardcodeados con valores
+dev en el repo).
+
+---
+
 ## Apéndice: Archivos Fuera del Scope Custom
 
 Estos archivos fueron modificados respecto al upstream original de Chatwoot y deben preservarse en merges:
