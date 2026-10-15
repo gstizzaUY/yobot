@@ -2779,6 +2779,18 @@ local — chunking ✓, embeddings 5/5 vía n8n+OpenAI ✓, búsqueda recupera l
 Pendiente: cargar la documentación real desde el dashboard (nivel/referencia: `global` para manuales
 generales, `product` para docs de un ítem).
 
+**Jerarquía completa (fix 2026-10-15)**: el sync guardaba solo la raíz + la hoja (con `parent_id` =
+la raíz), dejando inaccesibles las categorías intermedias (ML suele tener 3 niveles:
+"Colchones" → "Camas, Colchones y Accesorios" → "Hogar, Muebles y Jardín"). Ahora:
+- `sync_category` crea/actualiza **toda la cadena** (`path_from_root`: raíz → intermedias → hoja, cada
+  una con su padre inmediato; raíz = level `master`, resto `sub`; cache por corrida).
+- El filtro (`rag_reference_ids`, compartido por `/rag/search` y `/rag/pv_search`) recorre **toda la
+  cadena de padres** → los docs de cualquier nivel (global / raíz / intermedia / hoja / producto) se activan.
+- La UI del panel de docs renderiza el árbol completo (partial recursivo `_category_tree`), pre y post-venta.
+- **Re-sync**: el botón "Sincronizar" del dashboard corrige los parents existentes y crea las
+  intermedias. Backward compatible: los docs ya cargados (reference = raíz o hoja) siguen activándose
+  porque ambas están en la cadena.
+
 **Notas**: `ada-002` (1536) — pasar a `text-embedding-3-small` requeriría re-embeddear todo. Sin
 umbral de distancia (siempre devuelve hasta 5): aceptable con KB chica.
 

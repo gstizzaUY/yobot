@@ -128,18 +128,22 @@ module ReplyAi
       account.update_columns(custom_attributes: attrs)
     end
 
+    # Crea/actualiza TODA la cadena de categorías de ML (raíz → intermedias → hoja),
+    # cada una con su padre inmediato. La raíz queda level 'master'; el resto 'sub'.
+    # Cache por corrida: una llamada a ML por categoría distinta.
     def sync_category(account, cat_id)
-      return if MeliCategory.exists?(account_id: account.id, meli_category_id: cat_id)
+      @synced_categories ||= Set.new
+      return if @synced_categories.include?(cat_id)
 
+      @synced_categories << cat_id
       res = JSON.parse(RestClient.get("https://api.mercadolibre.com/categories/#{cat_id}").body)
-      MeliCategory.create!(
-        account: account, meli_category_id: cat_id,
-        name: res['name'], level: 'sub',
-        parent_id: res['path_from_root']&.first&.[]('id')
-      )
-      MeliCategory.find_or_create_by!(account: account, meli_category_id: res['path_from_root'].first['id']) do |c|
-        c.name  = res['path_from_root'].first['name']
-        c.level = 'master'
+      path = res['path_from_root'] || []
+      path.each_with_index do |node, index|
+        cat = MeliCategory.find_or_initialize_by(account: account, meli_category_id: node['id'])
+        cat.name      = node['name']
+        cat.level     = index.zero? ? 'master' : 'sub'
+        cat.parent_id = index.zero? ? nil : path[index - 1]['id']
+        cat.save! if cat.new_record? || cat.changed?
       end
     end
   end

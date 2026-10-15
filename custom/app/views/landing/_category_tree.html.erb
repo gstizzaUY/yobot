@@ -1,0 +1,30 @@
+<%# Árbol de categorías RAG (recursivo). Renderiza una categoría y sus hijas.
+    Locals: category (MeliCategory), children_by_parent (Hash), depth (Integer), mode ('pre'|'pv') %>
+<% is_root = depth.zero? %>
+<div class="<%= is_root ? 'border border-gray-100 rounded-2xl p-4' : 'bg-gray-50 p-3 rounded-xl' %>">
+    <div class="flex justify-between items-center <%= is_root ? 'mb-3' : '' %>">
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-lg"
+                  style="<%= is_root ? 'background:#fff4ef; color:#fd5101; border:1px solid #ffd0b8' : 'background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb' %>">
+                <%= category.meli_category_id %>
+            </span>
+            <span class="<%= is_root ? 'text-xs font-black uppercase tracking-wide' : 'text-sm font-medium text-gray-600' %>"
+                  style="<%= is_root ? 'color:#fd5101' : '' %>">
+                <%= is_root ? category.name : "↳ #{category.name}" %>
+            </span>
+        </div>
+        <% if mode == 'pv' %>
+            <%= render partial: 'pv_doc_row', locals: { id: category.meli_category_id, level: is_root ? 'category' : 'sub', title: category.name } %>
+        <% else %>
+            <%= render partial: 'doc_row', locals: { id: category.meli_category_id, level: is_root ? 'category' : 'sub_category', title: category.name } %>
+        <% end %>
+    </div>
+    <% children = children_by_parent[category.meli_category_id] || [] %>
+    <% if children.any? %>
+        <div class="space-y-2 ml-4 <%= is_root ? '' : 'mt-2' %>">
+            <% children.each do |child| %>
+                <%= render partial: 'category_tree', locals: { category: child, children_by_parent: children_by_parent, depth: depth + 1, mode: mode } %>
+            <% end %>
+        </div>
+    <% end %>
+</div>

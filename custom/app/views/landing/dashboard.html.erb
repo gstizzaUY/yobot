@@ -1192,34 +1192,7 @@
                         <!-- Categorías -->
                         <div id="rag-cats" class="rag-content hidden space-y-4">
                             <% @master_categories.each do |mcat| %>
-                                <div class="border border-gray-100 rounded-2xl p-4">
-                                    <div class="flex justify-between items-center mb-3">
-                                        <div class="flex items-center gap-2 flex-wrap">
-                                            <span class="cat-code-badge text-[11px] font-bold px-2 py-0.5 rounded-lg"
-                                                  style="background:#fff4ef; color:#fd5101; border:1px solid #ffd0b8">
-                                                <%= mcat.meli_category_id %>
-                                            </span>
-                                            <span class="text-xs font-black uppercase tracking-wide" style="color:#fd5101">
-                                                <%= mcat.name %>
-                                            </span>
-                                        </div>
-                                        <%= render partial: 'doc_row', locals: { id: mcat.meli_category_id, level: 'category', title: mcat.name } %>
-                                    </div>
-                                    <div class="space-y-2 ml-4">
-                                        <% @sub_categories.where(parent_id: mcat.meli_category_id).each do |sub| %>
-                                            <div class="bg-gray-50 p-3 rounded-xl flex justify-between items-center">
-                                                <div class="flex items-center gap-2 flex-wrap">
-                                                    <span class="sub-code-badge text-[11px] font-bold px-2 py-0.5 rounded-lg"
-                                                          style="background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb">
-                                                        <%= sub.meli_category_id %>
-                                                    </span>
-                                                    <span class="text-sm font-medium text-gray-600">↳ <%= sub.name %></span>
-                                                </div>
-                                                <%= render partial: 'doc_row', locals: { id: sub.meli_category_id, level: 'sub_category', title: sub.name } %>
-                                            </div>
-                                        <% end %>
-                                    </div>
-                                </div>
+                                <%= render partial: 'category_tree', locals: { category: mcat, children_by_parent: @categories_by_parent, depth: 0, mode: 'pre' } %>
                             <% end %>
                         </div>
 
@@ -1617,34 +1590,7 @@ style="border-color:#fd5101; border-top-color:transparent"></div>
                         <!-- Categorías -->
                         <div id="pv-rag-cats" class="pv-rag-content hidden space-y-4">
                             <% @master_categories.each do |mcat| %>
-                                <div class="border border-gray-100 rounded-2xl p-4">
-                                    <div class="flex justify-between items-center mb-3">
-                                        <div class="flex items-center gap-2 flex-wrap">
-                                            <span class="cat-code-badge text-[11px] font-bold px-2 py-0.5 rounded-lg"
-                                                  style="background:#fff4ef; color:#fd5101; border:1px solid #ffd0b8">
-                                                <%= mcat.meli_category_id %>
-                                            </span>
-                                            <span class="text-xs font-black uppercase tracking-wide" style="color:#fd5101">
-                                                <%= mcat.name %>
-                                            </span>
-                                        </div>
-                                        <%= render partial: 'pv_doc_row', locals: { id: mcat.meli_category_id, level: 'category', title: mcat.name } %>
-                                    </div>
-                                    <div class="space-y-2 ml-4">
-                                        <% @sub_categories.where(parent_id: mcat.meli_category_id).each do |sub| %>
-                                            <div class="bg-gray-50 p-3 rounded-xl flex justify-between items-center">
-                                                <div class="flex items-center gap-2 flex-wrap">
-                                                    <span class="sub-code-badge text-[11px] font-bold px-2 py-0.5 rounded-lg"
-                                                          style="background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb">
-                                                        <%= sub.meli_category_id %>
-                                                    </span>
-                                                    <span class="text-sm font-medium text-gray-600">↳ <%= sub.name %></span>
-                                                </div>
-                                                <%= render partial: 'pv_doc_row', locals: { id: sub.meli_category_id, level: 'sub', title: sub.name } %>
-                                            </div>
-                                        <% end %>
-                                    </div>
-                                </div>
+                                <%= render partial: 'category_tree', locals: { category: mcat, children_by_parent: @categories_by_parent, depth: 0, mode: 'pv' } %>
                             <% end %>
                         </div>
 

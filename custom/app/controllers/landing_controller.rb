@@ -508,15 +508,7 @@ class LandingController < ApplicationController
 
     embedding = openai_embedding(query)
 
-    # Construir la lista completa de IDs relevantes resolviendo la jerarquía:
-    # product → sub-category → category (parent) → global
-    reference_ids = ['global']
-    if category_id.present?
-      reference_ids << category_id
-      parent = MeliCategory.find_by(account_id: @account.id, meli_category_id: category_id)
-      reference_ids << parent.parent_id if parent&.parent_id.present?
-    end
-    reference_ids << item_id if item_id.present?
+    reference_ids = rag_reference_ids(item_id, category_id)
 
     docs = ReplyAiDocument.search_for(
       account_id:    @account.id,
@@ -675,13 +667,7 @@ class LandingController < ApplicationController
 
     embedding = openai_embedding(query)
 
-    reference_ids = ['global']
-    if category_id.present?
-      reference_ids << category_id
-      parent = MeliCategory.find_by(account_id: @account.id, meli_category_id: category_id)
-      reference_ids << parent.parent_id if parent&.parent_id.present?
-    end
-    reference_ids << item_id if item_id.present?
+    reference_ids = rag_reference_ids(item_id, category_id)
 
     docs = ReplyAiPvDocument.search_for(
       account_id:    @account.id,
@@ -2016,6 +2002,22 @@ class LandingController < ApplicationController
     JSON.parse(res.body).dig('data', 0, 'embedding')
   end
 
+  # IDs de referencia para el filtro RAG: 'global' + la categoría del item con toda su
+  # cadena de padres (raíz → intermedias → hoja) + el item.
+  def rag_reference_ids(item_id, category_id)
+    ids = ['global']
+    if category_id.present?
+      ids << category_id
+      current = MeliCategory.find_by(account_id: @account.id, meli_category_id: category_id)
+      while current&.parent_id.present?
+        ids << current.parent_id
+        current = MeliCategory.find_by(account_id: @account.id, meli_category_id: current.parent_id)
+      end
+    end
+    ids << item_id if item_id.present?
+    ids.uniq
+  end
+
   # Encuentra o crea silenciosamente el usuario agente común reply-ai.
   # Skip de confirmación para evitar envío de emails.
   def ensure_reply_agent_user
@@ -2140,6 +2142,7 @@ class LandingController < ApplicationController
 
     @master_categories = @account.meli_categories.where(level: 'master')
     @sub_categories    = @account.meli_categories.where(level: 'sub')
+    @categories_by_parent = @account.meli_categories.group_by(&:parent_id)
 
     # Tiendas oficiales MercadoLibre
     @official_stores = MeliOfficialStore.for_account(@account.id)
