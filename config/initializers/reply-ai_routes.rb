@@ -15,6 +15,7 @@ Rails.application.routes.prepend do
   get  '/dashboard/status'   => 'landing#dashboard_status',    as: :reply_ai_dashboard_status
   get  '/dashboard/products'    => 'landing#dashboard_products',     as: :reply_ai_dashboard_products
   get  '/dashboard/pv-products' => 'landing#pv_dashboard_products',  as: :reply_ai_pv_dashboard_products
+  post '/dashboard/products/sync' => 'landing#sync_products',        as: :sync_products
   post '/dashboard/update'   => 'landing#update_settings',     as: :update_settings
   post   '/dashboard/upload'     => 'landing#upload_document',  as: :upload_document
   delete '/dashboard/docs/:id'   => 'landing#destroy_document', as: :reply_ai_destroy_doc

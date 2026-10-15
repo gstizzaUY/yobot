@@ -2233,6 +2233,17 @@ style="border-color:#fd5101; border-top-color:transparent"></div>
     })();
     <% end %>
 
+    // Re-sincronizar catálogo de productos + categorías (botón del panel de productos)
+    function syncProducts() {
+        fetch('/dashboard/products/sync?account_id=<%= @account.id %>', {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || '<%= form_authenticity_token %>' }
+        }).then(r => {
+            if (!r.ok) { alert('No se pudo iniciar la sincronización.'); return; }
+            setTimeout(() => window.location.reload(), 2000);
+        }).catch(() => alert('No se pudo iniciar la sincronización.'));
+    }
+
     const BRAND        = '#fd5101';
     const BRAND_BORDER = '#fd5101';
 

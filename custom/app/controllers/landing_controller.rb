@@ -7,7 +7,7 @@ class LandingController < ApplicationController
 
   skip_before_action :authenticate_user!, only: [:index, :signup, :create_account, :meli_callback, :welcome, :go_to_chats, :dashboard, :logout, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :rag_search, :update_store_greeting, :refresh_official_stores, :refresh_tokens, :bot_active, :conversation_ai_gate, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :pv_rag_search, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax, :migrate_rag_pre, :migrate_rag_post, :confidence_report, :bridge_question, :bridge_message, :bridge_order, :bridge_claim, :bridge_manual_response, :bridge_sign, :bridge_seller_status, :bridge_register, :bridge_sync_config, :bridge_message_status, :bridge_sync_conversation_reads, :claims_webhook, :claims_index, :claims_list, :claims_sync, :claim_detail, :claim_messages, :claim_evidences, :claim_send_message, :claim_send_evidence, :claim_refund, :claim_partial_refund, :claim_available_offers, :claim_allow_return, :claim_open_dispute, :claim_affects_reputation, :claim_agent_pending, :claim_agent_execute, :claim_agent_cancel, :claim_agent_rerun, :return_detail, :return_review, :return_reasons, :return_cost, :change_detail, :change_allow_replace, :claim_panel, :claim_panel_data, :sales_list, :sale_detail, :sale_panel, :sale_panel_data, :product_panel, :product_panel_data], raise: false
   layout false
-  before_action :set_account, only: [:dashboard, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :update_store_greeting, :refresh_official_stores, :refresh_tokens, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax, :migrate_rag_pre, :migrate_rag_post, :confidence_report, :claims_index, :claims_list, :claims_sync, :claim_detail, :claim_messages, :claim_evidences, :claim_send_message, :claim_send_evidence, :claim_refund, :claim_partial_refund, :claim_available_offers, :claim_allow_return, :claim_open_dispute, :claim_affects_reputation, :claim_agent_pending, :claim_agent_execute, :claim_agent_cancel, :claim_agent_rerun, :return_detail, :return_review, :return_reasons, :return_cost, :change_detail, :change_allow_replace, :claim_panel, :claim_panel_data, :sales_list, :sale_detail, :sale_panel, :sale_panel_data, :product_panel, :product_panel_data]
+  before_action :set_account, only: [:dashboard, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :update_store_greeting, :refresh_official_stores, :refresh_tokens, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax, :migrate_rag_pre, :migrate_rag_post, :confidence_report, :claims_index, :claims_list, :claims_sync, :claim_detail, :claim_messages, :claim_evidences, :claim_send_message, :claim_send_evidence, :claim_refund, :claim_partial_refund, :claim_available_offers, :claim_allow_return, :claim_open_dispute, :claim_affects_reputation, :claim_agent_pending, :claim_agent_execute, :claim_agent_cancel, :claim_agent_rerun, :return_detail, :return_review, :return_reasons, :return_cost, :change_detail, :change_allow_replace, :claim_panel, :claim_panel_data, :sales_list, :sale_detail, :sale_panel, :sale_panel_data, :product_panel, :product_panel_data, :sync_products]
   # Modo recepción (testing): cuentas marcadas receive_only reciben/ingestan el flujo
   # (preguntas, mensajes, reclamos → Chatwoot) pero NUNCA ejecutan acciones que escriban en ML/Yobot.
   before_action :reject_receive_only_write, only: [:claim_send_message, :claim_send_evidence, :claim_refund, :claim_partial_refund, :claim_allow_return, :claim_open_dispute, :claim_agent_execute, :claim_agent_rerun, :return_review, :change_allow_replace]
@@ -234,20 +234,30 @@ class LandingController < ApplicationController
   # Endpoint HTML: tabla de productos para actualización sin recarga
   def dashboard_products
     setup_products_vars
-    @docs       = @account.reply_ai_documents.index_by(&:reference_id)
-    @pv_docs    = @account.reply_ai_pv_documents.index_by(&:reference_id)
-    @docs_count    = @account.reply_ai_documents.group(:reference_id).count
-    @pv_docs_count = @account.reply_ai_pv_documents.group(:reference_id).count
+    parent_docs    = @account.reply_ai_documents.where(source_doc_id: nil)
+    parent_pv_docs = @account.reply_ai_pv_documents.where(source_doc_id: nil)
+    @docs       = parent_docs.index_by(&:reference_id)
+    @pv_docs    = parent_pv_docs.index_by(&:reference_id)
+    @docs_count    = parent_docs.group(:reference_id).count
+    @pv_docs_count = parent_pv_docs.group(:reference_id).count
     render partial: 'products_table', layout: false
   end
 
   def pv_dashboard_products
     setup_products_vars
-    @docs       = @account.reply_ai_documents.index_by(&:reference_id)
-    @pv_docs    = @account.reply_ai_pv_documents.index_by(&:reference_id)
-    @docs_count    = @account.reply_ai_documents.group(:reference_id).count
-    @pv_docs_count = @account.reply_ai_pv_documents.group(:reference_id).count
+    parent_docs    = @account.reply_ai_documents.where(source_doc_id: nil)
+    parent_pv_docs = @account.reply_ai_pv_documents.where(source_doc_id: nil)
+    @docs       = parent_docs.index_by(&:reference_id)
+    @pv_docs    = parent_pv_docs.index_by(&:reference_id)
+    @docs_count    = parent_docs.group(:reference_id).count
+    @pv_docs_count = parent_pv_docs.group(:reference_id).count
     render partial: 'products_table', locals: { rag_partial: 'pv_doc_row', tab_param: 'pv-prods' }, layout: false
+  end
+
+  # Re-sincroniza el catálogo de productos + categorías (botón "Sincronizar" del panel).
+  def sync_products
+    ReplyAi::MeliSyncProductsWorker.perform_async(@account.id)
+    render json: { ok: true }
   end
 
   # PASO 4: "Ir a mis chats" — verifica token firmado, genera el SSO link y redirige a Chatwoot ya logueado
@@ -579,7 +589,7 @@ class LandingController < ApplicationController
 
     ReplyAi::DocumentProcessorWorker.perform_async(doc.id)
 
-    redirect_to reply_ai_dashboard_path, notice: 'Archivo recibido, procesando en segundo plano...'
+    redirect_to reply_ai_dashboard_path(panel: 'panel-pv-docs'), notice: 'Archivo recibido, procesando en segundo plano...'
   end
 
   # ─────────────────── RAG Post-venta ───────────────────
