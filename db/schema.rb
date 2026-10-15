@@ -1553,8 +1553,11 @@ ActiveRecord::Schema[7.2].define(version: 2099_01_01_000002) do
     t.datetime "updated_at", null: false
     t.string "source", default: "manual", null: false
     t.string "yobot_chunk_id"
+    t.bigint "source_doc_id"
+    t.integer "chunk_index"
     t.index ["account_id", "yobot_chunk_id"], name: "idx_rag_docs_account_yobot_chunk", unique: true
     t.index ["account_id"], name: "index_reply_ai_documents_on_account_id"
+    t.index ["source_doc_id"], name: "index_reply_ai_documents_on_source_doc_id"
   end
 
   create_table "reply_ai_pre_memory", id: :serial, force: :cascade do |t|
@@ -1573,8 +1576,11 @@ ActiveRecord::Schema[7.2].define(version: 2099_01_01_000002) do
     t.vector "embedding", limit: 1536
     t.string "source", default: "manual", null: false
     t.string "yobot_chunk_id"
+    t.bigint "source_doc_id"
+    t.integer "chunk_index"
     t.index ["account_id", "yobot_chunk_id"], name: "idx_rag_pv_docs_account_yobot_chunk", unique: true
     t.index ["account_id"], name: "index_reply_ai_pv_documents_on_account_id"
+    t.index ["source_doc_id"], name: "index_reply_ai_pv_documents_on_source_doc_id"
   end
 
   create_table "reporting_events", force: :cascade do |t|

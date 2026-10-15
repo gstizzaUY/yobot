@@ -2807,5 +2807,6 @@ Estos archivos fueron modificados respecto al upstream original de Chatwoot y de
 | `.gitignore` | + `docker-compose.override.yaml`, `Procfile.worktree` |
 | `Gemfile` | +2 gems custom |
 | `Gemfile.lock` | Dependencias (regenerar con `bundle install`) |
+| `db/schema.rb` | + tablas custom (`meli_*`, `reply_ai_*`). Rails lo re-escribe solo (dump) al correr migraciones custom: **commitear los cambios** para mantenerlo en sync (no editarlo a mano) |
 | `docker-compose.yaml` | +60 líneas (servicios n8n, tika, configuración local) |
 | `docker-compose.override.yaml` | Volúmenes externos para postgres y n8n |
