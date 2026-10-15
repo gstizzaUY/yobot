@@ -2647,8 +2647,22 @@ veía historial + mensaje (por eso una foto de producto + texto neutro clasifica
 - **Comprador**: `buyer_name` (nickname) + `buyer_city` en el contexto; mención en los prompts.
 - Verificado: historial sin actividad ✓, ETA real ✓, respuesta con la frase de derivación ✓.
 
-**Pendiente (P3)**: detalle del producto (atributos/descripción), cargar prompts post-venta + RAG
-desde el dashboard, y unificar un bloque de contexto único inyectado en todos los prompts.
+**P3 implementado (2026-10-15, vía API):**
+- **Producto en el contexto**: `context_assembler` hace `GET /items/{id}` + `/items/{id}/description`
+  (ML directo con el token; fallback al item de la orden) → `PRODUCTO: Título | Condición | Precio |
+  Variante comprada | Atributos | Garantía | Descripción (400 chars)`. El endpoint del panel de la app
+  **no sirve para n8n**: `set_account` exige sesión de usuario y redirige al signup.
+- **Bloque de contexto único** (`context_block`): COMPRADOR / PEDIDO / PRODUCTO / ENVÍO / ADJUNTO /
+  INSTRUCCIONES DEL VENDEDOR / BASE DE CONOCIMIENTO / HISTORIAL — inyectado idéntico en el clasificador
+  y en los 4 generadores (antes cada uno armaba su subconjunto).
+- Fix: el body de `generate_support_response` tenía una comilla extra (de P2) que se corrigió en este pase.
+- Verificado: PRODUCTO con atributos completos (marca, densidad, altura, antiácaros, garantía,
+  descripción) en el contexto y respuesta de logística usando el bloque.
+- El prompt `escalacion` **sí está cableado** (nodo de respuesta de reclamo, con fallback por defecto).
+
+**Pendiente (config, no código)**: cargar los prompts post-venta (tono/soporte/logística/cierre/escalación)
+y la documentación RAG desde el dashboard — hoy están vacíos; el bloque ya los consume
+(INSTRUCCIONES DEL VENDEDOR y BASE DE CONOCIMIENTO).
 
 ---
 
