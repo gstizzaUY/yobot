@@ -2828,6 +2828,15 @@ el systemMessage del AI Agent pide `[SIN_INFORMACION] <mejor respuesta>` cuando 
 (nota privada con la sugerencia; la pregunta **no** se responde) / **false**: sigue el flujo normal.
 Verificado ✓ — coherente con el RAG (el chunking y la jerarquía completa mejoran la info disponible).
 
+**Fix 2026-10-15 (alucinación con control activo)**: `require_conf: true` llegaba bien y
+`check_sin_info` se evaluaba, pero el modelo **no emitía** `[SIN_INFORMACION]` — el MISIÓN del
+systemMessage decía *"Si no tienes la información específica, usa tu mejor juicio para responder"*
+(contradecía la instrucción de retención → el modelo "juzgaba" que sabía el dato e inventaba, ej:
+"180 watts" del cargador). Se reemplazó esa línea por *"Si el dato específico … NO está literalmente
+en el CONTEXTO TÉCNICO, NUNCA lo inventes (ni potencias, ni medidas, ni precios, ni plazos …)"*.
+Regla general: no mezclar instrucciones de improvisación con el control de confianza en el mismo
+prompt. Aplicado vía API de n8n y espejado al repo (`n8n/reply_ai_questions_main.json`).
+
 **Post-venta** (`postsale_main`): el generador de soporte usa la frase de derivación ("Para darte una
 solución precisa…") → `if_fallback_to_human?` → `set_human_label_support` (label `atencion-humana`;
 el gate corta la IA). **Fix 2026-10-15**: la condición ahora respeta
