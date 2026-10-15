@@ -88,3 +88,10 @@ reply_ai_message_read_sync_job:
   cron: '*/1 * * * *'
   class: 'ReplyAi::MessageReadSyncWorker'
   queue: low
+
+# Reply-AI: sync de reclamos abiertos cada 15 minutos (respaldo del webhook de ML).
+# Dispara ClaimsSyncWorker por cuenta (search + upsert idempotente de meli_claims).
+reply_ai_claims_sync_job:
+  cron: '*/15 * * * *'
+  class: 'ReplyAi::ClaimsSyncAllWorker'
+  queue: low

@@ -2578,6 +2578,40 @@ Soporte completo de archivos en **ambos sentidos** (verificado end-to-end en pro
 **Notas operativas**: los `Retry` de ejecuciones usan el snapshot viejo del workflow; los Code nodes
 referenciados con `$('nodo').item` requieren pairing — usar `.first()` cuando el input viene de un Code node.
 
+### 23.8 IA post-venta verificada + guard de notificaciones + reclamos (2026-10-15)
+
+**IA post-venta con adjuntos — verificado end-to-end en prod:**
+- El comprador manda texto + imagen → la imagen llega a Chatwoot (multipart) y `process_attachments`
+  genera la descripción (visión) que entra al contexto del modelo.
+- Flujo completo corrido: `rag_search → process_attachments → context_assembler → classify_intent →
+  generate_*_response → send_*_reply_ml → mirror_*_to_chatwoot → label_*_done`.
+- La respuesta se envía a ML y se espeja en Chatwoot con `content_attributes.source='n8n_ai'`
+  (los filtros de salida ignoran los espejos — sin loops).
+- **Gate post-venta** (`POST /conversation_ai_gate`): bloquea si la conversación está `resolved`,
+  tiene assignee (`assigned_to_human`), label `atencion-humana`, o `post_venta_ia.enabled=false`.
+  Las conversaciones abiertas con el bot apagado quedan **asignadas** al reply agent (modo manual) →
+  al reactivar el bot hay que **desasignarlas** para que la IA responda
+  (`POST /api/v1/accounts/:id/conversations/:id/assignments` con `assignee_id: null`).
+
+**Guard de notificaciones (`es_bridge_message?` en `postsale_main`) — fix 2026-10-15:**
+- En prod ambas ramas del IF apuntaban a `check_idempotency` (no-op) → los bodies del webhook
+  "Post-Venta IA" (Chatwoot `message_created`, sin `_id`) fallaban con `ms_undefined` (ruido de
+  errores en cada mensaje).
+- Restaurado el diseño del repo: condición `{{ $input.first().json.body._id || '' }} notEquals ''`
+  → true → `check_idempotency` / false → fin. Las notificaciones ML (con `_id`) continúan;
+  los bodies de Chatwoot y los eventos `bridge_message` se cortan limpio (sin error).
+- Verificado con dos ejecuciones de prueba (corte limpio + continuación normal).
+
+**Reclamos — revisión 2026-10-15:**
+- Salida (`claims_outbound`): activo, filtro `attrs.type='reclamo'` + `claim_id`, ignora espejos,
+  envía a `/post-purchase/v1/claims/{id}/actions/send-message`; webhook de la cuenta OK.
+- Entrada (nativas): `POST /claims_webhook` (topics ML `claims`/`claims_actions`) → upsert →
+  conversación tipo `reclamo` en inbox "Reclamos" → labels → espejo de mensajes (dedupe
+  `ml_message_id`) → automatización/agente. El botón "Sincronizar" solo actualiza la DB
+  (no crea conversaciones; eso lo hacen el webhook y las acciones del panel).
+- **Nuevo cron**: `reply_ai_claims_sync_job` (`ClaimsSyncAllWorker` cada 15 min) — respaldo del
+  webhook: sync + upsert idempotente por cuenta.
+
 ---
 
 ## 24. Entornos e infraestructura (2026-10-13)

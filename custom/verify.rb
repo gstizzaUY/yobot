@@ -59,7 +59,8 @@ MODELS.each { |m| check("Modelo #{m}") { m.constantize } }
 
 WORKERS = %w[TokenRefreshWorker MeliSyncProductsWorker MeliSyncOfficialStoresWorker
              BulkImportWorker DocumentProcessorWorker PvDocumentProcessorWorker
-             ClaimAgentWorker ClaimsSyncWorker InjectCssMiddleware BridgeConfigSyncWorker].freeze
+             ClaimAgentWorker ClaimsSyncWorker ClaimsSyncAllWorker InjectCssMiddleware
+             BridgeConfigSyncWorker].freeze
 WORKERS.each { |w| check("Worker ReplyAi::#{w}") { "ReplyAi::#{w}".constantize } }
 
 check('Controller LandingController') { LandingController }
