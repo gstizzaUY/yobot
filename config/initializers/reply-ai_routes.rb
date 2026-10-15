@@ -10,6 +10,8 @@ Rails.application.routes.prepend do
   # Landing de confirmación post-conexión ML (pública: también sirve para
   # previsualizar/editar el diseño sin completar el OAuth).
   get  '/bienvenido'         => 'landing#welcome',             as: :reply_ai_welcome
+  # Aviso de reconexión de una cuenta ML ya vinculada (pública: previsualizar/editar diseño).
+  get  '/cuenta-ya-conectada' => 'landing#meli_already_connected', as: :reply_ai_meli_already_connected
   get  '/dashboard'          => 'landing#dashboard',           as: :reply_ai_dashboard
   get  '/dashboard/logout'   => 'landing#logout',              as: :reply_ai_logout
   get  '/dashboard/status'   => 'landing#dashboard_status',    as: :reply_ai_dashboard_status

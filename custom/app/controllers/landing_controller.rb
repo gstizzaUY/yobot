@@ -23,6 +23,10 @@ class LandingController < ApplicationController
   # previsualizar/editar el diseño sin completar el OAuth.
   def welcome; end
 
+  # Aviso de reconexión: la cuenta ML ya estaba vinculada a otra cuenta Reply-AI.
+  # Pública: se usa también para previsualizar/editar el diseño.
+  def meli_already_connected; end
+
   # PASO 1: Crear usuario y cuenta vía Platform API → sesión Devise → ML Auth
   def create_account
     email = params[:email].to_s.downcase.strip
