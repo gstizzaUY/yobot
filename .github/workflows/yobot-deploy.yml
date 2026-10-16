@@ -49,3 +49,8 @@ jobs:
         if: success()
         run: |
           curl -X POST ${{ secrets.EASYPANEL_WEBHOOK_URL }}
+
+      - name: Trigger Easypanel Worker Deploy
+        if: success()
+        run: |
+          curl -X POST ${{ secrets.EASYPANEL_WORKER_WEBHOOK_URL }}
