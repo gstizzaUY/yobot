@@ -2892,6 +2892,30 @@ el gate corta la IA). **Fix 2026-10-15**: la condición ahora respeta
 `set_human_label_logistica`, espejo del flujo de soporte) — el humano ve la conversación y el gate
 corta la IA. Nota: con el ETA real del envío (fix P2) este fallback debería ser poco frecuente.
 
+**Ciclo de aprendizaje — A1 (implementado 2026-10-16)**: la pregunta retenida que un humano responde
+desde Chatwoot se guarda como conocimiento RAG para que la IA la responda sola en el futuro.
+
+- **Endpoint interno `POST /rag/human_answer`** (auth `x-internal-secret`): crea `ReplyAiDocument`
+  (`level: 'product'`, `reference_id` = item de la pregunta, `source: 'human_answer'`,
+  `content: "Pregunta: …\n\nRespuesta: …"`) y encola `DocumentProcessorWorker` → pipeline de
+  chunking + embeddings existente. Valida `reference_id`/`answer` (422) y cuenta (404).
+- **`DocumentProcessorWorker`** ahora también procesa docs **sin archivo adjunto** (contenido ya
+  cargado) — antes solo extraía texto de un archivo (`return unless doc.file.attached?`).
+- **Flujo n8n `questions_manual`**: tras publicar la respuesta en ML (rama exitosa) →
+  `save_human_answer` (trae la pregunta desde los mensajes de la conversación de Chatwoot y llama al
+  endpoint) → `chatwoot_answer_saved_note` (nota privada: "✓ Respuesta guardada en la base de
+  conocimiento (producto X)…" / "⚠️ No se pudo guardar…") → continúa el cleanup existente
+  (mark delivered → labels → cierre). Si el guardado falla, la cadena **continúa** (el cleanup no se
+  rompe) y la nota lo informa.
+- **Nota de retención** (`questions_main`) extendida: avisa al agente que responder desde Chatwoot
+  publica en ML **y** guarda la respuesta en la base de conocimiento.
+- **Categorización**: nivel producto (item de la pregunta); se puede re-categorizar desde el panel de
+  Documentos. **Sin duplicados**: el flujo manual solo procesa preguntas con `status != 'completed'`.
+- **Verificado**: endpoint E2E en local (doc + chunk + embedding + el search lo devuelve como primer
+  resultado); endpoint en prod (401 sin secret / 422 con secret); flujos aplicados vía API de n8n y
+  espejados al repo. El agente ve la nota segundos después de responder (antes del cierre) y las
+  notas persisten aunque la conversación pase a "Resuelta".
+
 ---
 
 ## Apéndice: Archivos Fuera del Scope Custom
