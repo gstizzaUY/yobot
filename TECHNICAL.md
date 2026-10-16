@@ -2675,6 +2675,25 @@ y la documentación RAG desde el dashboard — hoy están vacíos; el bloque ya 
 
 ---
 
+### 23.10 Asignación de conversaciones — determinística (2026-10-16)
+
+**Problema**: el round-robin de Chatwoot solo asigna a agentes **online** (`allowed_online_agent_ids` =
+online ∩ miembros del equipo) y **solo al crear** la conversación (el reintento periódico requiere la
+feature `assignment_v2`, no activada). Resultado: conversaciones creadas sin presencia online quedaban
+**sin asignar para siempre** (caso real: conv 7 post-venta, 14/10 — los agentes estaban offline).
+
+**Fix (opción A)**: asignación explícita al agente Reply (`usuario-reply@replylatam.com`) + equipo
+correspondiente, sin depender de presencia:
+- `questions_main` (pre-venta): el nodo `chatwoot_conversation_create` asigna el agente tras crear
+  (el equipo ya va en el create). El SQL de `get_account_details` expone `reply_agent_id`.
+- `postsale_main` (post-venta): `get_or_create_conversation` llama `ensureAssignment(conv)` en los 3
+  caminos (creada / reusada / rescatada de BD) — asigna agente y equipo si faltan (best-effort).
+- Reclamos (Rails): `ensure_claim_conversation` → `ensure_reply_assignment(account, conv)`
+  (`Conversations::AssignmentService`). ⚠️ Los reclamos no tienen equipo propio (solo pre-venta y
+  post-venta): hoy se asigna solo el agente — evaluar crear un equipo "Reclamos" o reusar post-venta.
+- Idempotente por guard (`meta.assignee` / `assignee_id`): no re-asigna ni duplica mensajes de actividad.
+- Verificado: conv 7 asignada (reply usuario + team post-venta); flujos aplicados vía API y espejados al repo.
+
 ## 24. Entornos e infraestructura (2026-10-13)
 
 > **Clave para no confundirse**: `https://w1206-app.site` es la instancia **LOCAL (dev)** expuesta por un túnel Cloudflare — **no es producción**.
