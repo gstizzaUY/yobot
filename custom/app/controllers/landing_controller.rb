@@ -1785,6 +1785,7 @@ class LandingController < ApplicationController
 
     if claim.cw_conversation_id.present?
       conv = account.conversations.find_by(id: claim.cw_conversation_id)
+      ensure_reply_assignment(account, conv) if conv
       return conv&.id
     end
 
@@ -1803,8 +1804,21 @@ class LandingController < ApplicationController
       status: 'open',
       additional_attributes: { type: 'reclamo', claim_id: claim.claim_id.to_s }
     )
+    ensure_reply_assignment(account, conv)
     claim.update_columns(cw_conversation_id: conv.id)
     conv.id
+  end
+
+  # Asignación determinística del agente Reply (A 2026-10-16): no depende de
+  # presencia online (el round-robin de Chatwoot solo asigna a agentes online).
+  # Best-effort: un fallo acá no debe romper la creación/uso de la conversación.
+  def ensure_reply_assignment(account, conv)
+    reply_agent = account.users.find_by(email: ENV.fetch('REPLY_AGENT_EMAIL', 'usuario-reply@replylatam.com'))
+    return if reply_agent.nil? || conv.assignee_id == reply_agent.id
+
+    Conversations::AssignmentService.new(conversation: conv, assignee_id: reply_agent.id).perform
+  rescue StandardError => e
+    Rails.logger.warn "[ensure_reply_assignment] #{e.class} #{e.message}"
   end
 
   def find_or_create_claim_contact(account, claim)
