@@ -5,7 +5,7 @@ require 'uri'
 class LandingController < ApplicationController
   include ReplyAi::BridgeAuth
 
-  skip_before_action :authenticate_user!, only: [:index, :signup, :create_account, :meli_callback, :welcome, :go_to_chats, :dashboard, :logout, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :rag_search, :update_store_greeting, :refresh_official_stores, :refresh_tokens, :bot_active, :conversation_ai_gate, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :pv_rag_search, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax, :migrate_rag_pre, :migrate_rag_post, :confidence_report, :bridge_question, :bridge_message, :bridge_order, :bridge_claim, :bridge_manual_response, :bridge_sign, :bridge_seller_status, :bridge_register, :bridge_sync_config, :bridge_message_status, :bridge_sync_conversation_reads, :claims_webhook, :claims_index, :claims_list, :claims_sync, :claim_detail, :claim_messages, :claim_evidences, :claim_send_message, :claim_send_evidence, :claim_refund, :claim_partial_refund, :claim_available_offers, :claim_allow_return, :claim_open_dispute, :claim_affects_reputation, :claim_agent_pending, :claim_agent_execute, :claim_agent_cancel, :claim_agent_rerun, :return_detail, :return_review, :return_reasons, :return_cost, :change_detail, :change_allow_replace, :claim_panel, :claim_panel_data, :sales_list, :sale_detail, :sale_panel, :sale_panel_data, :product_panel, :product_panel_data], raise: false
+  skip_before_action :authenticate_user!, only: [:index, :signup, :create_account, :meli_callback, :welcome, :go_to_chats, :dashboard, :logout, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :rag_search, :human_answer, :update_store_greeting, :refresh_official_stores, :refresh_tokens, :bot_active, :conversation_ai_gate, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :pv_rag_search, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax, :migrate_rag_pre, :migrate_rag_post, :confidence_report, :bridge_question, :bridge_message, :bridge_order, :bridge_claim, :bridge_manual_response, :bridge_sign, :bridge_seller_status, :bridge_register, :bridge_sync_config, :bridge_message_status, :bridge_sync_conversation_reads, :claims_webhook, :claims_index, :claims_list, :claims_sync, :claim_detail, :claim_messages, :claim_evidences, :claim_send_message, :claim_send_evidence, :claim_refund, :claim_partial_refund, :claim_available_offers, :claim_allow_return, :claim_open_dispute, :claim_affects_reputation, :claim_agent_pending, :claim_agent_execute, :claim_agent_cancel, :claim_agent_rerun, :return_detail, :return_review, :return_reasons, :return_cost, :change_detail, :change_allow_replace, :claim_panel, :claim_panel_data, :sales_list, :sale_detail, :sale_panel, :sale_panel_data, :product_panel, :product_panel_data], raise: false
   layout false
   before_action :set_account, only: [:dashboard, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :update_store_greeting, :refresh_official_stores, :refresh_tokens, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax, :migrate_rag_pre, :migrate_rag_post, :confidence_report, :claims_index, :claims_list, :claims_sync, :claim_detail, :claim_messages, :claim_evidences, :claim_send_message, :claim_send_evidence, :claim_refund, :claim_partial_refund, :claim_available_offers, :claim_allow_return, :claim_open_dispute, :claim_affects_reputation, :claim_agent_pending, :claim_agent_execute, :claim_agent_cancel, :claim_agent_rerun, :return_detail, :return_review, :return_reasons, :return_cost, :change_detail, :change_allow_replace, :claim_panel, :claim_panel_data, :sales_list, :sale_detail, :sale_panel, :sale_panel_data, :product_panel, :product_panel_data, :sync_products]
   # Modo recepción (testing): cuentas marcadas receive_only reciben/ingestan el flujo
@@ -14,7 +14,7 @@ class LandingController < ApplicationController
   # Cuentas bridge: Reply NUNCA llama a la API de ML directamente — todo el tráfico
   # ML se gestiona a través de Yobot (bridge). `meli_api_for`/`MeliApi.for` rutean a
   # BridgeApi (execute-claim-action) para las cuentas bridgeadas.
-  before_action :set_account_from_token, only: [:rag_search, :pv_rag_search]
+  before_action :set_account_from_token, only: [:rag_search, :pv_rag_search, :human_answer]
 
   def index; end
   def signup; end
@@ -543,6 +543,37 @@ class LandingController < ApplicationController
   rescue StandardError => e
     Rails.logger.error "RAG search error: #{e.message}"
     render json: { context: '', doc_count: 0, error: e.message }, status: :ok
+  end
+
+  # RAG: guarda una respuesta humana como documento de conocimiento (A1, 2026-10-16).
+  # Llamado desde n8n (flujo questions_manual) cuando el agente respondió una pregunta
+  # retenida desde Chatwoot y esa respuesta se publicó OK en MercadoLibre. El par
+  # Pregunta+Respuesta se guarda como doc nivel producto (reference = item de la pregunta)
+  # y pasa por el pipeline de chunking + embeddings existente.
+  # Parámetros: account_id, reference_id (item ML), question, answer
+  # Auth: x-internal-secret header (vía set_account_from_token, igual que rag_search)
+  def human_answer
+    reference_id = params[:reference_id].to_s.strip
+    question     = params[:question].to_s.strip
+    answer       = params[:answer].to_s.strip
+
+    return render json: { error: 'reference_id requerido' }, status: :unprocessable_entity if reference_id.blank?
+    return render json: { error: 'answer requerido' }, status: :unprocessable_entity if answer.blank?
+
+    content = question.present? ? "Pregunta: #{question}\n\nRespuesta: #{answer}" : answer
+
+    doc = @account.reply_ai_documents.create!(
+      level: 'product',
+      reference_id: reference_id,
+      file_name: "Respuesta manual — #{reference_id}",
+      content: content,
+      source: 'human_answer'
+    )
+    ReplyAi::DocumentProcessorWorker.perform_async(doc.id)
+
+    render json: { ok: true, doc_id: doc.id }
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   # Guardar saludo personalizado por tienda oficial (PATCH /dashboard/stores/:store_id/greeting)

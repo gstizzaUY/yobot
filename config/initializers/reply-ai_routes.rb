@@ -22,6 +22,8 @@ Rails.application.routes.prepend do
   post   '/dashboard/upload'     => 'landing#upload_document',  as: :upload_document
   delete '/dashboard/docs/:id'   => 'landing#destroy_document', as: :reply_ai_destroy_doc
   post   '/rag/search'           => 'landing#rag_search',        as: :rag_search
+  # RAG: aprende la respuesta humana de una pregunta retenida (flujo n8n questions_manual)
+  post   '/rag/human_answer'     => 'landing#human_answer',      as: :rag_human_answer
   get  '/go_to_chats'        => 'landing#go_to_chats',          as: :go_to_chats
   # Tiendas oficiales MercadoLibre
   patch '/dashboard/stores/:store_id/greeting' => 'landing#update_store_greeting', as: :update_store_greeting
