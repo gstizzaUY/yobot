@@ -2158,6 +2158,10 @@ class LandingController < ApplicationController
     @is_syncing = @attrs['syncing_products'] == true || (@account.meli_products.empty? && has_credentials)
     setup_products_vars
 
+    # Panel de sync de configuración Yobot: solo cuentas gestionadas por Yobot
+    # (bridge o migradas) — mismas que sincroniza BridgeConfigSyncWorker.
+    @bridge_account = @account.meli_credentials.yobot_managed.exists?
+
     @master_categories = @account.meli_categories.where(level: 'master')
     @sub_categories    = @account.meli_categories.where(level: 'sub')
     @categories_by_parent = @account.meli_categories.group_by(&:parent_id)

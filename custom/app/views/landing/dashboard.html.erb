@@ -592,7 +592,8 @@
                             class="main-tab px-5 py-2.5 rounded-xl text-sm font-bold text-gray-500 transition-colors">Informes</button>
                 </div>
 
-                <!-- Sync de configuración Yobot -->
+                <!-- Sync de configuración Yobot (solo cuentas bridge) -->
+                <% if @bridge_account %>
                 <div id="pv-sync-row" class="flex items-center gap-3 mt-3">
                     <p class="text-xs text-gray-500 dark:text-gray-400">La configuración de este vendedor se sincroniza desde Yobot (bridge).</p>
                     <button type="button" onclick="syncBridgeConfig()"
@@ -600,6 +601,7 @@
                         Sincronizar ahora
                     </button>
                 </div>
+                <% end %>
 
                 <!-- Sub-pestañas Pre-Venta -->
                 <div id="subtabs-preventa" class="flex gap-1 mt-3 overflow-x-auto hidden">

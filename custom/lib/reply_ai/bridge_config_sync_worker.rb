@@ -11,7 +11,7 @@ module ReplyAi
       account = Account.find_by(id: account_id)
       return unless account
 
-      credential = account.meli_credentials.where(status: 'bridge').order(:id).first
+      credential = account.meli_credentials.yobot_managed.order(:id).first
       return unless credential
 
       base   = ENV.fetch('YOBOT_BRIDGE_URL', nil)
