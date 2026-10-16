@@ -2692,8 +2692,11 @@ y la documentación RAG desde el dashboard — hoy están vacíos; el bloque ya 
 ### 24.2 Deploy de la app
 
 1. Commit + `git push origin master` (repo `gstizzaUY/yobot`).
-2. **GitHub Actions** construye la imagen y dispara el deploy a **Easypanel** (webhook).
-3. Easypanel recrea los servicios.
+2. **GitHub Actions** construye la imagen y dispara **dos deploys** a Easypanel:
+   `EASYPANEL_WEBHOOK_URL` → `yobot-app` y `EASYPANEL_WORKER_WEBHOOK_URL` → `yobot-worker`
+   (agregado 2026-10-16: los cambios de workers/Sidekiq —ej. `DocumentProcessorWorker`— NO llegan
+   con el deploy del app; sin el webhook del worker quedaba corriendo el código viejo en silencio ✗).
+3. Easypanel recrea ambos servicios.
 
 > En las sesiones de trabajo, **"subir a producción" = push a GitHub** (el Action hace el resto). No se toca Easypanel a mano salvo para variables de entorno (§23.3).
 
@@ -2915,6 +2918,15 @@ desde Chatwoot se guarda como conocimiento RAG para que la IA la responda sola e
   resultado); endpoint en prod (401 sin secret / 422 con secret); flujos aplicados vía API de n8n y
   espejados al repo. El agente ve la nota segundos después de responder (antes del cierre) y las
   notas persisten aunque la conversación pase a "Resuelta".
+
+**Fix 2026-10-16 (quinta iteración — inferencias por negación)**: pregunta *"¿La caja incluye mouse?"*
+→ el contexto decía "incluyen cargador original en la caja" pero **no** mencionaba mouse; la IA
+respondió *"no incluye mouse, solo el cargador original"* ✗ (inferencia por ausencia, sin retener ✗).
+Se agregó a la REGLA ABSOLUTA: si preguntan si algo está incluido/compatible/disponible (¿incluye
+mouse?, ¿es compatible con Windows 11?, ¿viene con funda?) y el contexto no lo menciona LITERALMENTE,
+no afirmarlo NI negarlo → `[SIN_INFORMACION]`. Verificado con harness (3 escenarios × 3 muestras):
+mouse 3/3 marcador ✓; watts 3/3 ✓ (regresión); batería 3/3 grounded ✓ (regresión). Con el ciclo A1,
+la respuesta que da el humano a una pregunta retenida se convierte en conocimiento para la IA ✓.
 
 ---
 
