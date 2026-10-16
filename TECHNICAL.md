@@ -2919,14 +2919,19 @@ desde Chatwoot se guarda como conocimiento RAG para que la IA la responda sola e
   espejados al repo. El agente ve la nota segundos después de responder (antes del cierre) y las
   notas persisten aunque la conversación pase a "Resuelta".
 
-**Fix 2026-10-16 (quinta iteración — inferencias por negación)**: pregunta *"¿La caja incluye mouse?"*
-→ el contexto decía "incluyen cargador original en la caja" pero **no** mencionaba mouse; la IA
-respondió *"no incluye mouse, solo el cargador original"* ✗ (inferencia por ausencia, sin retener ✗).
-Se agregó a la REGLA ABSOLUTA: si preguntan si algo está incluido/compatible/disponible (¿incluye
-mouse?, ¿es compatible con Windows 11?, ¿viene con funda?) y el contexto no lo menciona LITERALMENTE,
-no afirmarlo NI negarlo → `[SIN_INFORMACION]`. Verificado con harness (3 escenarios × 3 muestras):
-mouse 3/3 marcador ✓; watts 3/3 ✓ (regresión); batería 3/3 grounded ✓ (regresión). Con el ciclo A1,
-la respuesta que da el humano a una pregunta retenida se convierte en conocimiento para la IA ✓.
+**Fix 2026-10-16 (quinta/sexta iteración — inferencias por negación + refuerzo)**: pregunta *"¿La
+caja incluye mouse?"* → el contexto decía "incluyen cargador original en la caja" pero NO mencionaba
+mouse; la IA respondía *"no incluye mouse, solo el cargador original"* ✗ (inferencia por ausencia,
+sin retener). **v5** agregó a la REGLA ABSOLUTA: si preguntan si algo está incluido/compatible/
+disponible y el contexto no lo menciona LITERALMENTE, no afirmarlo NI negarlo → `[SIN_INFORMACION]`
+(harness 3/3 ✓) — **pero en prod siguió fallando** ✗: la **memoria** de la sesión comprador+item
+contenía esa respuesta mala de una conversación anterior y el modelo la repetía ✗ (mismo patrón que
+la batería). **v6** refuerza: *"que el contexto detalle qué SÍ incluye NO autoriza a negar lo que no
+menciona"* + ejemplo concreto (contexto «incluye cargador original» + pregunta «¿incluye mouse?» →
+NO responder «no incluye mouse» → `[SIN_INFORMACION]`) + *"nunca repitas una respuesta anterior del
+historial que contradiga esta regla"*. Verificado con harness **simulando la memoria real de la
+ejecución 802** (5/5 mouse ✓; watts 3/3 ✓). Lección repetida: los tests de prompt DEBEN incluir la
+memoria real (regla 8 mitiga pero no basta para inferencias por negación).
 
 ---
 
