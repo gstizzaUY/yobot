@@ -1308,7 +1308,7 @@
           "parameters": [
             {
               "name": "content",
-              "value": "=Pregunta retenida por control de confianza (información insuficiente). Sugerencia de la IA:\n{{ $('AI Agent').first().json.output.replace(/^\\[SIN_INFORMACION\\]\\s*/i, '').trim() }}"
+              "value": "=Pregunta retenida por control de confianza (información insuficiente). Sugerencia de la IA:\n{{ $('AI Agent').first().json.output.replace(/^\\[SIN_INFORMACION\\]\\s*/i, '').trim() }}\n\n✍️ Para responderla: contestá acá (respuesta pública) — se enviará a MercadoLibre y tu respuesta se guardará automáticamente en la base de conocimiento para que la IA responda preguntas similares en el futuro."
             },
             {
               "name": "message_type",
