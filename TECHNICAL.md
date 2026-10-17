@@ -2699,9 +2699,26 @@ correspondiente, sin depender de presencia:
 **Síntoma**: el editor de prod mostraba *"1 node has issues, fix them before publishing"* en
 `reply_ai_postsale_main` (tras los cambios de asignación). El backend (`POST /activate`) validaba OK.
 
-**Causa**: en n8n 2.x el workflow tiene **draft** y **versión publicada** separados. El draft había
-divergido: tenía **pinData viejo** (datos de prueba "pinned" en `Execute Workflow Trigger`, capturados
-en julio) + `settings` distintos. El editor valida el draft y bloquea el publish.
+**Causa real (confirmada)**: el nodo **`detect_sentiment`** (HTTP Request a OpenAI con
+`authentication: predefinedCredentialType`) **no tenía credencial asignada** — el editor valida
+credenciales (`getNodeCredentialIssues` → "credentials unset") y lo flaggeaba como "1 node has
+issues", bloqueando Publish. Los otros 5 nodos OpenAI del flujo sí tenían la credencial (`openAiApi`,
+id `vHC1imcsHYCcvLxh`).
+**Fix**: asignar `openAiApi` (id `vHC1imcsHYCcvLxh`) al nodo + `PUT` + `activate` por API. El mismo
+fix se aplicó al n8n local (comparte los mismos ids de credenciales).
+
+**Diagnóstico (cómo encontrarlo)**: la API pública NO expone los issues (no están persistidos — se
+recalculan en el editor al cargar). Se identificó replicando la validación del bundle
+(`n8n-editor-ui/dist`): los issues salen de 4 validadores — `parameters` / `credentials` / `input`
+(input requerido sin conexión) / `execution` (error en la ejecución cargada). Para hallar el nodo sin
+UI: escanear el workflow por nodos con `authentication: predefinedCredentialType` (o
+`genericCredentialType`) **sin** `credentials`, nodos con params requeridos vacíos, o inputs
+requeridos sin padre conectado.
+
+**Notas secundarias (mismo día)**: el draft había divergido del publicado (pinData viejo de julio +
+settings) — los nodos **con pin están EXENTOS** de validación (código del editor), así que el pinData
+NO era la causa; se limpió igual (unpin manual en prod, `pinData={}` por DB en local). `activate`
+republica el estado actual (draft == published).
 
 **Fix aplicado**: `POST /api/v1/workflows/{id}/activate` republica el estado actual (draft == published
 de nuevo). ⚠️ El **pinData NO se puede limpiar vía API** (el PUT lo ignora; en el PUT, `settings` solo
