@@ -2694,6 +2694,27 @@ correspondiente, sin depender de presencia:
 - Idempotente por guard (`meta.assignee` / `assignee_id`): no re-asigna ni duplica mensajes de actividad.
 - Verificado: conv 7 asignada (reply usuario + team post-venta); flujos aplicados vía API y espejados al repo.
 
+### 23.11 Incidente n8n 2.x — draft/publish y pinData (2026-10-17)
+
+**Síntoma**: el editor de prod mostraba *"1 node has issues, fix them before publishing"* en
+`reply_ai_postsale_main` (tras los cambios de asignación). El backend (`POST /activate`) validaba OK.
+
+**Causa**: en n8n 2.x el workflow tiene **draft** y **versión publicada** separados. El draft había
+divergido: tenía **pinData viejo** (datos de prueba "pinned" en `Execute Workflow Trigger`, capturados
+en julio) + `settings` distintos. El editor valida el draft y bloquea el publish.
+
+**Fix aplicado**: `POST /api/v1/workflows/{id}/activate` republica el estado actual (draft == published
+de nuevo). ⚠️ El **pinData NO se puede limpiar vía API** (el PUT lo ignora; en el PUT, `settings` solo
+acepta `executionOrder` — otras keys dan 400): los pins se quitan **desde el editor** (click derecho en
+el nodo → Unpin).
+
+**Sync del n8n local** (v2.6.4, misma id de workflow): el workflow local había quedado desactualizado
+(import previo a los cambios de asignación). Se sincronizó vía DB (local-only): INSERT en
+`workflow_history` (nueva versión) + UPDATE `workflow_entity` (`nodes`/`connections`/`settings`/
+`versionId`/`activeVersionId` + `versionCounter`+1) + INSERT en `workflow_publish_history`
+(`activated`) + restart de `n8n-main`/`n8n-worker`. El pinData local (datos de prueba del túnel) se
+dejó intacto.
+
 ## 24. Entornos e infraestructura (2026-10-13)
 
 > **Clave para no confundirse**: `https://w1206-app.site` es la instancia **LOCAL (dev)** expuesta por un túnel Cloudflare — **no es producción**.
