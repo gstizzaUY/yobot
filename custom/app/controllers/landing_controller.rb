@@ -1809,14 +1809,20 @@ class LandingController < ApplicationController
     conv.id
   end
 
-  # Asignación determinística del agente Reply (A 2026-10-16): no depende de
-  # presencia online (el round-robin de Chatwoot solo asigna a agentes online).
+  # Asignación determinística del agente Reply + equipo Post-Venta (A 2026-10-16):
+  # no depende de presencia online (el round-robin de Chatwoot solo asigna a agentes online).
   # Best-effort: un fallo acá no debe romper la creación/uso de la conversación.
   def ensure_reply_assignment(account, conv)
     reply_agent = account.users.find_by(email: ENV.fetch('REPLY_AGENT_EMAIL', 'usuario-reply@replylatam.com'))
-    return if reply_agent.nil? || conv.assignee_id == reply_agent.id
+    post_venta_team = account.teams.find_by('name ILIKE ?', '%Post-Venta%')
 
-    Conversations::AssignmentService.new(conversation: conv, assignee_id: reply_agent.id).perform
+    if reply_agent && conv.assignee_id != reply_agent.id
+      Conversations::AssignmentService.new(conversation: conv, assignee_id: reply_agent.id).perform
+    end
+
+    if post_venta_team && conv.team_id != post_venta_team.id
+      conv.with_lock { conv.update!(team: post_venta_team) }
+    end
   rescue StandardError => e
     Rails.logger.warn "[ensure_reply_assignment] #{e.class} #{e.message}"
   end
