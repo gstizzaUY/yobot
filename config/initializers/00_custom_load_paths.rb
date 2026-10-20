@@ -16,6 +16,7 @@ main_loader = Rails.autoloaders.main
 
 main_loader.push_dir(custom_root.join('app/models'),     namespace: Object)
 main_loader.push_dir(custom_root.join('app/controllers'), namespace: Object)
+main_loader.push_dir(custom_root.join('app/policies'),    namespace: Object)
 
 # custom/lib/ → módulo ReplyAi y cualquier extensión futura
 main_loader.push_dir(custom_root.join('lib'), namespace: Object)

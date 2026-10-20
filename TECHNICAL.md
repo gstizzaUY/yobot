@@ -501,13 +501,13 @@ Inyecta CSS y JavaScript en las respuestas HTML del dashboard (`/app/*`).
 
 | Regla | Efecto |
 |-------|--------|
-| Oculta sub-items de Informes | Solo deja "Resumen" |
+| Oculta sub-items de Informes (actualizado 2026-10-20) | Deja **Resumen, Conversaciones, Agentes, Etiquetas, Bandeja de entrada y Equipo**; oculta **CSAT / SLA / Bot** (solo administradores) |
 | Oculta panel central vacío | Limpia el estado "sin conversaciones" |
 | Oculta sección Campañas | `li:has(a[href*="/campaigns"])` |
 | Oculta Centro de ayuda | `li:has(a[href*="/portals"])` |
 | Oculta sección Llamadas (2026-10-12) | `li.grid:has(a[href*="/calls"])` — los administradores la ven (el gate desactiva el CSS completo) |
 | Oculta sección Capitán (2026-10-14) | `li.grid:has(a[href*="/captain"])` — solo administradores la ven (gate de rol) |
-| Oculta sub-items de Ajustes | Solo deja "Respuestas personalizadas" |
+| Oculta sub-items de Ajustes (actualizado 2026-10-20) | Deja **"Configuración de la cuenta"** y **"Respuestas predeterminadas"** (el resto oculto) |
 | Oculta items del menú de perfil | Solo deja "Cerrar sesión" |
 | Oculta botón "Redactar nueva conversación" | Botón lápiz |
 | Oculta acciones de contacto | Merge, delete, etc. |
@@ -527,7 +527,8 @@ Bloque `ALL_USERS_CSS` — no lo apaga el gate de rol.
 ### JavaScript inyectado
 
 1. **Gate de rol (2026-10-12; + cierre de paneles 2026-10-15)**: decide en el cliente si el usuario es privilegiado (`SuperAdmin` o `administrator` de la **cuenta activa**) leyendo el Vue store (`getCurrentUser`/`getCurrentRole`) y **desactiva** el `<style>` de restricciones (`style.disabled`). Expone `window.__replyAiIsPrivileged()` para los demás scripts y re-evalúa cada 500 ms (cubre cambios de cuenta sin recarga). Para agentes además **cierra** los paneles laterales (`is_contact_sidebar_open`/`is_copilot_panel_open` vía `updateUISettings`) — el pill está oculto por CSS, pero el panel puede haber quedado abierto o abrirse con Alt+O. Motivo: los logins del SPA no crean sesión Warden (`store: false`), así que el chequeo server-side no puede distinguir el rol.
-2. **Patch de permisos de Reports**: Agrega `'agent'` a los permisos de la ruta `account_overview_reports` para que agentes vean Reportes.
+2. **Patch de permisos de rutas (2026-10-20)**: agrega `'agent'` a las metas de las 6 rutas de Informes visibles para agentes (`account_overview_reports`, `conversation_reports`, `agent_reports_index`, `label_reports_index`, `inbox_reports_index`, `team_reports_index` + variantes legacy) y a `/settings/general` + `general_settings_index` (así "Ajustes" navega al primer hijo accesible y "Configuración de la cuenta" se muestra). CSAT / SLA / Bot y el resto de Ajustes no reciben `'agent'`.
+   Complemento backend: overlay `custom/app/policies/custom/report_policy.rb` (`Custom::ReportPolicy#view? = super || @account_user&.agent?`) habilita los endpoints de datos de Informes a agentes (antes: 401 por `Pundit::NotAuthorizedError`). Requiere `custom/app/policies` en el loader (`00_custom_load_paths.rb`).
 3. **Detector de inbox Meli**: `MutationObserver` que agrega clase `reply-ai-meli-inbox` al `<body>` cuando la conversación activa pertenece a un inbox que contiene "MercadoLibre" (vía store: `getSelectedChat` → `inboxes/getInbox`; funciona también con un solo inbox). Si el inbox es de **post-venta o reclamos** agrega además `reply-ai-meli-attachments` (esos canales admiten archivos adjuntos → el clip queda visible; en pre-venta sigue oculto, 2026-10-14). Además oculta el acordeón de Macros (solo usuarios restringidos).
 4. **Link "Configuración Bot"**: Inyecta un item en el menú de perfil que navega a `/dashboard?account_id=X`. Detecta el `account_id` del Vue store, del dataset del sidebar switcher, o del path.
 5. **Banner de mediación**: muestra un banner fijo cuando la conversación activa tiene la label `reclamo-mediacion` (usa `getSelectedChat` + `conversationLabels/getConversationLabels`).
@@ -2778,6 +2779,22 @@ Cuando `reply-ai.online` apunte a Easypanel:
 > Notas: el código custom es **domain-agnóstico** (todo pasa por `FRONTEND_URL`/`ML_REDIRECT_URI` o rutas relativas; `INTERNAL_BASE_URL` default `localhost:3000` es interno). Rails no restringe hosts (no hay `config.hosts`).
 
 ---
+
+### 24.5 Build info (`GIT_SHA`) — local vs producción (documentado 2026-10-20)
+
+`BuildInfo.vue` (Ajustes → Configuración de la cuenta, al final) muestra `Build <sha[0..7]>`.
+Origen: `GIT_HASH` en `config/initializers/git_sha.rb`: `git rev-parse HEAD` si existe `.git` →
+si no, `.git_sha` → `HEROKU_SLUG_COMMIT` → fallback `'unknown'`.
+
+- **Producción**: muestra el commit desplegado (ej. `f9ea541`). El Dockerfile lo hornea en la imagen:
+  `RUN git rev-parse HEAD > /app/.git_sha` (+ `COPY` desde el stage pre-builder).
+- **Local**: muestra `unknown` porque (a) no existe `.git_sha` y (b) `git rev-parse HEAD` falla
+  dentro del contenedor → `fatal: detected dubious ownership in repository at '/app'` (el repo
+  montado es de otro usuario) → `sha` vacío → fallback.
+- **Impacto**: solo cosmético; no afecta funcionalidad.
+- **Pendiente (local, opcional)**: `git rev-parse HEAD > .git_sha` en la raíz + agregar `.git_sha`
+  al `.gitignore` + reiniciar rails. Alternativa no persistente:
+  `git config --global --add safe.directory /app` dentro del contenedor (se pierde al recrearlo).
 
 ## 25. Sincronización de flujos n8n repo ↔ prod (plan, 2026-10-15)
 

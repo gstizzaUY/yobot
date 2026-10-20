@@ -10,12 +10,9 @@ module ReplyAi
     # Usar selectores :has() + href para máxima estabilidad ante actualizaciones.
     CUSTOM_CSS = <<~'CSS'.freeze
       <style id="reply-ai-custom-css">
-        /* ── Ocultar sub-items del menú Informes (dejar solo Resumen) ── */
-        li.child-item:has(a[href*="/reports/conversation"]),
-        li.child-item:has(a[href*="/reports/agent"]),
-        li.child-item:has(a[href*="/reports/inboxes"]),
-        li.child-item:has(a[href*="/reports/label"]),
-        li.child-item:has(a[href*="/reports/team"]),
+        /* ── Sub-items de Informes: ocultos SOLO PARA AGENTES: CSAT / SLA / Bot ── */
+        /* (Resumen, Conversaciones, Agentes, Etiquetas, Bandeja y Equipo se muestran
+           a los agentes; el role-gate desactiva este bloque para administradores.) */
         li.child-item:has(a[href*="/reports/sla"]),
         li.child-item:has(a[href*="/reports/csat"]),
         li.child-item:has(a[href*="/reports/bot"]) {
@@ -49,8 +46,10 @@ module ReplyAi
           display: none !important;
         }
 
-        /* ── Ocultar sub-items de Ajustes (dejar solo Respuestas personalizadas) ── */
-        li.child-item:has(a[href*="/settings/"]):not(:has(a[href*="/settings/canned-response"])) {
+        /* ── Ajustes: para agentes solo "Configuración de la cuenta" (/settings/general)
+           y "Respuestas predeterminadas" (/settings/canned-response) ── */
+        /* El role-gate desactiva este bloque para administradores (ven todo). */
+        li.child-item:has(a[href*="/settings/"]):not(:has(a[href*="/settings/general"])):not(:has(a[href*="/settings/canned-response"])) {
           display: none !important;
         }
 
@@ -184,31 +183,46 @@ module ReplyAi
       </script>
 
       <script id="reply-ai-reports-patch">
-        // Parchamos el meta de la ruta overview_reports para incluir 'agent'
-        // de modo que Chatwoot la muestre en la barra lateral para agentes.
+        // Permisos de rutas para AGENTES:
+        //  - Informes: Resumen, Conversaciones, Agentes, Etiquetas, Bandeja y Equipo
+        //    (CSAT / SLA / Bot quedan solo para administradores; el CSS los oculta).
+        //  - Ajustes: "Configuración de la cuenta" (/settings/general) es el primer
+        //    hijo accesible → al clickear "Ajustes" el sidebar navega ahí ✓.
         (function () {
-          function patchReportsPermissions() {
+          var AGENT_REPORT_ROUTES = [
+            'account_overview_reports',
+            'conversation_reports',
+            'agent_reports_index', 'agent_reports',
+            'label_reports_index', 'label_reports',
+            'inbox_reports_index', 'inbox_reports',
+            'team_reports_index', 'team_reports',
+          ];
+
+          function allowAgent(route) {
+            if (!route.meta || !route.meta.permissions) return;
+            if (!route.meta.permissions.includes('agent')) {
+              route.meta.permissions.push('agent');
+            }
+          }
+
+          function patchPermissions() {
             var appEl = document.getElementById('app');
             if (!appEl || !appEl.__vue_app__) {
-              setTimeout(patchReportsPermissions, 300);
+              setTimeout(patchPermissions, 300);
               return;
             }
             var router = appEl.__vue_app__.config.globalProperties.$router;
             if (!router) return;
-            var routes = router.getRoutes();
-            var overviewRoute = routes.find(function (r) {
-              return r.name === 'account_overview_reports';
+            router.getRoutes().forEach(function (r) {
+              if (AGENT_REPORT_ROUTES.indexOf(r.name) !== -1) {
+                allowAgent(r);
+                return;
+              }
+              var path = String(r.path || '');
+              if (path.includes('/settings/general')) allowAgent(r);
             });
-            if (
-              overviewRoute &&
-              overviewRoute.meta &&
-              overviewRoute.meta.permissions &&
-              !overviewRoute.meta.permissions.includes('agent')
-            ) {
-              overviewRoute.meta.permissions.push('agent');
-            }
           }
-          patchReportsPermissions();
+          patchPermissions();
         })();
       </script>
 
