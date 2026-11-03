@@ -1,6 +1,6 @@
 # Reply-AI — Visión General de la Aplicación
 
-> Documento fuente para NotebookLM. Versión de referencia: Chatwoot v4.18.0 + Reply-AI (actualizado 2026-10-06).
+> Documento fuente para NotebookLM. Versión de referencia: Chatwoot v4.19.1 en local + Reply-AI (actualizado 2026-11-03; producción v4.18.0 pendiente de deploy).
 
 ## 1. Qué es Reply-AI
 
@@ -165,3 +165,4 @@ Tras el OAuth (`/callback`): se guardan los tokens, se detecta el país del vend
 
 - Todas las fases del plan (1: post-venta IA, 2: reclamos, 3: bridge) están **implementadas**; quedan pendientes de validación con sellers reales y algunas tareas operativas — detalladas en el documento *Funcionalidades Futuras*.
 - Producción (2026-10-06): Chatwoot v4.18.0 desplegado, verify 59/59 ✓, migraciones al día, blindaje activo.
+- Local/dev (2026-11-03): Chatwoot v4.19.1 actualizado, verify 60/60 ✓, 24 migraciones upstream aplicadas, blindaje activo. **Producción sigue en v4.18.0 hasta el próximo deploy.**

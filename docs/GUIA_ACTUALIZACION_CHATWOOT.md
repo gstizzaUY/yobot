@@ -1,9 +1,9 @@
 # Guía de actualización de Chatwoot — análisis de impacto y alineación
 
 > **Propósito**: documento vivo para actualizar Chatwoot sin romper la capa Reply-AI / MercadoLibre.
-> **Última revisión**: 2026-10-27
-> **Estado del repo**: Chatwoot **v4.18.0**
-> **Última versión analizada**: **v4.19.1** (análisis hecho el 2026-10-27; **no aplicada todavía**)
+> **Última revisión**: 2026-11-03
+> **Estado del repo**: Chatwoot **v4.19.1 en local**; producción **v4.18.0** (pendiente de deploy)
+> **Última versión analizada/aplicada**: **v4.19.1** (análisis 2026-10-27; upgrade local 2026-11-03)
 > **Referencias**: `TECHNICAL.md` §15 y §24, `docs/PANELES_DASHBOARD_APPS.md`, `docs/REQUERIMIENTOS_YOBOT.md`, `AGENTS.md`.
 
 ---
@@ -456,7 +456,7 @@ Ningún PR de upgrade se considera terminado si no incluye:
 
 ## 8. Registro de versiones e impacto
 
-### v4.18.0 — baseline actual del repo (2026-09-18) — [release notes](https://github.com/chatwoot/chatwoot/releases/tag/v4.18.0)
+### v4.18.0 — baseline anterior del repo (2026-09-18) — [release notes](https://github.com/chatwoot/chatwoot/releases/tag/v4.18.0)
 - Rails 7.2.3.1 / Ruby 3.4.4.
 - Custom layer completo: pre-venta, post-venta, reclamos, bridge, RAG, paneles.
 - `custom/verify.rb`: 60 checks (verificar salida real).
@@ -471,7 +471,7 @@ Ningún PR de upgrade se considera terminado si no incluye:
 - Migraciones nuevas, sin impacto en `meli_*`/`reply_ai_*`.
 - **Conclusión**: no se identificó un cambio que obligue a tocar `custom/` de entrada; sí requiere smoke de API/auth, assignments, UI y Zeitwerk.
 
-### v4.19.1 — analizada (release 2026-10-24; análisis 2026-10-27, no aplicada) — [release notes](https://github.com/chatwoot/chatwoot/releases/tag/v4.19.1)
+### v4.19.1 — aplicada en local (release 2026-10-24; análisis 2026-10-27; upgrade 2026-11-03) — [release notes](https://github.com/chatwoot/chatwoot/releases/tag/v4.19.1)
 - Patch de seguridad/hardening: Node 24.22.1, Twilio webhook, CSS sanitization, SAML metadata, fixes de Help Center/inbox bots, cookies de sesión solo en páginas públicas.
 - Rails/Ruby **sin cambios**.
 - 24 migraciones upstream nuevas, **sin colisión exacta** con las 20 custom; ninguna toca tablas custom.
@@ -481,7 +481,11 @@ Ningún PR de upgrade se considera terminado si no incluye:
 - API: `api_access_token` legacy sigue soportado; `ConversationsController#create` valida `team_id`/`assignee_id`; n8n manda IDs válidos. `MessagesController` agrega traducción y `clear_source_id` solo para inboxes no API.
 - Dockerfile: Node 24.22.1; preservar 6144 + `HEALTHCHECK`.
 - Zeitwerk 2.7.5 → 2.8.3; ejecutar `zeitwerk:check`.
-- **Estado**: analizada, pendiente de aplicar. Al aplicarla, actualizar esta entrada con fecha, conflictos, migraciones ejecutadas y resultado del smoke.
+- **Upgrade local 2026-11-03**: merge de 186 commits / ~3.025 archivos. Conflictos `modify/delete` mayormente por cambios de modo `100644 → 100755` en archivos que upstream eliminó; se aceptaron las eliminaciones. Conflictos reales: `db/schema.rb` (regenerado con `db:migrate`) y `enterprise/app/models/call.rb` (se tomó upstream).
+- **Verificación local**: 24 migraciones aplicadas, 0 pendientes, schema `2099_01_01_000002` con las 10 tablas custom; `zeitwerk:check` OK; `custom/verify.rb` 60/60; `/api` 4.19.1 con queue/data `ok`; `/`, `/signup` y `/app/login` 200; `/dashboard` 302 sin sesión; token legacy `api_access_token` 200; guard Enterprise OK; búsqueda RAG OK; datos custom intactos.
+- **Observaciones**: Vite cold start ~3 min; el primer `db:migrate` ejecutó annotate y devolvió 1, la segunda ejecución devolvió 0; `MessageReadSyncWorker` local falla por token ML vencido (esperado).
+- **Pendiente**: smoke visual de UI agente/admin, flujos n8n/bridge end-to-end, Dashboard Apps y deploy a producción.
+- **Estado**: aplicada en local; **producción pendiente**.
 
 ---
 

@@ -1,7 +1,7 @@
 ﻿# Chatwoot + Reply-AI — Documentación Técnica Unificada
 
-> **Versión**: Chatwoot 4.18.0 + Reply-AI / Meli  
-> **Última actualización**: 2026-10-27<br>
+> **Versión**: Chatwoot 4.19.1 (local; producción 4.18.0 pendiente de deploy) + Reply-AI / Meli<br>
+> **Última actualización**: 2026-11-03<br>
 > **Propósito**: Referencia completa para agentes IA y desarrolladores.  
 > **Entornos**: `w1206-app.site` = **local/dev** (túnel Cloudflare); producción = Easypanel (`yobot-cw-yobot-app.bsj9p0.easypanel.host`). Ver **§24**.
 
@@ -80,16 +80,17 @@ Cliente pregunta en MercadoLibre
 |------|-----------|---------|
 | Backend | Ruby on Rails | 7.2.3.1 |
 | Frontend | Vue 3 (Composition API) | 3.x |
-| Build | Vite | 5.x |
+| Build | Vite | 6.4.2 |
+| Build | Node.js | 24.22.1 |
 | Base de datos | PostgreSQL + pgvector | 16 |
 | Cache / PubSub | Redis | Alpine |
-| Background jobs | Sidekiq | 7.x |
+| Background jobs | Sidekiq | 7.3.10 |
 | Búsqueda vectorial | pgvector (neighbors gem) | — |
 | Extracción texto | Apache Tika | latest-full |
 | Automatización | n8n | 2.6.4 |
 | CSS | Tailwind (sin custom CSS) | — |
 | Ruby | MRI | 3.4.4 |
-| Package manager | pnpm | 10.x |
+| Package manager | pnpm | 10.2.0 |
 
 ---
 
@@ -984,9 +985,20 @@ Antes de mergear un tag hay que mirar, como mínimo:
 - Dockerfile custom: heap de 6144 y `HEALTHCHECK` con fallback a SidekiqAlive.
 - n8n: los JSON del repo son respaldo; producción se gestiona aparte.
 
-**Estado al 2026-10-27**: repo en **v4.18.0**; **v4.19.1 analizada, no aplicada**. Al aplicarla, actualizar esta sección y el registro de la guía.
+**Estado al 2026-11-03**: local en **v4.19.1** (merge + 24 migraciones aplicadas, `verify` y `zeitwerk` OK); producción sigue en **v4.18.0** hasta el deploy.
 
 **Un upgrade no se considera terminado** si no se actualizan `TECHNICAL.md`, `docs/GUIA_ACTUALIZACION_CHATWOOT.md`, `custom/verify.rb` (si cambió la superficie custom) y los docs de las áreas afectadas (paneles, bridge, n8n).
+
+### 15.4 Actualización a v4.19.1 (local, 2026-11-03)
+
+- Merge del tag `v4.19.1` (186 commits, ~3.025 archivos) en `update/upstream-v4.19.1`.
+- **Conflictos**: la mayoría fueron `modify/delete` porque los archivos solo tenían cambios de modo `100644 → 100755` y upstream los eliminó; se aceptaron las eliminaciones. Conflictos reales: `db/schema.rb` (se tomó upstream y se regeneró con `db:migrate`) y `enterprise/app/models/call.rb` (se tomó upstream).
+- **Migraciones**: 24 nuevas aplicadas; 0 pendientes; schema `2099_01_01_000002` con las 10 tablas custom.
+- **Dependencias**: Rails 7.2.3.1 / Ruby 3.4.4 sin cambios; Zeitwerk 2.8.3, Vite 6.4.2, `ai-agents` 0.13.0, `ruby_llm` 2.0.0; `roo` custom preservado.
+- **Dockerfile**: Node 24.22.1, heap 6144 y `HEALTHCHECK` preservados.
+- **Verificación**: `zeitwerk:check` OK; `custom/verify.rb` 60/60; `/api` 4.19.1 con `queue_services`/`data_services` en `ok`; `/`, `/signup`, `/app/login` 200; `/dashboard` 302 sin sesión; token legacy `api_access_token` 200; guard Enterprise OK; búsqueda RAG OK; datos custom intactos.
+- **Observaciones**: Vite tiene cold start de ~3 min; el primer `db:migrate` ejecutó annotate y devolvió 1, la segunda ejecución devolvió 0; `MessageReadSyncWorker` local falla por token ML vencido (esperado).
+- **Pendiente**: smoke visual de UI agente/admin, flujos n8n/bridge end-to-end, Dashboard Apps y deploy a producción.
 
 ---
 
@@ -2769,6 +2781,8 @@ dejó intacto.
 ## 24. Entornos e infraestructura (2026-10-13)
 
 > **Clave para no confundirse**: `https://w1206-app.site` es la instancia **LOCAL (dev)** expuesta por un túnel Cloudflare — **no es producción**.
+>
+> **Estado 2026-11-03**: local/dev en **v4.19.1**; producción en **v4.18.0** hasta el próximo deploy.
 
 ### 24.1 Topología
 
