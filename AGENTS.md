@@ -9,6 +9,15 @@
 - **Producción**: stack duplicado en **Easypanel** → `https://yobot-cw-yobot-app.bsj9p0.easypanel.host`. Se despliega con **push a GitHub** (`master`) → GitHub Actions → Easypanel.
 - Un `curl`/check a `w1206-app.site` valida el **local**, no el deploy real. Detalle, checklist de deploy y plan de dominio propio (`reply-ai.online`) en `TECHNICAL.md` **§24**.
 
+## Actualizaciones de Chatwoot
+
+- Antes de actualizar, leer `TECHNICAL.md` §15 y `docs/GUIA_ACTUALIZACION_CHATWOOT.md`.
+- Mergear siempre el **tag de release** (`vX.Y.Z`), nunca `upstream/develop`.
+- Preservar los cambios custom del Dockerfile: `--max-old-space-size=6144` y el `HEALTHCHECK` con fallback a SidekiqAlive.
+- Todo PR de upgrade debe actualizar `TECHNICAL.md` (§2, §15, §24 y apéndice), `docs/GUIA_ACTUALIZACION_CHATWOOT.md` (registro de versión + impacto) y `custom/verify.rb` si la versión cambia clases, tablas, asociaciones, workers o initializers. Si cambian paneles, bridge o n8n, actualizar también sus documentos.
+- No usar `db:reset` ni `db:schema:load`; correr `db:migrate` con backup previo.
+- El deploy de producción es push/merge a `master` (GitHub Actions + Easypanel app/worker); `bin/validate_push` bloquea el push directo. n8n no se despliega por git.
+
 ## Build / Test / Lint
 
 - **Setup**: `bundle install && pnpm install`
@@ -53,6 +62,9 @@
 
 ## General Guidelines
 
+- **Database foreign keys**: Prefer Rails associations and callbacks over database foreign-key constraints. Add a database foreign key only when there is a clear need and after checking deletion behavior and production migration/locking risks. Existing foreign keys alone are not a reason to add new ones.
+- **Migrations**: Create migrations with `bundle exec rails g migration <Name>` so the version is a real timestamp. Never hand-write or round the version (e.g. `20260925000000`); rounded versions collide across branches and break `db:migrate`.
+- **No custom SQL**: Write queries and data migrations in Ruby with ActiveRecord (`where`, `find_each`, `update!`). Do not use `execute`, SQL heredocs or raw SQL strings.
 - Prefer the smallest production-ready change that solves the current problem.
 - Build for the expected production path first. Do not add speculative guards, fallbacks, retries, or edge-case handling unless the caller can actually hit that case or production has proven it necessary.
 - Enforce eligibility and exclusivity rules at the earliest shared entry point. Do not repeat backup guards across downstream jobs, callbacks, services, or writes unless a proven independent path bypasses that point.
@@ -64,6 +76,9 @@
 - Prefer existing repo dependencies/client libraries over hand-rolled protocol code for auth, signing, parsing, or API plumbing.
 - Avoid one-use private helpers unless they hide real complexity or make the main flow meaningfully easier to read.
 - Prefer minimal, readable code over elaborate abstractions; clarity beats cleverness
+- Optimize for human-readable, idiomatic Rails code. Prefer clear model methods, associations, scopes, and named route helpers over dense controller chains or manually assembled paths.
+- Keep record relationships, association traversal, and reusable database queries in models or model scopes. Return an ActiveRecord relation when callers need to filter or order the result.
+- Controllers should coordinate requests and prepare responses. Keep request-specific URL generation and presentation logic in controllers or view helpers. Before finalizing controller changes, check that relationship and traversal logic lives in the model layer.
 - Break down complex tasks into small, testable units
 - Iterate after confirmation
 - Avoid writing specs unless explicitly asked
@@ -105,6 +120,7 @@
   - Backend i18n → `en.yml`, Frontend i18n → `en.json`
 - **Frontend**:
   - Use `components-next/` for message bubbles (the rest is being deprecated)
+- **AI models**: Before adding or changing an OpenAI model in `config/llm.yml` or code, check the deprecations page (https://developers.openai.com/api/docs/deprecations). Do not use a model that has a shutdown date; use the replacement the page recommends. Pick models through `config/llm.yml` and `Llm::FeatureRouter`, not hard-coded names.
 
 ## Ruby Best Practices
 
@@ -181,7 +197,7 @@ Account.include_mod_with('Concerns::Account')
 ### Verificación post-cambios
 
 ```bash
-# Verificar que todo carga (59 checks)
+# Verificar que todo carga (60 checks; confirmar la salida real)
 docker compose exec rails bundle exec rails runner custom/verify.rb
 
 # Verificar que Rails arranca
