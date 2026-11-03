@@ -57,7 +57,7 @@ Chatwoot soporta nativamente un directorio `custom/`: al existir, `ChatwootApp.e
 - **Middleware**: `InjectCssMiddleware` inyecta CSS/JS en el dashboard para simplificar la UI de agentes.
 - **Extensión de clases core**: overrides en `custom/lib/custom/` (por ejemplo el blindaje de `ChatwootHub`).
 
-Un script de verificación (`custom/verify.rb`, 59 checks en 6 categorías) valida la integridad de todo el custom layer: directorios, autoloading de 24+ clases, 9 tablas en BD, schema guard, initializers y asociaciones.
+Un script de verificación (`custom/verify.rb`, 60 checks en 6 categorías) valida la integridad de todo el custom layer: directorios, autoloading de 24+ clases, 10 tablas custom (9 chequeadas por el script), schema guard, initializers y asociaciones.
 
 ## 4. Los tres modos de operación
 
@@ -159,7 +159,7 @@ Tras el OAuth (`/callback`): se guardan los tokens, se detecta el país del vend
 - **Secrets**: `INTERNAL_API_SECRET` (n8n → Rails), `BRIDGE_SECRET` (HMAC con Yobot), OAuth de ML.
 - **CI/CD**: cada push a `master` construye la imagen (`docker/Dockerfile`) y la sube a GHCR, luego dispara el deploy de Easypanel por webhook.
 - **Healthcheck**: la imagen define `HEALTHCHECK` sobre `/api` (los tasks wedged de swarm se reemplazan solos).
-- **Actualizaciones de Chatwoot**: merge del tag de release (no `develop`), regeneración de `schema.rb`, verify 59 checks, con convención de migraciones custom en rango `2099...` para evitar colisiones de timestamp.
+- **Actualizaciones de Chatwoot**: merge del tag de release (no `develop`), regeneración de `schema.rb`, verify 60 checks, con convención de migraciones custom en rango `2099...` para evitar colisiones de timestamp.
 
 ## 10. Estados de validación
 

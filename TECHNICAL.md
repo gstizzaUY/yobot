@@ -1,7 +1,7 @@
 ﻿# Chatwoot + Reply-AI — Documentación Técnica Unificada
 
 > **Versión**: Chatwoot 4.18.0 + Reply-AI / Meli  
-> **Última actualización**: 2026-10-13  
+> **Última actualización**: 2026-10-27<br>
 > **Propósito**: Referencia completa para agentes IA y desarrolladores.  
 > **Entornos**: `w1206-app.site` = **local/dev** (túnel Cloudflare); producción = Easypanel (`yobot-cw-yobot-app.bsj9p0.easypanel.host`). Ver **§24**.
 
@@ -78,7 +78,7 @@ Cliente pregunta en MercadoLibre
 
 | Capa | Tecnología | Versión |
 |------|-----------|---------|
-| Backend | Ruby on Rails | 7.1.5.2 |
+| Backend | Ruby on Rails | 7.2.3.1 |
 | Frontend | Vue 3 (Composition API) | 3.x |
 | Build | Vite | 5.x |
 | Base de datos | PostgreSQL + pgvector | 16 |
@@ -883,31 +883,41 @@ Account.include_mod_with('Concerns::Account')
 ### Proceso seguro
 
 ```bash
-# 1. Fetch upstream
-git fetch upstream
-git merge upstream/develop
+# 1. Backup del estado actual
+git branch backup/pre-upgrade-vX.Y.Z
+git tag pre-upgrade-vX.Y.Z
 
-# 2. Resolver conflictos si los hay
+# 2. Fetch de tags y merge del tag de release (NO develop)
+git fetch upstream --tags
+git switch -c update/upstream-vX.Y.Z master
+git merge --no-ff vX.Y.Z
+
+# 3. Resolver conflictos si los hay
+#    - Dockerfile: preservar --max-old-space-size=6144 + HEALTHCHECK
+#    - db/schema.rb: regenerar con db:migrate (no resolver a mano)
+#    - .dockerignore/.gitignore/.env.example/Gemfile custom: preservar lo propio
 #    - Archivos eliminados por upstream: git rm
 #    - Archivos nuevos de upstream: git add
-#    - Content conflicts: resolver manualmente
 
-# 3. Reconstruir y reiniciar
-docker compose build --no-cache rails
-docker compose down && docker compose up -d
+# 4. Chequear colisiones de migraciones (ver §15.1)
 
-# 4. Migrar base de datos
+# 5. Rebuild + migraciones
+docker compose build rails sidekiq vite   # si cambió Dockerfile/dependencias
+docker compose up -d --force-recreate rails sidekiq vite
 docker compose exec rails bundle exec rails db:migrate
 
-# 5. Verificar integridad
+# 6. Verificar autoloading e integridad
+docker compose exec rails bundle exec rails zeitwerk:check
 docker compose exec rails bundle exec rails runner custom/verify.rb
-# Deben salir todos ✓ (59 checks)
+# Deben salir todos ✓ (hoy 60 checks; confirmar la salida real)
 
-# 6. Commit y push
+# 7. Commit y PR (no push directo a master: bin/validate_push lo bloquea)
 git add -A
-git commit -m "update: chatwoot upstream vX.Y.Z"
-git push origin master
+git commit -m "chore(upgrade): chatwoot vX.Y.Z"
+git push origin update/upstream-vX.Y.Z
 ```
+
+> El análisis de impacto previo (auth/API, UI, Enterprise, n8n, migraciones, Docker) y la checklist de alineación están en `docs/GUIA_ACTUALIZACION_CHATWOOT.md`.
 
 ### Qué NO hacer
 
@@ -928,6 +938,7 @@ Estos archivos NO existen en el upstream de Chatwoot, por lo que no generan conf
 - `config/initializers/reply_ai_schema_guard.rb`
 - `n8n/` (workflows)
 - `TECHNICAL.md` (este documento)
+- `docs/GUIA_ACTUALIZACION_CHATWOOT.md` (guía viva de upgrades e impacto)
 
 ### 15.1 Lecciones de la actualización a v4.17.1 (2026-08-31)
 
@@ -957,11 +968,31 @@ Merge del tag `v4.18.0` (123 commits, sin commits posteriores en `upstream/maste
 7. **Symlinks `CLAUDE.md` / `.windsurf/rules/chatwoot.md`**: son symlinks a AGENTS.md ilegibles desde Windows sobre `\\wsl.localhost` (git status los marca M fantasma; upstream no los cambió entre tags → no estorban al merge ni al commit).
 8. **Verificación de producción (2026-10-06, post-deploy)**: build Actions #32 `passing` → webhook Easypanel → `/api` → `{"version":"4.18.0","queue_services":"ok","data_services":"ok"}`. En la terminal del servicio app: `db:migrate:status` → **0 pendientes** (el start del servicio aplica las migraciones upstream — solo el schema guard de boot es custom-only), `rails runner custom/verify.rb` → **59/59 ✓**, gates → `self_hosted_paid?=true` / `pricing_plan=enterprise` / `self_hosted_enterprise?=true`. Smoke HTTP: `/`, `/signup`, `/robots.txt` (nuevo controller) → 200; `/bot_active` → 401. Rollback: tag `pre-upgrade-v4.17.1`.
 
+### 15.3 Análisis de impacto y alineación documental (2026-10-27)
+
+> **Guía completa**: [`docs/GUIA_ACTUALIZACION_CHATWOOT.md`](docs/GUIA_ACTUALIZACION_CHATWOOT.md).
+
+Antes de mergear un tag hay que mirar, como mínimo:
+
+- Notas de release de **todos** los tags intermedios (no solo el target).
+- Rails/Ruby/Node/pnpm, `Gemfile`, `Gemfile.lock`, `package.json`, `pnpm-lock.yaml`.
+- Migraciones nuevas, colisiones con `custom/db/migrate/` y cambios en `db/schema.rb`.
+- Auth/API: `access_token_auth_helper.rb`, `api/base_controller.rb`, `platform_controller.rb`, `conversations_controller.rb`, `messages_controller.rb`.
+- UI/selectores: `Frame.vue`, `SidepanelSwitch.vue`, `ChannelLeaf.vue`, `ReplyBottomPanel.vue`, `ReplyTopPanel.vue`, `LabelBox.vue`, `AccordionItem.vue`, `ContactInfo.vue`, `Sidebar.vue` y rutas de Informes/Ajustes.
+- Enterprise: `lib/chatwoot_app.rb`, `lib/chatwoot_hub.rb`, `premium_features.yml` y `ReconcilePlanConfigService`.
+- Contratos de n8n: endpoints, `api_access_token`, `team_id`/`assignee_id`, labels, mensajes, adjuntos y ticks.
+- Dockerfile custom: heap de 6144 y `HEALTHCHECK` con fallback a SidekiqAlive.
+- n8n: los JSON del repo son respaldo; producción se gestiona aparte.
+
+**Estado al 2026-10-27**: repo en **v4.18.0**; **v4.19.1 analizada, no aplicada**. Al aplicarla, actualizar esta sección y el registro de la guía.
+
+**Un upgrade no se considera terminado** si no se actualizan `TECHNICAL.md`, `docs/GUIA_ACTUALIZACION_CHATWOOT.md`, `custom/verify.rb` (si cambió la superficie custom) y los docs de las áreas afectadas (paneles, bridge, n8n).
+
 ---
 
 ## 16. Script de Verificación
 
-`custom/verify.rb` — 59 checks en 6 categorías:
+`custom/verify.rb` — 60 checks en 6 categorías (conteo actual; confirmar la salida real al ejecutarlo):
 
 ```bash
 # Local
@@ -976,11 +1007,13 @@ rails runner custom/verify.rb
 | # | Categoría | Qué verifica |
 |---|-----------|-------------|
 | 1 | Directorios | `custom/` existe, `app/` está limpio (9 checks) |
-| 2 | Autoloading | 15 clases cargan (modelos, workers, controller) |
-| 3 | Base de datos | 8 tablas custom existen |
-| 4 | Schema guard | Migraciones registradas, 0 pendientes |
+| 2 | Autoloading | 25 clases cargan: 8 modelos + 11 workers + controller + 5 librerías |
+| 3 | Base de datos | 9 tablas custom chequeadas (el total real es 10; falta `reply_ai_pre_memory`) |
+| 4 | Schema guard | Path registrado, migraciones encontradas, 0 pendientes (3 checks) |
 | 5 | Initializers | 8 archivos presentes, sin duplicado |
-| 6 | Asociaciones | Account tiene los 5 `has_many` correctos |
+| 6 | Asociaciones | 6 `has_many` custom chequeados en `Account` (faltan `meli_orders` y `meli_official_stores`) |
+
+> `custom/verify.rb` es una verificación **estructural**: no prueba flujos de negocio, UI, n8n, RAG, bridge ni claims. Completar siempre con los smokes de `docs/GUIA_ACTUALIZACION_CHATWOOT.md` §6. Si se agregan checks para `reply_ai_pre_memory`, `meli_orders` o `meli_official_stores`, actualizar esta tabla y el conteo en la guía.
 
 ---
 
@@ -2414,7 +2447,7 @@ Tras cada merge de upstream, verificar que el blindaje sigue enganchado:
    aplicar silenciosamente — re-adaptar el módulo).
 2. `ChatwootApp.self_hosted_enterprise?` responde `true` (si upstream renombró el método,
    re-adaptar `Custom::ChatwootApp`).
-3. `rails runner custom/verify.rb` → 59 checks.
+3. `rails runner custom/verify.rb` → 60 checks (confirmar la salida real).
 4. Confirmar que `config/initializers/custom_enterprise_guard.rb` sigue cargando (está en
    `INITIALIZERS` del verify).
 

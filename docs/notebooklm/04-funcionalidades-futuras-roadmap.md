@@ -91,5 +91,5 @@ Cualquier funcionalidad nueva debe seguir estas reglas documentadas:
 3. **Endpoints nuevos en `LandingController`** o controladores en `custom/app/controllers/`.
 4. **Workers en `custom/lib/reply_ai/`**; **migraciones en `custom/db/migrate/`** con timestamps en rango `2099...` para no colisionar con upstream.
 5. **Variables de entorno nuevas**: documentar en `.env.example` y en TECHNICAL.md.
-6. **Verificar** tras cada fase: `rails runner custom/verify.rb` (59 checks) + testing manual del flujo afectado + actualización de §18 del documento.
+6. **Verificar** tras cada fase: `rails runner custom/verify.rb` (60 checks) + testing manual del flujo afectado + actualización de §18 del documento.
 7. En specs, preferir `let`/setup directo sobre helpers; usar `with_modified_env` en vez de stub de `ENV`.

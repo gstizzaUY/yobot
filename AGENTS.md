@@ -9,6 +9,15 @@
 - **Producción**: stack duplicado en **Easypanel** → `https://yobot-cw-yobot-app.bsj9p0.easypanel.host`. Se despliega con **push a GitHub** (`master`) → GitHub Actions → Easypanel.
 - Un `curl`/check a `w1206-app.site` valida el **local**, no el deploy real. Detalle, checklist de deploy y plan de dominio propio (`reply-ai.online`) en `TECHNICAL.md` **§24**.
 
+## Actualizaciones de Chatwoot
+
+- Antes de actualizar, leer `TECHNICAL.md` §15 y `docs/GUIA_ACTUALIZACION_CHATWOOT.md`.
+- Mergear siempre el **tag de release** (`vX.Y.Z`), nunca `upstream/develop`.
+- Preservar los cambios custom del Dockerfile: `--max-old-space-size=6144` y el `HEALTHCHECK` con fallback a SidekiqAlive.
+- Todo PR de upgrade debe actualizar `TECHNICAL.md` (§2, §15, §24 y apéndice), `docs/GUIA_ACTUALIZACION_CHATWOOT.md` (registro de versión + impacto) y `custom/verify.rb` si la versión cambia clases, tablas, asociaciones, workers o initializers. Si cambian paneles, bridge o n8n, actualizar también sus documentos.
+- No usar `db:reset` ni `db:schema:load`; correr `db:migrate` con backup previo.
+- El deploy de producción es push/merge a `master` (GitHub Actions + Easypanel app/worker); `bin/validate_push` bloquea el push directo. n8n no se despliega por git.
+
 ## Build / Test / Lint
 
 - **Setup**: `bundle install && pnpm install`
@@ -181,7 +190,7 @@ Account.include_mod_with('Concerns::Account')
 ### Verificación post-cambios
 
 ```bash
-# Verificar que todo carga (59 checks)
+# Verificar que todo carga (60 checks; confirmar la salida real)
 docker compose exec rails bundle exec rails runner custom/verify.rb
 
 # Verificar que Rails arranca
