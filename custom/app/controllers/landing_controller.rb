@@ -7,7 +7,7 @@ class LandingController < ApplicationController
 
   skip_before_action :authenticate_user!, only: [:index, :signup, :create_account, :meli_callback, :welcome, :go_to_chats, :dashboard, :logout, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :rag_search, :human_answer, :update_store_greeting, :refresh_official_stores, :refresh_tokens, :bot_active, :conversation_ai_gate, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :pv_rag_search, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax, :migrate_rag_pre, :migrate_rag_post, :confidence_report, :bridge_question, :bridge_message, :bridge_order, :bridge_claim, :bridge_manual_response, :bridge_sign, :bridge_seller_status, :bridge_register, :bridge_sync_config, :bridge_message_status, :bridge_sync_conversation_reads, :claims_webhook, :claims_index, :claims_list, :claims_sync, :claim_detail, :claim_messages, :claim_evidences, :claim_send_message, :claim_send_evidence, :claim_refund, :claim_partial_refund, :claim_available_offers, :claim_allow_return, :claim_open_dispute, :claim_affects_reputation, :claim_agent_pending, :claim_agent_execute, :claim_agent_cancel, :claim_agent_rerun, :return_detail, :return_review, :return_reasons, :return_cost, :change_detail, :change_allow_replace, :claim_panel, :claim_panel_data, :sales_list, :sale_detail, :sale_panel, :sale_panel_data, :product_panel, :product_panel_data], raise: false
   layout false
-  before_action :set_account, only: [:dashboard, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :update_store_greeting, :refresh_official_stores, :refresh_tokens, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax, :migrate_rag_pre, :migrate_rag_post, :confidence_report, :claims_index, :claims_list, :claims_sync, :claim_detail, :claim_messages, :claim_evidences, :claim_send_message, :claim_send_evidence, :claim_refund, :claim_partial_refund, :claim_available_offers, :claim_allow_return, :claim_open_dispute, :claim_affects_reputation, :claim_agent_pending, :claim_agent_execute, :claim_agent_cancel, :claim_agent_rerun, :return_detail, :return_review, :return_reasons, :return_cost, :change_detail, :change_allow_replace, :claim_panel, :claim_panel_data, :sales_list, :sale_detail, :sale_panel, :sale_panel_data, :product_panel, :product_panel_data, :sync_products]
+  before_action :set_account, only: [:dashboard, :update_settings, :upload_document, :destroy_document, :dashboard_status, :dashboard_products, :pv_dashboard_products, :update_store_greeting, :refresh_official_stores, :refresh_tokens, :post_venta, :update_post_venta, :pv_upload_document, :pv_destroy_document, :bulk_import_preview, :bulk_import, :product_docs_list, :destroy_document_ajax, :pv_destroy_document_ajax, :migrate_rag_pre, :migrate_rag_post, :confidence_report, :claims_index, :claims_list, :claims_sync, :claim_detail, :claim_messages, :claim_evidences, :claim_send_message, :claim_send_evidence, :claim_refund, :claim_partial_refund, :claim_available_offers, :claim_allow_return, :claim_open_dispute, :claim_affects_reputation, :claim_agent_pending, :claim_agent_execute, :claim_agent_cancel, :claim_agent_rerun, :return_detail, :return_review, :return_reasons, :return_cost, :change_detail, :change_allow_replace, :claim_panel, :claim_panel_data, :sales_list, :sale_detail, :sale_panel, :sale_panel_data, :product_panel, :product_panel_data, :sync_products, :bridge_sync_config]
   # Modo recepción (testing): cuentas marcadas receive_only reciben/ingestan el flujo
   # (preguntas, mensajes, reclamos → Chatwoot) pero NUNCA ejecutan acciones que escriban en ML/Yobot.
   before_action :reject_receive_only_write, only: [:claim_send_message, :claim_send_evidence, :claim_refund, :claim_partial_refund, :claim_allow_return, :claim_open_dispute, :claim_agent_execute, :claim_agent_rerun, :return_review, :change_allow_replace]
@@ -798,11 +798,28 @@ class LandingController < ApplicationController
     end
   end
 
-  # Yobot registra un seller nuevo para bridge
+  # Yobot registra un seller nuevo para bridge.
+  # `profile`:
+  # - "bridge" (default): bridge puro. Reply ejecuta todo a través de Yobot.
+  # - "migrated": perfil migrado. Reply ejecuta directo contra ML con el token emitido
+  #   por la app de Yobot (meli_credentials.status = "active" + bridge_enabled = true).
   def bridge_register
     ml_user_id = params[:ml_user_id].to_s.strip
+    profile    = params[:profile].presence || 'bridge'
     return render json: { error: 'ml_user_id requerido' }, status: :unprocessable_entity if ml_user_id.blank?
+    unless %w[bridge migrated].include?(profile)
+      return render json: { error: "profile inválido (usar 'bridge' o 'migrated')" }, status: :unprocessable_entity
+    end
     return render json: { error: 'Ya existe una credencial para este seller' }, status: :conflict if MeliCredential.exists?(ml_user_id: ml_user_id)
+
+    access_token  = params[:access_token].to_s
+    refresh_token = params[:refresh_token].to_s
+    site_id       = params[:site_id].to_s.strip.upcase.presence
+
+    return render json: { error: 'access_token requerido' }, status: :unprocessable_entity if access_token.blank?
+    if profile == 'migrated' && (refresh_token.blank? || site_id.blank?)
+      return render json: { error: 'access_token, refresh_token y site_id son requeridos para profile=migrated' }, status: :unprocessable_entity
+    end
 
     platform_token = ENV.fetch('CHATWOOT_PLATFORM_TOKEN')
     account_name   = params[:nickname].presence || "ML Seller #{ml_user_id}"
@@ -831,9 +848,17 @@ class LandingController < ApplicationController
     )
 
     account = Account.find(account_data['id'])
+    attrs = default_reply_ai_config
+    attrs['mercadolibre']['user'] = {
+      'user_id' => ml_user_id.to_i,
+      'site_id' => site_id,
+      'nickname' => account_name
+    }.compact
+    attrs['receive_only'] = true if ENV['REPLY_RECEIVE_ONLY'] == 'true'
+
     account.update_columns(
       limits: { 'agents' => 3, 'inboxes' => 5 },
-      custom_attributes: default_reply_ai_config.merge(ENV['REPLY_RECEIVE_ONLY'] == 'true' ? { 'receive_only' => true } : {})
+      custom_attributes: attrs
     )
 
     real_user = User.find(user_data['id'])
@@ -842,13 +867,14 @@ class LandingController < ApplicationController
     # Mismos usuarios que las cuentas nativas: vendedor a agente + shadow SuperAdmin + agente común
     setup_account_users(account, real_user)
 
+    credential_status = profile == 'migrated' ? 'active' : 'bridge'
     MeliCredential.create!(
       account: account,
       ml_user_id: ml_user_id,
-      access_token: params[:access_token].to_s,
-      refresh_token: params[:refresh_token].to_s,
+      access_token: access_token,
+      refresh_token: refresh_token,
       expires_at: params[:expires_at].presence,
-      status: 'bridge',
+      status: credential_status,
       bridge_enabled: true
     )
 
@@ -861,8 +887,12 @@ class LandingController < ApplicationController
       user_email: user_email,
       user_password: user_password,
       ml_user_id: ml_user_id,
-      status: 'bridge'
+      status: credential_status,
+      profile: profile
     }, status: :created
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.error "bridge_register validation error: #{e.message}"
+    render json: { error: e.message }, status: :unprocessable_entity
   rescue RestClient::Exception => e
     Rails.logger.error "bridge_register error: #{e.message}"
     render json: { error: "Error creando cuenta bridge: #{e.message}" }, status: :internal_server_error

@@ -100,6 +100,10 @@ namespace :reply_ai do
     raise 'account_id requerido' if account_id.zero?
 
     result = ReplyAi::BridgeConfigSyncWorker.new.perform(account_id)
-    puts "Config mapeada para account=#{result[:account_id]} (#{result[:stores]} tiendas)"
+    if result.nil?
+      puts "Sin credencial bridge/migrada para account=#{account_id}; no se sincronizó configuración"
+    else
+      puts "Config mapeada para account=#{result[:account_id]} (#{result[:stores]} tiendas)"
+    end
   end
 end

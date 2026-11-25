@@ -18,25 +18,18 @@ module ReplyAi
 
     private
 
-    # Rutas de refresh según el perfil del usuario (2026-08-07):
-    # - MIGRADO (`bridge_enabled` + credenciales de la app de Yobot en .env): refresh
-    #   directo a ML con `YOBOT_ML_APP_ID`/`YOBOT_ML_SECRET_KEY` (el token lo emitió la app
-    #   de Yobot; solo esa app puede refrescarlo). El flag de Yobot es `full` → su token
-    #   obsoleto es irrelevante.
-    # - BRIDGE PURO (`status == 'bridge'` sin las vars de Yobot): vía `/api/bridge/refresh-token`.
+    # Rutas de refresh:
+    # - Cuentas gestionadas por Yobot (`bridge_enabled` o status bridge): SIEMPRE vía
+    #   `/api/bridge/refresh-token`. Yobot refresca con la app de ML de Yobot, actualiza
+    #   su propia BD y devuelve los tokens; Reply persiste la misma copia. Así ambos
+    #   sistemas mantienen el mismo token y Yobot puede seguir enriqueciendo los forwards.
     # - NATIVO: refresh directo a ML con `ML_APP_ID`/`ML_SECRET_KEY` (app de Reply).
     def refresh_meli_token(credential)
-      if credential.bridge_enabled && yobot_app_credentials?
-        refresh_via_ml_with_yobot_app(credential)
-      elsif credential.status == 'bridge'
+      if credential.bridge_enabled || credential.status == 'bridge'
         refresh_via_yobot(credential)
       else
         refresh_via_ml(credential)
       end
-    end
-
-    def yobot_app_credentials?
-      ENV.fetch('YOBOT_ML_APP_ID', nil).present? && ENV.fetch('YOBOT_ML_SECRET_KEY', nil).present?
     end
 
     def refresh_via_yobot(credential)
@@ -76,10 +69,6 @@ module ReplyAi
 
     def refresh_via_ml(credential)
       refresh_with_app(credential, ENV.fetch('ML_APP_ID'), ENV.fetch('ML_SECRET_KEY'), log_tag: 'nativo')
-    end
-
-    def refresh_via_ml_with_yobot_app(credential)
-      refresh_with_app(credential, ENV.fetch('YOBOT_ML_APP_ID'), ENV.fetch('YOBOT_ML_SECRET_KEY'), log_tag: 'migrado (app Yobot)')
     end
 
     def refresh_with_app(credential, client_id, client_secret, log_tag:)
