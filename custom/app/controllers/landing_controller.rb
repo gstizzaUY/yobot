@@ -75,8 +75,10 @@ class LandingController < ApplicationController
 
       # 4. Configurar atributos Reply-AI en la cuenta
       account = Account.find(account_data['id'])
+      # Español por defecto; meli_callback cambia a pt_BR si el seller es de MLB.
       account.update_columns(
         limits: { 'agents' => 3, 'inboxes' => 5 },
+        locale: 'es',
         custom_attributes: default_reply_ai_config
       )
 
@@ -815,6 +817,7 @@ class LandingController < ApplicationController
     access_token  = params[:access_token].to_s
     refresh_token = params[:refresh_token].to_s
     site_id       = params[:site_id].to_s.strip.upcase.presence
+    account_locale = site_id == 'MLB' ? 'pt_BR' : 'es'
 
     return render json: { error: 'access_token requerido' }, status: :unprocessable_entity if access_token.blank?
     if profile == 'migrated' && (refresh_token.blank? || site_id.blank?)
@@ -858,6 +861,7 @@ class LandingController < ApplicationController
 
     account.update_columns(
       limits: { 'agents' => 3, 'inboxes' => 5 },
+      locale: account_locale,
       custom_attributes: attrs
     )
 
@@ -943,6 +947,15 @@ class LandingController < ApplicationController
     else
       conversation.update!(status: 'open') if conversation.resolved?
     end
+
+    # Asignación determinística igual que post-venta/nativo: equipo Pre-venta + agente Reply.
+    # No pisa una asignación manual existente.
+    presale_team = @account.teams.where('LOWER(name) = ?', 'pre-venta').first
+    reply_agent  = ensure_reply_agent_user
+    assignment   = {}
+    assignment[:team_id]     = presale_team.id if conversation.team_id.blank? && presale_team
+    assignment[:assignee_id] = reply_agent.id if conversation.assignee_id.blank? && reply_agent
+    conversation.update!(assignment) if assignment.any?
 
     message = conversation.messages
                           .where(message_type: :incoming, private: false)
