@@ -37,6 +37,7 @@
 
     <script>
         const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+        const accountId = '<%= params[:account_id].to_s %>';
         // El iframe recibe conversation.id por postMessage (appContext); la URL del
         // Dashboard App llega sin sustituir ({{conversation.id}} literal).
         let conversationId = '<%= params[:conversation_id].to_s %>';
@@ -44,6 +45,11 @@
 
         function esc(s) { return (s || '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
         function api(url, opts = {}) {
+            if (accountId && url.startsWith('/dashboard/')) {
+                const u = new URL(url, window.location.origin);
+                u.searchParams.set('account_id', accountId);
+                url = u.pathname + u.search;
+            }
             const headers = Object.assign({ 'X-CSRF-Token': CSRF }, opts.headers || {});
             return fetch(url, Object.assign({ headers }, opts)).then(r => r.json().catch(() => ({})));
         }

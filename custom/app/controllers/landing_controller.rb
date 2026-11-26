@@ -2469,7 +2469,7 @@ class LandingController < ApplicationController
     ].each do |app|
       account.dashboard_apps.create!(
         title: app[:title],
-        content: [{ type: 'frame', url: "#{public_base}/dashboard/#{app[:panel]}?conversation_id={{conversation.id}}" }],
+        content: [{ type: 'frame', url: "#{public_base}/dashboard/#{app[:panel]}?account_id=#{account.id}&conversation_id={{conversation.id}}" }],
         user_id: user_id
       )
     end

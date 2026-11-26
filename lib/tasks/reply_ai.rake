@@ -49,7 +49,7 @@ namespace :reply_ai do
       end
 
       unless DashboardApp.exists?(account_id: account.id)
-        app_url = "#{ENV.fetch('FRONTEND_URL', 'https://w1206-app.site')}/dashboard/claim-panel?conversation_id={{conversation.id}}"
+        app_url = "#{ENV.fetch('FRONTEND_URL', 'https://w1206-app.site')}/dashboard/claim-panel?account_id=#{account.id}&conversation_id={{conversation.id}}"
         RestClient.post(
           "#{base}/api/v1/accounts/#{account.id}/dashboard_apps",
           { title: 'Reclamo ML', content: [{ type: 'frame', url: app_url }] }.to_json,
@@ -59,7 +59,7 @@ namespace :reply_ai do
       end
 
       unless account.dashboard_apps.exists?(title: 'Venta ML')
-        sale_url = "#{ENV.fetch('FRONTEND_URL', 'https://w1206-app.site')}/dashboard/sale-panel?conversation_id={{conversation.id}}"
+        sale_url = "#{ENV.fetch('FRONTEND_URL', 'https://w1206-app.site')}/dashboard/sale-panel?account_id=#{account.id}&conversation_id={{conversation.id}}"
         RestClient.post(
           "#{base}/api/v1/accounts/#{account.id}/dashboard_apps",
           { title: 'Venta ML', content: [{ type: 'frame', url: sale_url }] }.to_json,

@@ -186,3 +186,54 @@ localizados `es-AR` (fechas y montos), dark mode con `html.dark`.
    el item desde `additional_attributes` de la conversación (`ml_item_id`/`item_id`).
 4. **NoMethodError `source_id`**: `Conversation` no tiene `source_id` — vive en
    `contact_inbox`. Fix en `resolve_panel_claim`.
+
+## 9. Fix multi-cuenta — `account_id` obligatorio en la URL (2026-11-26)
+
+**Síntoma**: las Dashboard Apps funcionan con el seller (que tiene una sola cuenta), pero
+fallan para el shadow admin o el agente común (miembros de varias cuentas):
+- Venta ML: "Venta no encontrada para esta conversación."
+- Producto ML: "item_id requerido".
+- Ocurre incluso recargando y en distintas conversaciones.
+- Llamando los endpoints con la sesión del seller y `conversation_id` correcto devuelven 200.
+
+**Causa**: la URL del Dashboard App no incluía `account_id`. El controller `set_account` usa
+`session[:reply_ai_account_id]` cuando no hay `params[:account_id]`; para usuarios
+multi-cuenta esa sesión puede apuntar a otra cuenta. El iframe terminaba resolviendo el
+`conversation_id` contra la cuenta equivocada. No es un problema de token de ML ni de rol:
+el usuario tiene acceso a la cuenta, pero el iframe no le dice cuál usar.
+
+**Fix aplicado**:
+
+1. `LandingController#setup_account_channels` registra las Dashboard Apps con:
+   ```text
+   /dashboard/<panel>?account_id=<account.id>&conversation_id={{conversation.id}}
+   ```
+2. Los paneles custom agregan `account_id` a **todas** las llamadas `/dashboard/*`:
+   ```js
+   const accountId = '<%= params[:account_id].to_s %>';
+
+   function api(url, opts = {}) {
+     if (accountId && url.startsWith('/dashboard/')) {
+       const u = new URL(url, window.location.origin);
+       u.searchParams.set('account_id', accountId);
+       url = u.pathname + u.search;
+     }
+     // fetch...
+   }
+   ```
+3. Se actualizaron las Dashboard Apps existentes de las cuentas 5, 6, 7, 8 y 9 vía
+   `PATCH /api/v1/accounts/:account_id/dashboard_apps/:id` para incluir `account_id`.
+4. El backfill manual (`lib/tasks/reply_ai.rake`) también genera las URLs con `account_id`.
+
+**Archivos**:
+- `custom/app/controllers/landing_controller.rb` (`setup_account_channels`)
+- `custom/app/views/landing/sale_panel.html.erb`
+- `custom/app/views/landing/product_panel.html.erb`
+- `custom/app/views/landing/claim_panel.html.erb`
+- `lib/tasks/reply_ai.rake`
+
+**Verificación**:
+- Con `admin-reply` y con `usuario-reply`, abrir una conversación post-venta.
+- Venta ML debe mostrar la venta; Producto ML debe mostrar el producto.
+- En Network, `/dashboard/sales/panel-data` y `/dashboard/product-panel/data` deben
+  incluir `account_id=<id>` y devolver 200.
