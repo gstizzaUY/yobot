@@ -197,7 +197,10 @@ class LandingController < ApplicationController
         'seconds' => pvia[:delay_seconds].to_i.clamp(0, 900)
       },
       'scheduledMode' => sanitize_schedule(params[:schedule_pv]),
-      'logistica' => { 'enabled' => pvia.dig(:logistica, :enabled) == '1' },
+      'logistica' => {
+        'enabled'           => pvia.dig(:logistica, :enabled) == '1',
+        'fallback_to_human' => pvia.dig(:logistica, :fallback_to_human) == '1'
+      },
       'soporte'   => {
         'enabled'           => pvia.dig(:soporte, :enabled)           == '1',
         'fallback_to_human' => pvia.dig(:soporte, :fallback_to_human) == '1'
@@ -387,11 +390,20 @@ class LandingController < ApplicationController
     # depender de la DB cuando la conversación fue creada en otra instancia
     conversation_type = params[:conversation_type].presence
 
-    conversation = account.conversations.find_by(id: params[:conversation_id])
+    # n8n envía el display_id de Chatwoot (la API expone id = display_id).
+    # Fallback al id interno para compatibilidad con llamadas viejas.
+    conversation = account.conversations.find_by(display_id: params[:conversation_id]) ||
+                   account.conversations.find_by(id: params[:conversation_id])
 
     if conversation
       return render json: { should_respond: false, reason: 'conversation_resolved' } if conversation.resolved?
-      return render json: { should_respond: false, reason: 'assigned_to_human' } if conversation.assignee_id.present?
+
+      # La asignación automática al agente Reply no debe bloquear la IA.
+      # Solo bloquea una asignación a otro usuario humano.
+      reply_agent_email = ENV.fetch('REPLY_AGENT_EMAIL', 'usuario-reply@replylatam.com').to_s.downcase
+      assignee_email    = conversation.assignee&.email.to_s.downcase
+      assigned_to_human = conversation.assignee_id.present? && assignee_email != reply_agent_email
+      return render json: { should_respond: false, reason: 'assigned_to_human' } if assigned_to_human
 
       labels = conversation.label_list
       return render json: { should_respond: false, reason: 'human_handover_label', labels: labels } if labels.include?('atencion-humana')
@@ -2564,7 +2576,7 @@ class LandingController < ApplicationController
         'post_venta_ia' => {
           'enabled'   => false,
           'model'     => 'gpt-4o-mini',
-          'logistica' => { 'enabled' => true },
+          'logistica' => { 'enabled' => true, 'fallback_to_human' => true },
           'soporte'   => { 'enabled' => true, 'fallback_to_human' => true },
           'cierre'    => { 'enabled' => true, 'auto_resolve' => true },
           'reclamo'   => { 'notify_customer' => false },

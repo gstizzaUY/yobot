@@ -133,7 +133,7 @@ module ReplyAi
         'model' => 'gpt-4o-mini',
         'delay' => build_delay(@c['postVentaResponseDelay']),
         'scheduledMode' => build_schedule(@c['postVentaScheduledMode']),
-        'logistica' => { 'enabled' => true },
+        'logistica' => { 'enabled' => true, 'fallback_to_human' => true },
         'soporte' => { 'enabled' => true, 'fallback_to_human' => true },
         'cierre' => { 'enabled' => true, 'auto_resolve' => true },
         'reclamo' => { 'notify_customer' => false },
