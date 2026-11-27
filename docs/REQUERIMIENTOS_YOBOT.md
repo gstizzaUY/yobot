@@ -1011,6 +1011,7 @@ Auth: misma firma HMAC; `isBridged` → 403 si no.
 | `postVentaScheduledMode` `{enabled, timezone, workDays[], holidays[{date, name}]}` | `config.post_venta_ia.scheduledMode` `{enabled, timezone, days, overrides}` | **Campo nuevo en Reply** (misma traducción de forma que pre-venta) |
 | `automatizacionReclamos.enabled, autoEnviarEvidenciaPNR, autoAceptarDevolucionPDD, autoReembolsoParcial, autoAprobarDevolucionSimple, montoMaximoAuto, montoMaximoDevolucionAuto, modoAgenteSupervisado, tiposExcluidos[]` | `config.automatizacion_reclamos.*` (mismos nombres) | 1:1 — campo existe |
 | `automatizacionReclamos.delayRespuesta` | `config.automatizacion_reclamos.delayRespuesta` | **Campo nuevo en Reply** |
+| — (sin equivalente en Yobot) | `config.post_venta_ia.logistica.fallback_to_human` | **Reply-only**; default `true`. Controla la derivación a humano del fallback logístico; no se mapea desde Yobot. |
 | `agenteConversacionesEnabled` | — | NO mapear (Reply no tiene equivalente; el ClaimAgentWorker es de reclamos, no de conversaciones) |
 | Mensaje de venta inicial (¿existe en Yobot?) | `config.post_sale {enabled, message}` (aviso ME1 de Reply) | **CONSULTA A YOBOT** — ver §4 |
 

@@ -2643,10 +2643,12 @@ referenciados con `$('nodo').item` requieren pairing — usar `.first()` cuando 
 - La respuesta se envía a ML y se espeja en Chatwoot con `content_attributes.source='n8n_ai'`
   (los filtros de salida ignoran los espejos — sin loops).
 - **Gate post-venta** (`POST /conversation_ai_gate`): bloquea si la conversación está `resolved`,
-  tiene assignee (`assigned_to_human`), label `atencion-humana`, o `post_venta_ia.enabled=false`.
-  Las conversaciones abiertas con el bot apagado quedan **asignadas** al reply agent (modo manual) →
-  al reactivar el bot hay que **desasignarlas** para que la IA responda
-  (`POST /api/v1/accounts/:id/conversations/:id/assignments` con `assignee_id: null`).
+  tiene assignee humano (`assigned_to_human`), label `atencion-humana`, o
+  `post_venta_ia.enabled=false`. La asignación automática al reply agent de Reply no bloquea la IA.
+  El endpoint resuelve la conversación por `display_id` (lo que envía n8n, porque la API de Chatwoot
+  expone `id = display_id`) y mantiene fallback al id interno. Las conversaciones abiertas con el
+  bot apagado quedan asignadas al reply agent (modo manual): al reactivar el bot ya no hace falta
+  desasignarlas mientras el assignee sea ese agente; si se asignan a un humano, la IA se corta.
 
 **Guard de notificaciones (`es_bridge_message?` en `postsale_main`) — fix 2026-10-15:**
 - En prod ambas ramas del IF apuntaban a `check_idempotency` (no-op) → los bodies del webhook
@@ -3011,10 +3013,16 @@ solución precisa…") → `if_fallback_to_human?` → `set_human_label_support`
 el gate corta la IA). **Fix 2026-10-15**: la condición ahora respeta
 `pv_ia.soporte.fallback_to_human` — antes lo ignoraba (la UI prometía una config sin efecto).
 
-**Fallback de logística (aplicado 2026-10-15)**: cuando la respuesta de logística contiene
-"Voy a consultar el estado" se etiqueta `atencion-humana` (nodos `if_fallback_logistica?` +
-`set_human_label_logistica`, espejo del flujo de soporte) — el humano ve la conversación y el gate
-corta la IA. Nota: con el ETA real del envío (fix P2) este fallback debería ser poco frecuente.
+**Fallback de logística (aplicado 2026-10-15; ampliado 2026-11-27)**: cuando la respuesta de
+logística contiene "Voy a consultar el estado" se etiqueta `atencion-humana` (nodos
+`if_fallback_logistica?` + `set_human_label_logistica`, espejo del flujo de soporte) — el humano ve
+la conversación y el gate corta la IA. La condición respeta
+`pv_ia.logistica.fallback_to_human` (checkbox en el dashboard, default `true`) y el `shipCtx` ahora
+incluye `Modalidad` normalizada (Full / Flex / ME1 / ME2 / Colecta-Retiro / Custom). Antes de la
+etiqueta, los fallbacks de logística y soporte ejecutan `apply_*_handoff_db` (estado
+`needs_human` + `handoff_reason`) y publican una nota privada con el mensaje del cliente y el
+contexto del pedido/envío (`*_handover_note`), para que el agente humano tenga evidencia sin abrir
+la ejecución de n8n. Nota: con el ETA real del envío (fix P2) este fallback debería ser poco frecuente.
 
 **Ciclo de aprendizaje — A1 (implementado 2026-10-16)**: la pregunta retenida que un humano responde
 desde Chatwoot se guarda como conocimiento RAG para que la IA la responda sola en el futuro.

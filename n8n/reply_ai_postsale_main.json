@@ -342,7 +342,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nfunction getSafe(n) { try { return $(n).first().json; } catch(e) { return {}; } }\n\nasync function safeFetch(url, headers) {\n  try {\n    const r = await fetch(url, { method: 'GET', headers });\n    if (!r.ok) return null;\n    return await r.json();\n  } catch(e) { return null; }\n}\n\nconst account     = getSafe('get_account_details');\nconst msgDetails  = getSafe('normalize_message');\nconst ragResult   = getSafe('rag_search');\nconst convDetails = getSafe('get_or_create_conversation');\nconst token       = account.access_token;\n\nconst orderId = msgDetails.order_id;\nlet order    = null;\nlet shipment = null;\n\nif (account.bridge_enabled === true) {\n  const triggerBody = $('Execute Workflow Trigger').first().json.body;\n  order = triggerBody.order || null;\n  shipment = triggerBody.shipment || null;\n} else if (orderId && token) {\n  let orderIds = [String(orderId)];\n  const pack = await safeFetch(\n    `https://api.mercadolibre.com/packs/${orderId}`,\n    { Authorization: `Bearer ${token}` }\n  );\n  if (pack && Array.isArray(pack.orders) && pack.orders.length) {\n    orderIds = pack.orders.map(o => String(o.id)).filter(Boolean);\n  }\n  const orders = [];\n  for (const oid of orderIds) {\n    const od = await safeFetch(\n      `https://api.mercadolibre.com/orders/${oid}`,\n      { Authorization: `Bearer ${token}` }\n    );\n    if (od) orders.push(od);\n  }\n  order = orders[0] || null;\n  if (order) order._all_items = orders.flatMap(o => o.order_items || []);\n  if (order?.shipping?.id) {\n    shipment = await safeFetch(\n      `https://api.mercadolibre.com/shipments/${order.shipping.id}`,\n      { Authorization: `Bearer ${token}` }\n    );\n  }\n}\n\n// Fetch últimos 8 mensajes para contexto de conversación\nconst histData = await safeFetch(\n  `https://w1206-app.site/api/v1/accounts/${account.chatwoot_account_id}/conversations/${convDetails.id}/messages`,\n  { api_access_token: 'TSL8r4ctWYzXJF9fiAS1Z8RV' }\n);\n// Solo mensajes reales (0=cliente, 1=vendedor): excluye actividad (2) y plantillas (3)\nconst histMsgs = (histData?.payload || []).filter(m => !m.private && m.content && (m.message_type === 0 || m.message_type === 1));\nconst history = histMsgs.slice(-8).map(m =>\n  `${m.message_type === 0 ? 'Cliente' : 'Vendedor'}: ${m.content}`\n).join('\\n');\n\nconst orderItems = order ? (order._all_items || order.order_items || []) : [];\nconst orderCtx = order\n  ? `ID: ${order.id} | Estado: ${order.status} | Total: ${order.currency_id} ${order.total_amount} | Productos: ${orderItems.map(i=>i.item?.title).filter(Boolean).join(', ') || '(sin títulos)'}`\n  : '(Sin datos de pedido)';\n\nconst shipDate = shipment\n  ? (shipment.shipping_option?.estimated_delivery_final?.date\n    || shipment.shipping_option?.estimated_delivery_time?.date\n    || shipment.estimated_delivery_final?.date\n    || shipment.estimated_delivery_time?.date\n    || shipment.estimated_handling_limit?.date\n    || 'N/A')\n  : 'N/A';\nconst shipCtx = shipment\n  ? `ID: ${shipment.id} | Estado: ${shipment.status} | Tracking: ${shipment.tracking_number||'N/A'} | Fecha estimada de entrega: ${shipDate}`\n  : '(Sin datos de envío)';\n\n// Detalle del producto comprado: ML directo (item + description) con fallback al item de la orden\nconst orderItem = orderItems[0]?.item || {};\nconst firstItemId = orderItem.id || '';\nlet item = null;\nlet itemDesc = '';\nif (firstItemId && token) {\n  item = await safeFetch(\n    `https://api.mercadolibre.com/items/${firstItemId}`,\n    { Authorization: `Bearer ${token}` }\n  );\n  const desc = await safeFetch(\n    `https://api.mercadolibre.com/items/${firstItemId}/description`,\n    { Authorization: `Bearer ${token}` }\n  );\n  itemDesc = String(desc?.plain_text || desc?.text || '').slice(0, 400);\n}\nconst itemAttrs = (item?.attributes || [])\n  .filter(a => a && a.value_name)\n  .slice(0, 10)\n  .map(a => `${a.name || a.id}: ${a.value_name}`)\n  .join(' | ');\nconst variationAttrs = (orderItem.variation_attributes || [])\n  .filter(a => a && a.value_name)\n  .map(a => `${a.name || a.id}: ${a.value_name}`)\n  .join(' | ');\nconst productCtx = item\n  ? `Título: ${item.title || orderItem.title || '(sin título)'} | Condición: ${item.condition || orderItem.condition || 'N/A'} | Precio: ${item.currency_id || ''} ${item.price || ''}${variationAttrs ? ' | Variante comprada: ' + variationAttrs : ''}${itemAttrs ? ' | Atributos: ' + itemAttrs : ''}${item.warranty ? ' | Garantía: ' + item.warranty : ''}${itemDesc ? ' | Descripción: ' + itemDesc : ''}`\n  : (orderItem.title\n      ? `Título: ${orderItem.title} | Condición: ${orderItem.condition || 'N/A'}${variationAttrs ? ' | Variante comprada: ' + variationAttrs : ''}${orderItem.warranty ? ' | Garantía: ' + orderItem.warranty : ''}`\n      : '(Sin datos de producto)');\n\nconst buyerData = getSafe('get_buyer_details');\nconst buyerName = buyerData.nickname || '';\nconst buyerCity = buyerData.address?.city || '';\n\n// Registro de la interpretación del adjunto como nota privada (visible para agentes)\nconst attachmentCtx = getSafe('process_attachments').attachment_context || '';\nif (attachmentCtx) {\n  await fetch(\n    `https://w1206-app.site/api/v1/accounts/${account.chatwoot_account_id}/conversations/${convDetails.id}/messages`,\n    {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json', api_access_token: 'TSL8r4ctWYzXJF9fiAS1Z8RV' },\n      body: JSON.stringify({ content: `📎 Interpretación del adjunto (IA):\\n${attachmentCtx}`, message_type: 'outgoing', private: true })\n    }\n  );\n}\n\n// Bloque de contexto único: mismo contenido para clasificador y generadores\nconst contextBlock = [\n  `COMPRADOR: ${buyerName || '(sin nombre)'}${buyerCity ? ' — ' + buyerCity : ''}`,\n  `PEDIDO: ${orderCtx}`,\n  `PRODUCTO: ${productCtx}`,\n  `ENVÍO: ${shipCtx}`,\n  `ADJUNTO DEL CLIENTE: ${attachmentCtx || '(ninguno)'}`,\n  `INSTRUCCIONES DEL VENDEDOR: ${(account.prompts && account.prompts.otros) || '(ninguna)'}`,\n  `BASE DE CONOCIMIENTO:\\n${ragResult?.context || '(sin documentación)'}`,\n  `HISTORIAL:\\n${history || '(ninguno)'}`,\n].join('\\n\\n');\n\nreturn {\n  message:               msgDetails.text || '',\n  conversation_id:       convDetails.id,\n  account_id:            account.chatwoot_account_id,\n  ml_user_id:            $('Execute Workflow Trigger').first().json.body.user_id,\n  buyer_user_id:         String(msgDetails.from?.user_id || ''),\n  buyer_name:            buyerName,\n  buyer_city:            buyerCity,\n  product_context:       productCtx,\n  pack_id:               msgDetails.pack_id,\n  order_context:         orderCtx,\n  shipment_context:      shipCtx,\n  rag_context:           ragResult.context || '',\n  conversation_history:  history,\n  prompts:               account.prompts || {},\n  pv_ia:                 (() => { try { const r = account.pv_ia; return (typeof r === 'string') ? JSON.parse(r) : (r || {}); } catch(e) { return {}; } })(),\n  attachment_context:    attachmentCtx,\n  context_block:         contextBlock\n};\n"
+        "jsCode": "const __ra_helpers = this.helpers;\nconst __ra_toBuf = (b) => {\n  if (Buffer.isBuffer(b)) return b;\n  if (b && typeof b === 'object' && b.type === 'Buffer' && Array.isArray(b.data)) return Buffer.from(b.data);\n  if (typeof b === 'string') return Buffer.from(b);\n  if (b && typeof b === 'object') return Buffer.from(JSON.stringify(b));\n  return Buffer.from(String(b));\n};\nconst __ra_toText = (b) => __ra_toBuf(b).toString('utf8');\nconst fetch = (url, opts = {}) => (async () => {\n  try {\n    const res = await __ra_helpers.httpRequest({\n      method: (opts.method || 'GET').toUpperCase(),\n      url,\n      headers: opts.headers || {},\n      body: opts.body,\n      json: false,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    return {\n      ok: res.statusCode >= 200 && res.statusCode < 300,\n      status: res.statusCode,\n      json: async () => { const t = __ra_toText(res.body); try { return JSON.parse(t); } catch (e) { return t; } },\n      text: async () => __ra_toText(res.body),\n      arrayBuffer: async () => __ra_toBuf(res.body)\n    };\n  } catch (e) {\n    return { ok: false, status: e.status || e.statusCode || 0, json: async () => ({}), text: async () => String(e.message || ''), arrayBuffer: async () => Buffer.alloc(0) };\n  }\n})();\n\n\n\nfunction getSafe(n) { try { return $(n).first().json; } catch(e) { return {}; } }\n\nasync function safeFetch(url, headers) {\n  try {\n    const r = await fetch(url, { method: 'GET', headers });\n    if (!r.ok) return null;\n    return await r.json();\n  } catch(e) { return null; }\n}\n\nconst account     = getSafe('get_account_details');\nconst msgDetails  = getSafe('normalize_message');\nconst ragResult   = getSafe('rag_search');\nconst convDetails = getSafe('get_or_create_conversation');\nconst token       = account.access_token;\n\nconst orderId = msgDetails.order_id;\nlet order    = null;\nlet shipment = null;\n\nif (account.bridge_enabled === true) {\n  const triggerBody = $('Execute Workflow Trigger').first().json.body;\n  order = triggerBody.order || null;\n  shipment = triggerBody.shipment || null;\n} else if (orderId && token) {\n  let orderIds = [String(orderId)];\n  const pack = await safeFetch(\n    `https://api.mercadolibre.com/packs/${orderId}`,\n    { Authorization: `Bearer ${token}` }\n  );\n  if (pack && Array.isArray(pack.orders) && pack.orders.length) {\n    orderIds = pack.orders.map(o => String(o.id)).filter(Boolean);\n  }\n  const orders = [];\n  for (const oid of orderIds) {\n    const od = await safeFetch(\n      `https://api.mercadolibre.com/orders/${oid}`,\n      { Authorization: `Bearer ${token}` }\n    );\n    if (od) orders.push(od);\n  }\n  order = orders[0] || null;\n  if (order) order._all_items = orders.flatMap(o => o.order_items || []);\n  if (order?.shipping?.id) {\n    shipment = await safeFetch(\n      `https://api.mercadolibre.com/shipments/${order.shipping.id}`,\n      { Authorization: `Bearer ${token}` }\n    );\n  }\n}\n\n// Fetch últimos 8 mensajes para contexto de conversación\nconst histData = await safeFetch(\n  `https://w1206-app.site/api/v1/accounts/${account.chatwoot_account_id}/conversations/${convDetails.id}/messages`,\n  { api_access_token: 'TSL8r4ctWYzXJF9fiAS1Z8RV' }\n);\n// Solo mensajes reales (0=cliente, 1=vendedor): excluye actividad (2) y plantillas (3)\nconst histMsgs = (histData?.payload || []).filter(m => !m.private && m.content && (m.message_type === 0 || m.message_type === 1));\nconst history = histMsgs.slice(-8).map(m =>\n  `${m.message_type === 0 ? 'Cliente' : 'Vendedor'}: ${m.content}`\n).join('\\n');\n\nconst orderItems = order ? (order._all_items || order.order_items || []) : [];\nconst orderCtx = order\n  ? `ID: ${order.id} | Estado: ${order.status} | Total: ${order.currency_id} ${order.total_amount} | Productos: ${orderItems.map(i=>i.item?.title).filter(Boolean).join(', ') || '(sin títulos)'}`\n  : '(Sin datos de pedido)';\n\nconst shippingData = shipment || order?.shipping || null;\nconst logisticType = String(shippingData?.logistic_type || order?.shipping?.logistic_type || '').toLowerCase();\nconst shippingMode = String(shippingData?.mode || order?.shipping?.mode || '').toLowerCase();\nconst shippingTags = Array.isArray(shippingData?.tags)\n  ? shippingData.tags.map(tag => String(tag).toLowerCase())\n  : [];\nconst shippingMethod = String(\n  shippingData?.shipping_method?.name ||\n  shippingData?.shipping_method?.type ||\n  order?.shipping?.method?.name ||\n  order?.shipping?.method?.type ||\n  ''\n).toLowerCase();\n\nfunction shippingModality() {\n  if (logisticType === 'fulfillment') return 'Full';\n  if (logisticType === 'self_service' || shippingTags.includes('self_service_in') || shippingTags.includes('flex')) return 'Flex';\n  if (shippingMode === 'me2' || logisticType === 'cross_docking') return 'ME2';\n  if (shippingMode === 'me1' || logisticType === 'xd_drop_off' || logisticType === 'drop_off') return 'ME1';\n  if (shippingData?.local_pick_up === true || logisticType === 'not_specified' || shippingMode === 'not_specified') return 'Colecta/Retiro';\n  if (shippingMode === 'custom' || logisticType === 'custom') return 'Custom';\n  return 'No informada';\n}\n\nconst shipModality = shippingModality();\nconst shipDate = shipment\n  ? (shipment.shipping_option?.estimated_delivery_final?.date\n    || shipment.shipping_option?.estimated_delivery_time?.date\n    || shipment.estimated_delivery_final?.date\n    || shipment.estimated_delivery_time?.date\n    || shipment.estimated_handling_limit?.date\n    || 'N/A')\n  : 'N/A';\nconst shipCtx = shippingData\n  ? `ID: ${shippingData.id || 'N/A'} | Modalidad: ${shipModality} | logistic_type: ${logisticType || 'N/A'} | mode: ${shippingMode || 'N/A'} | Método: ${shippingMethod || 'N/A'} | Estado: ${shippingData.status || 'N/A'} | Subestado: ${shippingData.substatus || 'N/A'} | Tracking: ${shippingData.tracking_number || 'N/A'} | Fecha estimada de entrega: ${shipDate}`\n  : '(Sin datos de envío)';\n\n// Detalle del producto comprado: ML directo (item + description) con fallback al item de la orden\nconst orderItem = orderItems[0]?.item || {};\nconst firstItemId = orderItem.id || '';\nlet item = null;\nlet itemDesc = '';\nif (firstItemId && token) {\n  item = await safeFetch(\n    `https://api.mercadolibre.com/items/${firstItemId}`,\n    { Authorization: `Bearer ${token}` }\n  );\n  const desc = await safeFetch(\n    `https://api.mercadolibre.com/items/${firstItemId}/description`,\n    { Authorization: `Bearer ${token}` }\n  );\n  itemDesc = String(desc?.plain_text || desc?.text || '').slice(0, 400);\n}\nconst itemAttrs = (item?.attributes || [])\n  .filter(a => a && a.value_name)\n  .slice(0, 10)\n  .map(a => `${a.name || a.id}: ${a.value_name}`)\n  .join(' | ');\nconst variationAttrs = (orderItem.variation_attributes || [])\n  .filter(a => a && a.value_name)\n  .map(a => `${a.name || a.id}: ${a.value_name}`)\n  .join(' | ');\nconst productCtx = item\n  ? `Título: ${item.title || orderItem.title || '(sin título)'} | Condición: ${item.condition || orderItem.condition || 'N/A'} | Precio: ${item.currency_id || ''} ${item.price || ''}${variationAttrs ? ' | Variante comprada: ' + variationAttrs : ''}${itemAttrs ? ' | Atributos: ' + itemAttrs : ''}${item.warranty ? ' | Garantía: ' + item.warranty : ''}${itemDesc ? ' | Descripción: ' + itemDesc : ''}`\n  : (orderItem.title\n      ? `Título: ${orderItem.title} | Condición: ${orderItem.condition || 'N/A'}${variationAttrs ? ' | Variante comprada: ' + variationAttrs : ''}${orderItem.warranty ? ' | Garantía: ' + orderItem.warranty : ''}`\n      : '(Sin datos de producto)');\n\nconst buyerData = getSafe('get_buyer_details');\nconst buyerName = buyerData.nickname || '';\nconst buyerCity = buyerData.address?.city || '';\n\n// Registro de la interpretación del adjunto como nota privada (visible para agentes)\nconst attachmentCtx = getSafe('process_attachments').attachment_context || '';\nif (attachmentCtx) {\n  await fetch(\n    `https://w1206-app.site/api/v1/accounts/${account.chatwoot_account_id}/conversations/${convDetails.id}/messages`,\n    {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json', api_access_token: 'TSL8r4ctWYzXJF9fiAS1Z8RV' },\n      body: JSON.stringify({ content: `📎 Interpretación del adjunto (IA):\\n${attachmentCtx}`, message_type: 'outgoing', private: true })\n    }\n  );\n}\n\n// Bloque de contexto único: mismo contenido para clasificador y generadores\nconst contextBlock = [\n  `COMPRADOR: ${buyerName || '(sin nombre)'}${buyerCity ? ' — ' + buyerCity : ''}`,\n  `PEDIDO: ${orderCtx}`,\n  `PRODUCTO: ${productCtx}`,\n  `ENVÍO: ${shipCtx}`,\n  `ADJUNTO DEL CLIENTE: ${attachmentCtx || '(ninguno)'}`,\n  `INSTRUCCIONES DEL VENDEDOR: ${(account.prompts && account.prompts.otros) || '(ninguna)'}`,\n  `BASE DE CONOCIMIENTO:\\n${ragResult?.context || '(sin documentación)'}`,\n  `HISTORIAL:\\n${history || '(ninguno)'}`,\n].join('\\n\\n');\n\nreturn {\n  message:               msgDetails.text || '',\n  conversation_id:       convDetails.id,\n  account_id:            account.chatwoot_account_id,\n  ml_user_id:            $('Execute Workflow Trigger').first().json.body.user_id,\n  buyer_user_id:         String(msgDetails.from?.user_id || ''),\n  buyer_name:            buyerName,\n  buyer_city:            buyerCity,\n  product_context:       productCtx,\n  pack_id:               msgDetails.pack_id,\n  order_context:         orderCtx,\n  shipment_context:      shipCtx,\n  rag_context:           ragResult.context || '',\n  conversation_history:  history,\n  prompts:               account.prompts || {},\n  pv_ia:                 (() => { try { const r = account.pv_ia; return (typeof r === 'string') ? JSON.parse(r) : (r || {}); } catch(e) { return {}; } })(),\n  attachment_context:    attachmentCtx,\n  context_block:         contextBlock\n};\n"
       },
       "id": "2cd14ff4-8235-486e-970d-aa8961a29914",
       "name": "context_assembler",
@@ -2185,11 +2185,12 @@
             {
               "id": "l1",
               "operator": {
-                "type": "string",
-                "operation": "contains"
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
               },
-              "leftValue": "={{ $('generate_logistics_response').first().json.choices[0].message.content }}",
-              "rightValue": "Voy a consultar el estado"
+              "leftValue": "={{ $('generate_logistics_response').first().json.choices[0].message.content.includes('Voy a consultar el estado') && $('context_assembler').first().json.pv_ia?.logistica?.fallback_to_human !== false }}",
+              "rightValue": ""
             }
           ]
         },
@@ -2228,6 +2229,130 @@
       "position": [
         -36384,
         -1824
+      ],
+      "typeVersion": 4.4
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE meli_orders\nSET estado_conversacion = 'needs_human', handoff_reason = 'fallback_logistica', last_message_at = NOW()\nWHERE id = '{{ $('check_lifecycle').item.json.order_db_id }}';",
+        "options": {}
+      },
+      "id": "6d2f0d4a-2f6f-4f4e-9f0e-8b1a7c3d5e02",
+      "name": "apply_logistics_handoff_db",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -36640,
+        -1888
+      ],
+      "typeVersion": 2.6,
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "=⚠️ Derivación a humano — Logística\n\nMotivo: la IA no pudo confirmar el estado del envío (sin datos o consulta fallida).\n\n📝 Mensaje del cliente:\n\"{{ $('context_assembler').item.json.message }}\"\n\n📦 Contexto del pedido:\n{{ $('context_assembler').item.json.order_context }}\n\n🚚 Estado del envío:\n{{ $('context_assembler').item.json.shipment_context }}\n\nPor favor, intervenís a la brevedad."
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6d2f0d4a-2f6f-4f4e-9f0e-8b1a7c3d5e01",
+      "name": "logistics_handover_note",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -36560,
+        -1888
+      ],
+      "typeVersion": 4.4
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE meli_orders\nSET estado_conversacion = 'needs_human', handoff_reason = 'fallback_soporte', last_message_at = NOW()\nWHERE id = '{{ $('check_lifecycle').item.json.order_db_id }}';",
+        "options": {}
+      },
+      "id": "6d2f0d4a-2f6f-4f4e-9f0e-8b1a7c3d5e04",
+      "name": "apply_support_handoff_db",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -36640,
+        -1712
+      ],
+      "typeVersion": 2.6,
+      "credentials": {
+        "postgres": {
+          "id": "3sMbSrK2N5Vz3Xew",
+          "name": "Postgres chatwoot_development"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://w1206-app.site/api/v1/accounts/{{ $('context_assembler').item.json.account_id }}/conversations/{{ $('context_assembler').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "TSL8r4ctWYzXJF9fiAS1Z8RV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "=⚠️ Derivación a humano — Soporte\n\nMotivo: la IA no pudo resolver la consulta técnica o el cliente requiere atención humana.\n\n📝 Mensaje del cliente:\n\"{{ $('context_assembler').item.json.message }}\"\n\n📦 Contexto del pedido:\n{{ $('context_assembler').item.json.order_context }}\n\n🚚 Estado del envío:\n{{ $('context_assembler').item.json.shipment_context }}\n\nPor favor, intervenís a la brevedad."
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6d2f0d4a-2f6f-4f4e-9f0e-8b1a7c3d5e03",
+      "name": "support_handover_note",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -36560,
+        -1712
       ],
       "typeVersion": 4.4
     }
@@ -2842,7 +2967,7 @@
       "main": [
         [
           {
-            "node": "set_human_label_support",
+            "node": "apply_support_handoff_db",
             "type": "main",
             "index": 0
           }
@@ -3136,7 +3261,7 @@
       "main": [
         [
           {
-            "node": "set_human_label_logistica",
+            "node": "apply_logistics_handoff_db",
             "type": "main",
             "index": 0
           }
@@ -3144,6 +3269,50 @@
         [
           {
             "node": "label_logistics_done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "apply_logistics_handoff_db": {
+      "main": [
+        [
+          {
+            "node": "logistics_handover_note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "logistics_handover_note": {
+      "main": [
+        [
+          {
+            "node": "set_human_label_logistica",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "apply_support_handoff_db": {
+      "main": [
+        [
+          {
+            "node": "support_handover_note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "support_handover_note": {
+      "main": [
+        [
+          {
+            "node": "set_human_label_support",
             "type": "main",
             "index": 0
           }

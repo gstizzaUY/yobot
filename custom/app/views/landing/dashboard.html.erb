@@ -1443,6 +1443,12 @@ style="border-color:#fd5101; border-top-color:transparent"></div>
                                     <textarea name="post_venta_ia[prompts][logistica]" rows="2"
                                         placeholder="Respondé con el estado real del envío (estado + tracking + fecha estimada del contexto). Si piden una fecha anterior a la estimada, explicá que no se puede garantizar y que vas a avisar ante cualquier novedad."
                                         class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus-brand text-[13px] resize-none transition hover:border-gray-300"><%= @pv_ia.dig('prompts', 'logistica') %></textarea>
+                                    <label class="flex items-center gap-2.5 cursor-pointer mt-2">
+                                        <input type="checkbox" name="post_venta_ia[logistica][fallback_to_human]" value="1"
+                                               <%= @pv_ia.dig('logistica', 'fallback_to_human') != false ? 'checked' : '' %>
+                                               class="w-4 h-4 rounded accent-[#fd5101]">
+                                        <span class="text-xs text-gray-600 dark:text-gray-300">Derivar a humano si no hay datos de envío</span>
+                                    </label>
                                 </div>
                             </div>
 
